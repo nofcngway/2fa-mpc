@@ -37,12 +37,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Auth Go module, proto definitions, generate.sh, Makefile
-- [ ] 01-02-PLAN.md — TwoFA Go module, proto definitions, generate.sh, Makefile
-- [ ] 01-03-PLAN.md — MPC Go module, proto definitions, generate.sh, Makefile
-- [ ] 01-04-PLAN.md — Auth Docker Compose, config, Clean Architecture skeleton
-- [ ] 01-05-PLAN.md — TwoFA Docker Compose, config, Clean Architecture skeleton
-- [ ] 01-06-PLAN.md — MPC Docker Compose, config, Clean Architecture skeleton
+- [x] 01-01-PLAN.md — Auth Go module, proto definitions, generate.sh, Makefile
+- [x] 01-02-PLAN.md — TwoFA Go module, proto definitions, generate.sh, Makefile
+- [x] 01-03-PLAN.md — MPC Go module, proto definitions, generate.sh, Makefile
+- [x] 01-04-PLAN.md — Auth Docker Compose, config, Clean Architecture skeleton
+- [x] 01-05-PLAN.md — TwoFA Docker Compose, config, Clean Architecture skeleton
+- [x] 01-06-PLAN.md — MPC Docker Compose, config, Clean Architecture skeleton
 
 ### Phase 2: Auth Registration
 **Goal**: Users can create accounts with strongly validated passwords
