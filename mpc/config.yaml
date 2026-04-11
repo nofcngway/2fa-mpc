@@ -1,0 +1,16 @@
+server:
+  port: 9100
+
+database:
+  dsn: "postgres://mpc_user:mpc_pass@localhost:5435/mpc_db?sslmode=disable"
+
+kafka:
+  brokers:
+    - "localhost:9094"
+  topic: "mpc-events"
+
+node:
+  id: 1
+  encryption_key: "0123456789abcdef0123456789abcdef"
+
+shared_secret: "dev-shared-secret-change-in-production"
