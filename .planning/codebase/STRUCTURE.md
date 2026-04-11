@@ -5,230 +5,341 @@
 ## Directory Layout
 
 ```
-/Users/vbncursed/programming/2fa/
-├── auth/                     # Auth Service (registration, login, JWT)
-├── gateway/                  # API Gateway (REST → gRPC translator)
-├── twofa/                    # TwoFA Service (2FA orchestration, Shamir)
-├── mpc/                      # MPC Node Service (share storage with encryption)
-├── migration/                # Cross-service database migrations (if needed)
-├── monitoring/               # Prometheus/Grafana configuration
-├── workspace/                # Obsidian vault (ADR, decisions, progress, security docs)
-├── .planning/
-│   └── codebase/            # Generated planning documents (ARCHITECTURE.md, STRUCTURE.md, etc.)
-├── CLAUDE.md                # Project rules and conventions (Russian)
-├── README.md                # Development prompts and target state
-├── TZ.md                    # Technical specification (Russian, copy of requirements)
-└── .obsidian/               # Obsidian workspace configuration
+2fa/
+├── gateway/                    # API Gateway service (HTTP entry point)
+├── auth/                       # Authentication service (user management, JWT)
+├── twofa/                      # 2FA orchestration (Shamir split/combine, TOTP)
+├── mpc/                        # MPC node (share storage, encryption)
+├── migration/                  # Cross-service database migrations
+├── monitoring/                 # Prometheus + Grafana configuration
+├── workspace/                  # Obsidian vault (architecture decisions, notes)
+├── .planning/codebase/         # GSD analysis documents
+├── CLAUDE.md                   # Project specifications and rules
+├── TZ.md                       # Technical requirements (detailed specs)
+└── .obsidian/                  # Obsidian vault config
 ```
 
 ## Directory Purposes
 
-**auth/ - Authentication Service:**
-- Purpose: User registration, login, JWT token management, session validation
-- Contains: Complete Go service with Clean Architecture
-- Key files:
-  - `cmd/app/main.go`: Service entry point
-  - `api/auth_api/auth.proto`: gRPC service definition
-  - `internal/services/authService/`: Business logic (register, login, JWT, password validation)
-  - `internal/storage/pgstorage/`: PostgreSQL repository for users and sessions
-  - `internal/storage/redisstorage/`: Redis repository for refresh tokens
-  - `config/config.go`: Configuration loader from config.yaml
+**gateway/:**
+- Purpose: Single HTTP REST entry point for frontend clients, translates REST → gRPC, enforces rate limiting
+- Contains: gRPC service API handlers, HTTP route definitions, middleware
+- Key files: `cmd/app/main.go`, `internal/api/`, `config.yaml`
 
-**gateway/ - API Gateway:**
-- Purpose: Single HTTP entry point, REST-to-gRPC translation, rate limiting
-- Contains: Go service exposing HTTP endpoints
-- Key files:
-  - `cmd/app/main.go`: Gateway entry point
-  - HTTP handlers: register, login, refresh, logout, 2fa endpoints
-  - gRPC clients: connections to Auth and TwoFA services
-  - Middleware: JWT validation, rate limiting, CORS, logging
+**auth/:**
+- Purpose: User authentication, JWT token lifecycle management, session handling
+- Contains: Registration, login, token refresh/validation, password validation logic
+- Key files: `cmd/app/main.go`, `internal/services/authService/`, `internal/storage/pgstorage/`, `internal/storage/redisstorage/`
 
-**twofa/ - Two-Factor Authentication Service:**
-- Purpose: 2FA setup/verification, Shamir secret sharing orchestration, MPC client coordination
-- Contains: Go service with cryptographic operations
-- Key files:
-  - `cmd/app/main.go`: Service entry point
-  - `api/twofa_api/twofa.proto`: TwoFA service definition
-  - `api/mpc_api/mpc.proto`: MPC client contract (shared with mpc/)
-  - `internal/services/twofaService/shamir/`: Shamir Secret Sharing in GF(256)
-  - `internal/services/twofaService/totp/`: TOTP generation and validation (RFC 6238)
-  - `internal/clients/mpc/`: gRPC clients to 3 MPC nodes
-  - `internal/storage/pgstorage/`: Metadata storage (2FA records, backup codes)
+**twofa/:**
+- Purpose: 2FA orchestration, Shamir Secret Sharing implementation, TOTP validation, MPC node coordination
+- Contains: 2FA setup/verify/disable operations, custom Shamir and TOTP implementations
+- Key files: `cmd/app/main.go`, `internal/services/twofaService/`, `internal/services/twofaService/shamir/`, `internal/services/twofaService/totp/`
 
-**mpc/ - MPC Node Service:**
-- Purpose: Secure storage of secret shares with at-rest encryption
-- Contains: Go service (3 identical instances, NODE_ID from config distinguishes them)
-- Key files:
-  - `cmd/app/main.go`: Node entry point
-  - `api/mpc_api/mpc.proto`: MPC service definition (copy from twofa/)
-  - `internal/services/shareService/`: Share storage/retrieval logic
-  - `internal/crypto/aes.go`: AES-256-GCM encryption/decryption
-  - `internal/storage/pgstorage/`: Share persistence
-  - Middleware: Authorization via metadata (shared secret token)
+**mpc/:**
+- Purpose: Distributed secret share storage with encryption at rest, one instance per share (3 total)
+- Contains: Share encryption/decryption, PostgreSQL persistence, access control
+- Key files: `cmd/app/main.go`, `internal/services/mpcService/`, `internal/storage/pgstorage/`
 
 **migration/:**
-- Purpose: Cross-service database migrations (if needed)
-- Contains: SQL migration files (currently empty)
-- Usage: For schema changes that span multiple services
+- Purpose: SQL schema migrations shared across services
+- Contains: SQL files for creating tables (users, sessions, 2fa_records, shares, audit_log)
+- Key files: `*.sql` migration files
 
 **monitoring/:**
-- Purpose: Prometheus and Grafana configuration
-- Contains: prometheus.yml, grafana dashboards (currently empty)
-- Usage: Collect and visualize metrics from all services
+- Purpose: Prometheus scrape configuration and Grafana dashboards
+- Contains: prometheus.yml, dashboard JSON definitions
+- Key files: `prometheus.yml`, `dashboards/`
 
-**workspace/ - Obsidian Vault:**
-- Purpose: Architecture documentation, security protocols, decisions, progress tracking
+**workspace/:**
+- Purpose: Obsidian vault for architecture documentation, decisions, and project progress
+- Contains: Architecture notes, service documentation, security protocols, decision logs
 - Structure:
-  - `00 - Index.md`: Navigation hub
-  - `01 - Architecture/`: System overview, data flows, service descriptions
-  - `02 - Services/`: Per-service documentation (API endpoints, responsibilities)
-  - `03 - Security/`: Cryptographic protocols (Shamir, TOTP, AES, JWT, password policy)
-  - `04 - Decisions/`: Architecture Decision Records (ADR Log.md)
-  - `05 - Progress/`: TODO.md, Changelog.md for sprint tracking
+  - `00 - Index.md`: Navigation
+  - `01 - Architecture/`: System overview, service interactions, data flows
+  - `02 - Services/`: Individual service documentation
+  - `03 - Security/`: Protocol specifications (Shamir, TOTP, AES, JWT)
+  - `04 - Decisions/`: ADR (Architecture Decision Records)
+  - `05 - Progress/`: TODO list, changelog
+
+**.planning/codebase/:**
+- Purpose: GSD (Generalized System Design) analysis documents
+- Contains: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, CONCERNS.md, INTEGRATIONS.md, STACK.md
 
 ## Key File Locations
 
 **Entry Points:**
-- `auth/cmd/app/main.go`: Auth Service binary entry point
-- `gateway/cmd/app/main.go`: API Gateway binary entry point
-- `twofa/cmd/app/main.go`: TwoFA Service binary entry point
-- `mpc/cmd/app/main.go`: MPC Node Service binary entry point
+- `gateway/cmd/app/main.go`: HTTP REST gateway server startup
+- `auth/cmd/app/main.go`: Authentication service startup
+- `twofa/cmd/app/main.go`: 2FA service startup
+- `mpc/cmd/app/main.go`: MPC node service startup
 
 **Configuration:**
-- `<service>/config.yaml`: YAML config file per service (database, Redis, Kafka, ports, encryption key)
-- `<service>/config/config.go`: Config struct and loader using gopkg.in/yaml.v3
-- `<service>/docker-compose.yaml`: Local development infrastructure per service
+- `gateway/config.yaml`: Gateway configuration (HTTP port, gRPC targets, rate limits)
+- `auth/config.yaml`: Auth service configuration (gRPC port, DB, Redis, Kafka, JWT keys)
+- `twofa/config.yaml`: TwoFA service configuration (gRPC port, DB, MPC node addresses, rate limits)
+- `mpc/config.yaml`: MPC node configuration (gRPC port, encryption key, node ID)
 
-**Core Logic:**
-- `auth/internal/services/authService/`: Registration, login, JWT generation, token refresh
-- `twofa/internal/services/twofaService/`: 2FA operations, Shamir split/combine, TOTP validation
-- `mpc/internal/services/shareService/`: Share encryption, storage, retrieval
-- `gateway/handlers/`: HTTP endpoint handlers that translate to gRPC calls
+**Protocol Definitions:**
+- `gateway/api/google/api/`: Google API annotations (http.proto, field_behavior.proto)
+- `gateway/api/models/`: Shared proto models (gateway_model.proto)
+- `gateway/api/gateway_api/`: Gateway service RPC definitions (gateway.proto)
+- `auth/api/google/api/`: Google API annotations
+- `auth/api/models/`: Auth proto models (auth_model.proto, user, session, token)
+- `auth/api/auth_api/`: Auth service RPC definitions (auth.proto)
+- `twofa/api/google/api/`: Google API annotations
+- `twofa/api/models/`: TwoFA proto models (twofa_model.proto, share, 2fa_record)
+- `twofa/api/twofa_api/`: TwoFA service RPC definitions (twofa.proto)
+- `mpc/api/google/api/`: Google API annotations
+- `mpc/api/models/`: MPC proto models (mpc_model.proto, share)
+- `mpc/api/mpc_api/`: MPC service RPC definitions (mpc.proto)
 
-**Data Access:**
-- `<service>/internal/storage/pgstorage/`: PostgreSQL repository (pgx client, CRUD methods)
-- `<service>/internal/storage/redisstorage/`: Redis repository (session/rate limit storage)
-- `twofa/internal/clients/mpc/`: gRPC clients to MPC nodes with timeout handling
+**Core Business Logic:**
+- `auth/internal/services/authService/auth_service.go`: Auth service structure and interface
+- `auth/internal/services/authService/register.go`: User registration logic
+- `auth/internal/services/authService/login.go`: User login and JWT generation
+- `auth/internal/services/authService/refresh.go`: Token refresh/rotation
+- `auth/internal/services/authService/validate.go`: Token validation
+- `auth/internal/services/authService/password_validation.go`: Password policy enforcement
+- `auth/internal/services/authService/jwt.go`: JWT generation and parsing (RS256)
 
-**Testing:**
-- `<service>/internal/services/<service>/..._test.go`: Unit tests for business logic
-- Examples: `auth/internal/services/authService/password_validation_test.go`, `twofa/internal/services/twofaService/shamir/shamir_test.go`
+- `twofa/internal/services/twofaService/twofa_service.go`: TwoFA service structure and interface
+- `twofa/internal/services/twofaService/setup.go`: 2FA setup and secret splitting
+- `twofa/internal/services/twofaService/verify.go`: 2FA verification and secret reconstruction
+- `twofa/internal/services/twofaService/disable.go`: 2FA disabling and share cleanup
+- `twofa/internal/services/twofaService/shamir/shamir.go`: Shamir Secret Sharing (GF(256))
+- `twofa/internal/services/twofaService/totp/totp.go`: TOTP generation and validation (RFC 6238)
+- `twofa/internal/services/twofaService/rate_limit.go`: Rate limiting (5 attempts per 5 min)
 
-**Cryptography:**
-- `twofa/internal/services/twofaService/shamir/shamir.go`: Shamir Secret Sharing (Split, Combine)
-- `twofa/internal/services/twofaService/shamir/gf256.go`: GF(256) arithmetic (Add, Multiply, Inverse)
-- `twofa/internal/services/twofaService/totp/totp.go`: TOTP generation, validation, provisioning URI
-- `mpc/internal/crypto/aes.go`: AES-256-GCM encrypt/decrypt with nonce
+- `mpc/internal/services/mpcService/mpc_service.go`: MPC service structure
+- `mpc/internal/services/mpcService/store_share.go`: Share encryption and storage
+- `mpc/internal/services/mpcService/retrieve_share.go`: Share retrieval and decryption
+- `mpc/internal/services/mpcService/delete_share.go`: Share deletion
+- `mpc/internal/services/mpcService/encryption.go`: AES-256-GCM encryption/decryption
 
-**Protobuf Definitions:**
-- `auth/api/auth_api/auth.proto`: Auth service methods (Register, Login, RefreshToken, Logout, ValidateToken)
-- `twofa/api/twofa_api/twofa.proto`: TwoFA service methods (Setup2FA, Verify2FA, Disable2FA, Get2FAStatus)
-- `twofa/api/mpc_api/mpc.proto`: MPC service contract (StoreShare, RetrieveShare, DeleteShare)
-- `mpc/api/mpc_api/mpc.proto`: Copy of twofa contract
-- `<service>/api/models/`: Proto message definitions (User, TokenPair, Share, TwoFARecord, etc.)
-- `<service>/api/google/api/`: Google API annotations for proto
+**gRPC Handlers:**
+- `gateway/internal/api/gateway_service_api/gateway_api.go`: Gateway handler wrapper
+- `gateway/internal/api/gateway_service_api/register.go`: Register RPC handler
+- `gateway/internal/api/gateway_service_api/login.go`: Login RPC handler
+- `gateway/internal/api/gateway_service_api/refresh_token.go`: RefreshToken RPC handler
+- `gateway/internal/api/gateway_service_api/logout.go`: Logout RPC handler
+- `gateway/internal/api/gateway_service_api/setup_2fa.go`: Setup2FA RPC handler
+- `gateway/internal/api/gateway_service_api/verify_2fa.go`: Verify2FA RPC handler
+- `gateway/internal/api/gateway_service_api/disable_2fa.go`: Disable2FA RPC handler
+- `gateway/internal/api/gateway_service_api/get_2fa_status.go`: Get2FAStatus RPC handler
 
-**Bootstrap & DI:**
-- `<service>/internal/bootstrap/`: Dependency injection factories
-  - `auth_service.go`: Create AuthService with dependencies
-  - `pgstorage.go`: Initialize pgx connection pool
-  - `redis.go`: Initialize Redis client
-  - `mpc_clients.go`: Create 3 gRPC clients to MPC nodes (TwoFA only)
-  - `kafka_producer.go`: Initialize Kafka producer
-  - `server.go`: Register gRPC handlers and middleware
+- `auth/internal/api/auth_service_api/auth_api.go`: Auth handler wrapper
+- `auth/internal/api/auth_service_api/register.go`: Register RPC handler
+- `auth/internal/api/auth_service_api/login.go`: Login RPC handler
+- `auth/internal/api/auth_service_api/refresh_token.go`: RefreshToken RPC handler
+- `auth/internal/api/auth_service_api/logout.go`: Logout RPC handler
+- `auth/internal/api/auth_service_api/validate_token.go`: ValidateToken RPC handler
 
-**Middleware:**
-- `<service>/internal/middleware/interceptors.go`: gRPC interceptors
-  - Logging interceptor (request/response, slog structured)
-  - Metrics interceptor (Prometheus counters and histograms)
-  - Recovery interceptor (panic handling)
-  - Authorization interceptor (MPC nodes only)
+- `twofa/internal/api/twofa_service_api/twofa_api.go`: TwoFA handler wrapper
+- `twofa/internal/api/twofa_service_api/setup_2fa.go`: Setup2FA RPC handler
+- `twofa/internal/api/twofa_service_api/verify_2fa.go`: Verify2FA RPC handler
+- `twofa/internal/api/twofa_service_api/disable_2fa.go`: Disable2FA RPC handler
+- `twofa/internal/api/twofa_service_api/get_2fa_status.go`: Get2FAStatus RPC handler
 
-**Generated Protobuf Code:**
-- `<service>/internal/pb/`: Generated .pb.go and _grpc.pb.go files (auto-generated by protoc)
+- `mpc/internal/api/mpc_service_api/mpc_api.go`: MPC handler wrapper
+- `mpc/internal/api/mpc_service_api/store_share.go`: StoreShare RPC handler
+- `mpc/internal/api/mpc_service_api/retrieve_share.go`: RetrieveShare RPC handler
+- `mpc/internal/api/mpc_service_api/delete_share.go`: DeleteShare RPC handler
+
+**Data Access (Storage):**
+- `<service>/internal/storage/pgstorage/pgstorage.go`: PostgreSQL connection pool initialization, table creation
+- `<service>/internal/storage/pgstorage/models.go`: Storage-layer data models and SQL constants
+- `auth/internal/storage/pgstorage/user.go`: User CRUD operations (Create, GetByEmail, GetByID)
+- `auth/internal/storage/pgstorage/session.go`: Session/audit log operations
+- `twofa/internal/storage/pgstorage/twofa_record.go`: 2FA metadata operations
+- `mpc/internal/storage/pgstorage/share.go`: Encrypted share CRUD operations
+
+- `auth/internal/storage/redisstorage/redisstorage.go`: Redis client initialization
+- `auth/internal/storage/redisstorage/session.go`: Refresh token operations (Set, Get, Delete with TTL)
+
+**Dependency Injection:**
+- `<service>/internal/bootstrap/bootstrap.go`: Main bootstrap coordinator (creates all components)
+- `<service>/internal/bootstrap/auth_service.go`: AuthService factory
+- `<service>/internal/bootstrap/twofa_service.go`: TwoFAService factory
+- `<service>/internal/bootstrap/mpc_service.go`: MPCService factory
+- `<service>/internal/bootstrap/pgstorage.go`: PostgreSQL storage factory
+- `<service>/internal/bootstrap/redisstorage.go`: Redis storage factory
+- `<service>/internal/bootstrap/kafka_producer.go`: Kafka producer factory
+- `<service>/internal/bootstrap/auth_api.go`: AuthServiceAPI factory
+- `<service>/internal/bootstrap/twofa_api.go`: TwoFAServiceAPI factory
+- `<service>/internal/bootstrap/mpc_api.go`: MPCServiceAPI factory
+- `<service>/internal/bootstrap/server.go`: gRPC server initialization with interceptors
+
+**Middleware & Interceptors:**
+- `<service>/internal/middleware/interceptors.go`: gRPC unary/stream interceptors (logging, metrics, recovery, auth)
+
+**Kafka Consumers (Event Processing):**
+- `<service>/internal/consumer/`: Directory for event consumers (if needed for cross-service events)
+
+**Tests:**
+- `<service>/internal/services/<serviceName>/<operation>_test.go`: Unit tests for business logic
+- `<service>/internal/services/authService/password_validation_test.go`: Password validation tests
+- `<service>/internal/api/<service>_service_api/<operation>_test.go`: Handler integration tests
+- `<service>/internal/storage/pgstorage/<entity>_test.go`: Storage layer tests
+
+**Build & Deployment:**
+- `<service>/Makefile`: Build targets (generate proto, build, test, docker)
+- `<service>/scripts/generate.sh`: Protocol buffer code generation script
+- `<service>/scripts/command.mk`: Common make commands
+- `<service>/docker-compose.yaml`: Local development environment (PostgreSQL, Redis)
+- `<service>/go.mod`: Go module definition
+- `<service>/go.sum`: Go dependency lock file
+
+**Generated Code:**
+- `<service>/internal/pb/`: Generated protobuf code (never edit manually)
+  - `models/`: Generated message code
+  - `auth_api/`, `twofa_api/`, `mpc_api/`, `gateway_api/`: Generated service stubs
+
+**Configuration & Models:**
+- `<service>/config/config.go`: Configuration loading from YAML
+- `<service>/internal/models/models.go`: Domain model structs (User, Session, TokenPair, etc.)
 
 ## Naming Conventions
 
 **Files:**
-- Service logic: `<operation>.go` (e.g., `register.go`, `login.go`, `setup.go`, `verify.go`)
-- Tests: `<operation>_test.go` (e.g., `password_validation_test.go`, `shamir_test.go`)
-- Models: `models.go` (domain models per service)
-- Repositories: `<entity>.go` (e.g., `user.go`, `session.go`, `share.go`)
-- Clients: `client.go` (gRPC clients to other services)
-- Configuration: `config.go`, `config.yaml`
-- Middleware: `interceptors.go`
+- `*.proto`: Protocol buffer definitions (snake_case, e.g., `auth_model.proto`, `auth.proto`)
+- `*.go`: Go source files (snake_case, e.g., `password_validation.go`, `store_share.go`)
+- `*_test.go`: Unit/integration tests (same name as file being tested with `_test` suffix)
+- `*_pb.go`: Generated protobuf code (auto-generated, never edited)
+- `*_grpc.pb.go`: Generated gRPC stubs (auto-generated, never edited)
+- `config.yaml`: Service configuration (always lowercase)
+- `docker-compose.yaml`: Docker Compose configuration
+- `Makefile`: Build automation
+- `go.mod`, `go.sum`: Go module files
 
 **Directories:**
-- Service packages: camelCase, single word (e.g., `authService`, `twofaService`, `shareService`)
-- Layer directories: snake_case (e.g., `auth_service_api`, `pgstorage`, `redisstorage`)
-- Utilities: plural form (e.g., `services/`, `storage/`, `clients/`)
+- `api/`: Protocol buffer definitions (grouped by service)
+- `cmd/`: Command-line entry points (always `cmd/app/main.go`)
+- `config/`: Configuration loading (always `config/config.go`)
+- `internal/`: Private package tree (never imported by external packages)
+  - `api/`: gRPC service handlers
+  - `bootstrap/`: Dependency injection factories
+  - `models/`: Domain models
+  - `services/`: Business logic
+  - `storage/`: Data access (repositories)
+  - `middleware/`: gRPC interceptors
+  - `consumer/`: Event consumers
+  - `pb/`: Generated protobuf code
+- `scripts/`: Helper scripts (always include `generate.sh`)
 
-**Functions & Interfaces:**
-- Public (exported): PascalCase (e.g., `Register`, `CreateUser`, `StoreShare`)
-- Private (unexported): camelCase (e.g., `validateEmail`, `zeroizeSecret`)
-- Interfaces: descriptive, usually ending in "er" or explicit (e.g., `Storage`, `Producer`, `Encryptor`, `MPCClient`)
+**Functions:**
+- camelCase (e.g., `registerUser`, `validatePassword`, `storeShare`)
+- Service methods: action verbs (Register, Login, Setup2FA, Verify2FA)
+- Repository methods: CRUD pattern (Create, Get, Update, Delete)
+- Utility functions: descriptive (ValidateEmail, GenerateJWT, EncryptShare)
 
 **Variables:**
-- Constants: UPPER_SNAKE_CASE (e.g., `DEFAULT_TTL`, `GCM_NONCE_SIZE`)
-- Package-level: camelCase or PascalCase for exported
-- Method receivers: short (e.g., `s *AuthService`, `r *Repository`)
+- camelCase (e.g., `userID`, `passwordHash`, `encryptionKey`)
+- Constants: UPPER_SNAKE_CASE (e.g., `MAX_PASSWORD_LENGTH`, `JWT_ACCESS_EXPIRY`)
+- Interface names: PascalCase with suffix -er (e.g., `UserRepository`, `TokenValidator`)
+- Struct names: PascalCase (e.g., `User`, `Session`, `TokenPair`)
+
+**Types:**
+- Structs: PascalCase (e.g., `User`, `Session`, `RegisterRequest`, `LoginResponse`)
+- Interfaces: PascalCase with -er suffix (e.g., `UserRepository`, `PasswordValidator`)
+- Error types: PascalCase with Error suffix (e.g., `InvalidPasswordError`)
+
+**Proto messages:**
+- PascalCase (e.g., `User`, `RegisterRequest`, `RegisterResponse`, `TokenPair`)
+- Services: PascalCase with Service suffix (e.g., `AuthService`, `TwoFAService`, `MPCNodeService`)
+- RPC methods: PascalCase (e.g., `Register`, `Login`, `Setup2FA`, `Verify2FA`)
 
 ## Where to Add New Code
 
-**New Authentication Feature:**
-- Primary code: `auth/internal/services/authService/<feature>.go`
-- Database schema: Update `auth/internal/storage/pgstorage/models.go` and `initTables()` in `pgstorage.go`
-- Tests: `auth/internal/services/authService/<feature>_test.go`
-- gRPC method: Add to `auth/api/auth_api/auth.proto` → implement handler in `auth/internal/api/auth_service_api/<feature>.go`
-- Kafka event: Call `kafkaProducer.Publish()` in service logic
+**New Feature (e.g., new Auth operation):**
+- Primary code: `<service>/internal/services/<serviceName>/<operation>.go` (business logic)
+- Handler: `<service>/internal/api/<service>_service_api/<operation>.go` (gRPC handler)
+- Proto: `<service>/api/<service>_api/<service>.proto` (add RPC method and messages)
+- Tests: `<service>/internal/services/<serviceName>/<operation>_test.go` (unit tests)
+- Storage changes: `<service>/internal/storage/pgstorage/<entity>.go` (if new persistence needed)
 
-**New 2FA Feature:**
-- Primary code: `twofa/internal/services/twofaService/<feature>.go`
-- MPC orchestration: Call `mpcClients[].StoreShare()` or `RetrieveShare()` from service logic
-- Cryptography: Add to `twofa/internal/services/twofaService/shamir/` or `totp/`
-- Tests: Shamir tests in `shamir_test.go`, TOTP tests in `totp_test.go`
+**New Service (e.g., notification service):**
+- Create directory at project root: `notification/`
+- Follow Clean Architecture structure:
+  ```
+  notification/
+  ├── api/
+  │   ├── google/api/
+  │   ├── models/
+  │   │   └── notification_model.proto
+  │   └── notification_api/
+  │       └── notification.proto
+  ├── cmd/app/main.go
+  ├── config/config.go
+  ├── internal/
+  │   ├── api/notification_service_api/
+  │   ├── bootstrap/
+  │   ├── models/models.go
+  │   ├── services/notificationService/
+  │   ├── storage/pgstorage/
+  │   ├── middleware/interceptors.go
+  │   └── pb/
+  ├── scripts/generate.sh
+  ├── config.yaml
+  ├── docker-compose.yaml
+  ├── Makefile
+  ├── go.mod
+  └── go.sum
+  ```
+- Register new service in Gateway routing
+- Update workspace documentation (`workspace/02 - Services/<NewService>.md`)
 
-**New MPC Operation:**
-- Primary code: `mpc/internal/services/shareService/<operation>.go`
-- Encryption: Use `encryptor.Encrypt()` and `Decrypt()` from `mpc/internal/crypto/aes.go`
-- Storage: Call `storage.CreateShare()` or `GetShare()` from `mpc/internal/storage/pgstorage/share.go`
+**New Component/Module (e.g., backup code manager):**
+- Location: `<service>/internal/services/<serviceName>/backup_codes/` (if service-specific)
+- Or: `shared/backup_codes/` (if used across multiple services)
+- Pattern: Group related functionality in subdirectory under services
 
-**New HTTP Endpoint (Gateway only):**
-- HTTP handler: `gateway/handlers/<feature>.go`
-- gRPC client call: Use `authClient` or `twofaClient` from bootstrap
-- Middleware: Register rate limiter in endpoint middleware chain
-- Response: Translate gRPC response to JSON, map status codes to HTTP
+**Utilities & Helpers:**
+- Shared helpers: `shared/utils/` (e.g., `shared/utils/crypto/`, `shared/utils/validation/`)
+- Service-specific: `<service>/internal/services/<serviceName>/<utility>.go` (inline for simple utilities)
 
-**Shared Utilities:**
-- Validation helpers: `<service>/internal/services/<serviceName>/<helper>.go` (can be reused across handlers/services)
-- Constants: Define in `internal/models/models.go` or respective file
-- Custom types: Define in `internal/models/models.go`
+**Tests:**
+- Unit tests: `<service>/internal/<layer>/<module>/<operation>_test.go` (same directory as code)
+- Integration tests: `<service>/tests/integration/` (optional, for complex scenarios)
+- Test fixtures: `<service>/tests/fixtures/` (test data, factories, mocks)
 
 ## Special Directories
 
-**workspace/ - Obsidian Vault:**
-- Purpose: Design documentation and progress tracking
-- Generated: No (manually created)
-- Committed: Yes (part of git repo)
-- Files are Markdown with Obsidian wikilinks for cross-references
-- Update when: Adding new services, making architectural decisions, security protocol changes
+**generated code (internal/pb/):**
+- Purpose: Holds all protobuf-generated code
+- Generated by: `scripts/generate.sh` (buf or protoc)
+- Committed: Yes (for reproducible builds)
+- How to regenerate: Run `make generate` or `./scripts/generate.sh`
+- Never edit manually: All files in this directory are auto-generated
 
-**.planning/codebase/:**
-- Purpose: Generated analysis documents for GSD (code generation system)
-- Generated: Yes (by GSD mapping agents)
+**workspace/ (Obsidian vault):**
+- Purpose: Architecture decisions, service documentation, progress tracking
+- Generated: No (manually written)
+- Committed: Yes (part of project documentation)
+- Structure: 5 main sections (Architecture, Services, Security, Decisions, Progress)
+
+**.obsidian/ (Vault config):**
+- Purpose: Obsidian editor configuration
+- Generated: Partially (plugins, themes)
+- Committed: Yes (maintains vault setup)
+
+**migration/:**
+- Purpose: SQL schema migrations
+- Contains: Numbered SQL files (001_initial_schema.sql, 002_add_2fa_tables.sql)
+- Committed: Yes (must be in version control)
+- How to run: Migration tool in each service startup (see `internal/storage/pgstorage/pgstorage.go`)
+
+**monitoring/:**
+- Purpose: Prometheus and Grafana configuration
+- Contains: prometheus.yml (scrape configs), dashboards/ (JSON definitions)
 - Committed: Yes
-- Contains: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, CONCERNS.md
+- How to update: Modify YAML/JSON, restart Docker Compose services
 
-**internal/pb/:**
-- Purpose: Auto-generated protobuf code
-- Generated: Yes (by `protoc` via `scripts/generate.sh`)
-- Committed: Yes (generated code is committed, NOT in .gitignore)
-- Do not edit: Regenerate via `make proto` or `scripts/generate.sh`
-
-**internal/api/<service>_service_api/:**
-- Purpose: gRPC handlers (translation layer between proto and business logic)
-- Generated: No (manually implemented)
-- Contains: One file per RPC method, each handler calls service layer
+**docker-compose.yaml (service-level):**
+- Purpose: Local development environment for single service
+- Contains: PostgreSQL, Redis, optional Kafka connector
+- Committed: Yes
+- Usage: `docker-compose up` during development
 
 ---
 

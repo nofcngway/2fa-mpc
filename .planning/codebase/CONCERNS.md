@@ -2,341 +2,656 @@
 
 **Analysis Date:** 2026-04-11
 
-## Critical Implementation Risks
+## Project Status
 
-### Shamir Secret Sharing (Custom GF(256) Implementation)
-- **Issue**: Custom cryptographic implementation from scratch with no external audit
-- **Files**: `twofa/internal/services/twofaService/shamir/` (when implemented)
-- **Impact**: Incorrect GF(256) arithmetic (especially multiplication/division via log/exp tables) compromises the entire 2FA system. Even subtle bugs in Lagrange interpolation destroy threshold security
-- **Risk Level**: CRITICAL
-- **Fix approach**: 
-  - Implement extensive unit tests covering all GF(256) operations before any production use
-  - Test vectors: verify against reference implementations (e.g., ssss.readthedocs.io)
-  - Test recovery with invalid/corrupted shares to ensure they don't accidentally reconstruct
-  - Consider getting external cryptographic review before deployment
-  - Tests must cover: all GF(256) ops (add/mul/div/inv), split/combine with all 3 combinations of 2 shares, edge cases (empty secret, 1-byte secret, 20-byte TOTP secret)
+This project is in early planning phase with comprehensive specifications but **no implementation code yet**. Service directories (`auth/`, `gateway/`, `twofa/`, `mpc/`) are empty. Concerns listed below are prospective risks identified from architectural design, specification requirements, and project structure.
 
-### TOTP Secret Lifecycle - Memory Safety
-- **Issue**: TOTP-secret (20 bytes) must be generated, split, zeroized, but never persisted as plaintext. Memory remains vulnerable to core dumps, debugging tools, and cold-start attacks
-- **Files**: `twofa/internal/services/twofaService/` (when implemented)
-- **Impact**: Plaintext secret exposure if memory zeroization is skipped or incomplete. Rate limiting failure allows brute-force OTP codes (10^6 combinations in 30 seconds)
-- **Risk Level**: HIGH
-- **Fix approach**:
-  - Implement explicit memory zeroization for secret buffers after Shamir split (use `golang.org/x/crypto/subtle` patterns or manual overwrite)
-  - Verify no TOTP-secret strings are logged (implement code review + static analysis)
-  - Document exactly which functions hold the secret in memory at each step
-  - Rate limiter must be non-bypassable: store per-user counter in Redis with atomic increments, check BEFORE verification attempt
+---
 
-### JWT RS256 Key Management
-- **Issue**: Private key must be loaded from configuration without being logged or exposed in error messages. Key rotation requires careful handling
-- **Files**: `auth/internal/services/authService/jwt.go`, `auth/config/config.go` (when implemented)
-- **Impact**: Private key compromise enables forging arbitrary tokens for any user
-- **Risk Level**: HIGH
-- **Fix approach**:
-  - Load RSA private key from file (protected by filesystem permissions, not in YAML)
-  - Never log the key value; only log "private key loaded" message
-  - Error messages must not include key material: use `errors.New("key load failed")` not formatted strings with key
-  - Public key should be served at a well-known endpoint for other services to validate tokens
-  - Document key rotation procedure (old key must still validate in-flight tokens for 15+ minutes after rotation)
+## Security Concerns
 
-### AES-256-GCM Encryption at Rest
-- **Issue**: Each MPC node has a unique encryption key, but nonce generation via `crypto/rand` is non-deterministic. Reusing same key+nonce with different plaintext breaks GCM security
-- **Files**: `mpc/internal/crypto/aes.go`, `mpc/internal/storage/pgstorage/` (when implemented)
-- **Impact**: Complete compromise of encrypted shares in MPC node PostgreSQL if nonce collision occurs or if same share is re-encrypted
-- **Risk Level**: HIGH
-- **Fix approach**:
-  - Strictly enforce: nonce is cryptographically random (12 bytes from `crypto/rand`), unique per encryption operation
-  - Store nonce alongside ciphertext (this is standard practice, not a vulnerability)
-  - NEVER re-encrypt the same plaintext under same key (each Shamir split call gets new share, not re-encryption of old)
-  - Test: verify nonce diversity across 1000+ encrypt operations
-  - Do NOT use deterministic nonce derivation (e.g., hash-based) — only `crypto/rand`
+### Critical: Shamir Secret Sharing Implementation Risk
 
-### Password Validation - Sequence Detection
-- **Issue**: Detecting "4+ characters in sequence" requires checking ASCII ordering, keyboard layouts, and reverse patterns. Incorrect implementation allows weak sequences through
-- **Files**: `auth/internal/services/authService/password_validation.go` (when implemented)
-- **Impact**: Users can set weak passwords like "Password1!" (0 sequences detected due to bug), defeating password policy
-- **Risk Level**: MEDIUM
-- **Fix approach**:
-  - Implement separate checker for each sequence type: numeric ASCII (0-9), alphabetic ASCII (a-z, case-insensitive), keyboard rows (qwerty, asdf, zxcv)
-  - For each sequence, check both forward and reverse
-  - Include test cases at boundaries: 3 chars → PASS, 4 chars → FAIL, 5 chars → FAIL
-  - Test reverse sequences: "dcba", "4321", "yrewq"
-  - Reject both uppercase and lowercase matches: "ABCD" is same sequence as "abcd"
+**Risk:** Custom cryptographic implementation of Shamir Secret Sharing in GF(256)
 
-### Rate Limiting on 2FA Verification
-- **Issue**: Specification requires "5 attempts per 5 minutes per user_id" but implementation must handle distributed requests across multiple Gateway instances
-- **Files**: `twofa/internal/services/twofaService/` (when implemented)
-- **Impact**: Brute-force OTP codes (10^6 possibilities) becomes feasible if rate limiter is bypassable
-- **Risk Level**: HIGH
-- **Fix approach**:
-  - Store counter in Redis (shared across all gateways)
-  - Key format: `2fa:verify:{user_id}` with value = attempt count, TTL 5 minutes
-  - Check counter BEFORE attempting verification (not after)
-  - Check and increment atomically: use Redis INCR or Lua script to prevent race conditions
-  - Return same error message for "rate limited" and "invalid code" (timing attack mitigation)
-  - Reset counter on successful verification
+**Impact:** Incorrect arithmetic in GF(256) or flawed polynomial interpolation could allow:
+- Secrets recoverable from insufficient shares (threshold 2-of-3 broken)
+- Invalid shares accepted as valid
+- Data corruption during split/combine cycles
 
-## Design Gaps
+**Files:** `twofa/internal/services/twofaService/shamir/gf256.go`, `twofa/internal/services/twofaService/shamir/shamir.go`
 
-### TOTP Provisioning URI Security
-- **Issue**: Provisioning URI contains base32-encoded secret and is returned in Setup2FA response. If HTTP/TLS is compromised, secret is exposed before user scans QR code
-- **Files**: `twofa/internal/services/twofaService/totp/` (when implemented)
-- **Impact**: Attacker intercepts provisioning URI → extracts secret → can forge valid OTP codes, completely bypassing 2FA setup
-- **Risk Level**: MEDIUM
-- **Fix approach**:
-  - This is a protocol-level issue, not implementation: provisioning URI MUST be transmitted only over HTTPS with strong TLS
-  - Consider returning only QR code URI (encrypted), not plaintext secret
-  - Document to frontend: if Setup2FA response is logged/cached, 2FA is compromised
-  - Add warning to API response: "Keep provisioning URI secure — anyone with this URI can forge OTP codes"
+**Current Mitigation:**
+- Design specifies unit tests (`shamir_test.go`) for:
+  - Split→Combine roundtrip
+  - Any 2-of-3 shares recover original
+  - 1-of-3 fails to recover
+  - Edge cases: empty secret, 1-byte secret, 20-byte TOTP secret
 
-### TOTP Backup Codes Implementation Missing
-- **Issue**: Specification mentions backup codes (10 hashed codes) but no implementation approach is documented
-- **Files**: `twofa/internal/storage/pgstorage/` (when implemented — backup_codes table)
-- **Impact**: If TOTP device is lost and no backup codes exist, user loses all 2FA access; if backup codes are weak/predictable, user can be locked out by attacker
-- **Risk Level**: MEDIUM
-- **Fix approach**:
-  - Generate 10 random backup codes (12 alphanumeric each) during Setup2FA
-  - Store only bcrypt hashes in database (same as password hashing)
-  - Return codes to user ONLY once, at setup time — user must save them
-  - Implement DisableBackupCode endpoint to prevent reuse (mark used codes in DB)
-  - Require user to confirm they've saved backup codes before Setup2FA completes
-  - Document: backup codes are one-time use, not 10-use pool
+**Recommendations:**
+- Implement rigorous test suite BEFORE integration with MPC nodes
+- Add property-based tests (e.g., for all valid 2-share combinations)
+- Verify GF(256) log/exp tables against reference implementation
+- Consider security audit before production deployment
+- Document the Lagrange interpolation formula explicitly in code
 
-### MPC Node Authorization
-- **Issue**: Specification requires "shared secret via gRPC metadata", but implementation approach is not detailed. Shared secret must be managed securely
-- **Files**: `mpc/internal/middleware/interceptors.go` (when implemented)
-- **Impact**: If shared secret is hardcoded, logged, or exposed in error messages, any compromised service gains access to all shares
-- **Risk Level**: HIGH
-- **Fix approach**:
-  - Load shared secret from environment variables (separate for each node)
-  - Each MPC node has different shared secret (NODE_ID=1 → SECRET_1, NODE_ID=2 → SECRET_2, NODE_ID=3 → SECRET_3)
-  - gRPC interceptor checks "authorization" metadata header: expect exactly `Bearer {secret}` format
-  - Never log the shared secret, only "authorization check passed/failed"
-  - Error messages must not leak secret value: return `Unauthenticated` status without details
-  - Document: shared secrets are per-node and must be rotated without downtime (dual-validation period)
+---
 
-### Cross-Service Communication Security
-- **Issue**: TwoFA → MPC nodes communication is gRPC-only, but if network is compromised or service runs outside Kubernetes, plaintext gRPC is vulnerable
-- **Files**: `twofa/internal/api/twofa_service_api/` (when implemented)
-- **Impact**: Attacker on network can intercept shares flowing from TwoFA to MPC nodes
-- **Risk Level**: MEDIUM
-- **Fix approach**:
-  - Require mTLS between TwoFA and all MPC nodes (gRPC with client certificates)
-  - Each service has certificate, MPC nodes validate TwoFA certificate
-  - Document mTLS setup in `monitoring/` (Kubernetes-style certificate rotation)
-  - Alternative if mTLS is not available: encrypt shares before transmission (double encryption: Shamir result → AES-256-GCM)
+### Critical: TOTP Secret Lifecycle & Memory Safety
 
-## Testing Coverage Gaps
+**Risk:** TOTP secret must never persist to storage; only transient in-memory handling with explicit zeroing
 
-### Cryptography Testing
-- **What's not tested**: Shamir combine with wrong share indices, corrupted share data recovery, zero-valued shares, non-random coefficients
-- **Files**: `twofa/internal/services/twofaService/shamir/shamir_test.go` (when implemented)
-- **Risk**: Silent failures or incorrect reconstructions go undetected until production
-- **Priority**: CRITICAL
-- **Action items**:
-  - Test combine with (share[0], share[1]), (share[0], share[2]), (share[1], share[2]) separately
-  - Test combine with 1 share only → must fail, not accidentally reconstruct
-  - Test with all-zero secret (edge case)
-  - Test GF(256) operations with identity elements (0, 1) and edge values (254, 255)
+**Files Affected:** `twofa/internal/services/twofaService/` (setup.go, verify.go, disable.go), `twofa/internal/services/twofaService/totp/totp.go`
 
-### Error Path Testing
-- **What's not tested**: Kafka producer failure handling, PostgreSQL connection loss during share storage, gRPC deadline exceeded, partial share failure (1 of 3 MPC nodes down)
-- **Files**: All service repositories and Kafka integration (when implemented)
-- **Risk**: System becomes inconsistent (1 share stored, 2 failed) or hangs indefinitely
-- **Priority**: HIGH
-- **Action items**:
-  - Test StoreShare when MPC node 2 is unreachable (circuit breaker logic needed)
-  - Test Verify2FA when TwoFA → MPC gRPC call times out (5 second deadline)
-  - Test Kafka producer failure doesn't block authentication flow (fire-and-forget semantics)
+**Problems:**
+- No built-in memory zeroization in Go — developers must manually clear sensitive bytes
+- Garbage collection timing non-deterministic; secrets could remain in heap
+- If any logging accidentally includes secret (despite rules), production exposure
+- Shamir recombination step produces secret in memory; must be cleared immediately after TOTP validation
 
-### Integration Testing
-- **What's not tested**: Full flow: Setup2FA → retrieve from all 3 MPC nodes → combine → verify OTP, under various failure modes
-- **Files**: Integration test suite (missing)
-- **Risk**: System appears to work in unit tests but fails in production under realistic conditions
-- **Priority**: HIGH
-- **Action items**:
-  - Create integration test: Register → Login → Setup2FA → Verify2FA with valid OTP
-  - Create failure test: Setup2FA with 1 MPC node down → Verify2FA with different node down → must still succeed
-  - Test Redis failure during token refresh
-  - Test Kafka downtime doesn't block auth/2fa operations
+**Current Mitigation:**
+- Specification forbids persistent storage
+- Specification requires `zeroize` after split and after validation
+- Design specifies memory-only handling
 
-## Known Limitations (By Design)
+**Recommendations:**
+- Implement explicit zeroization helper:
+  ```go
+  func zeroize(data []byte) {
+      for i := range data {
+          data[i] = 0
+      }
+  }
+  ```
+- Use in service code immediately after use: `defer zeroize(secret)`
+- Add panic if secret accidentally logged (check in logging middleware)
+- Document that Go's runtime makes stronger guarantees than some languages but not perfect
+- Consider stack allocation for small secrets (stack clearing happens on function exit)
 
-### TOTP Synchronization Window
-- **Issue**: Specification allows ±1 time window (±30 seconds) for clock skew, but no explicit handling of clock drift scenarios
-- **Files**: `twofa/internal/services/twofaService/totp/` (when implemented)
-- **Impact**: User with clock 60+ seconds ahead/behind cannot login, but 30-second drift is accepted
-- **Severity**: LOW (acceptable per RFC 6238)
-- **Mitigation**: Document to users: keep device time synchronized. Consider server-side time sync audit.
+---
 
-### Shamir Share Recovery Failure
-- **Issue**: If 2+ MPC nodes are down during Verify2FA, recovery is impossible (requires 2-of-3 shares)
-- **Files**: `twofa/internal/services/twofaService/` (when implemented)
-- **Impact**: User cannot authenticate with 2FA if 2+ MPC nodes are down
-- **Severity**: MEDIUM (operational requirement, not security)
-- **Mitigation**: Implement MPC node health checks and failover. Document operational SLA: "All 3 MPC nodes must be available 99.9% of the time".
+### High: JWT Key Management & Distribution
 
-## Security-Specific Concerns
+**Risk:** RS256 requires private key in Auth Service and public key distribution to Gateway/TwoFA/MPC services
 
-### Logging of Sensitive Data
-- **Issue**: Specification prohibits logging secrets, passwords, shares, encryption keys. Implementation must be verified to enforce this
-- **Files**: All service files implementing logging (when implemented)
-- **Risk**: Accidental logging of secrets in debug logs, error messages, Kafka events
-- **Priority**: CRITICAL
-- **Verification approach**:
-  - Use static analysis: grep for logger calls that include password, secret, key, share variables
-  - Log only non-sensitive metadata: user_id (UUID ok), operation name, status, latency
-  - Test: set breakpoint in logger, ensure no sensitive data is passed
-  - Kafka events must log: user_id, operation, timestamp; NOT share_data or secret material
+**Files:** `auth/internal/services/authService/jwt.go` (generation), `auth/cmd/app/main.go` (key loading), `gateway/config/config.go` (public key loading), all other services
 
-### Password Storage & Hashing
-- **Issue**: Specification requires bcrypt cost=12, but no guidance on pepper/salt configuration
-- **Files**: `auth/internal/services/authService/` (when implemented)
-- **Risk**: Bcrypt with cost=12 takes ~100ms per hash. If user creates 1000 accounts rapidly, hash generation becomes bottleneck or attacker might use timing to detect hash cost mismatches
-- **Priority**: LOW
-- **Approach**:
-  - Bcrypt automatically uses salt (16 bytes) per call — no additional pepper needed
-  - Cost=12 is industry standard (~100ms) — acceptable for registration/password change, not for every login (JWT used instead)
-  - Monitor hashing latency: if > 500ms, reduce concurrent registration attempts
+**Problems:**
+- Private key must be loaded from config or environment at startup — **never expose in logs**
+- Public key distribution mechanism not yet specified — hard-coded, environment var, or discovery?
+- Key rotation strategy undefined — old tokens become invalid
+- If private key compromised, all issued tokens become forgeable
 
-### Token Revocation Gaps
-- **Issue**: Access tokens (15-minute TTL) cannot be revoked before expiry if user account is compromised. Refresh tokens can be revoked (deleted from Redis) but access tokens in-flight are still valid
-- **Files**: `auth/internal/services/authService/` (when implemented)
-- **Risk**: If user account is compromised, attacker with access token can perform actions for up to 15 minutes
-- **Severity**: LOW (acceptable trade-off for performance; 15 minutes is short window)
-- **Mitigation**: 
-  - Implement token blacklist (Redis set of revoked access tokens with TTL 15 minutes) for emergency revocation
-  - On Logout, delete refresh token AND invalidate all active access tokens (optional, expensive)
-  - For critical operations (password change), require fresh re-authentication (new login)
+**Current Mitigation:**
+- Specification marks "НИКОГДА не логировать секретные данные"
+- Design specifies RS256 for asymmetric verification
 
-## Scaling & Performance Concerns
+**Recommendations:**
+- Implement secure key loading:
+  - Load RSA keys from file system (not inline in code)
+  - File permissions: 0600 for private key
+  - Check and log if key files are world-readable (security warning)
+- For public key distribution:
+  - Option 1: Hard-coded in services (requires code deploy to rotate)
+  - Option 2: Fetch from Auth Service on startup (adds dependency, latency)
+  - Option 3: Environment variable (simpler, fits config model)
+  - Recommend Option 3 with clear documentation
+- Implement key rotation strategy:
+  - Support multiple public keys for grace period during rotation
+  - Add `kid` (key ID) header to JWT for versioning
+- Add metrics: `auth_jwt_generation_total`, `auth_jwt_validation_errors_total` (track validation failures to detect compromise early)
 
-### Redis Dependency for Rate Limiting & Sessions
-- **Issue**: Rate limiting and refresh tokens are stored in Redis. Single Redis instance is a bottleneck; Redis failure causes complete auth/2FA lockout
-- **Files**: `gateway/internal/` and `auth/internal/storage/redisstorage/` (when implemented)
-- **Impact**: Redis cluster failover or restart → all users unable to login/verify 2FA (total outage)
-- **Severity**: MEDIUM
-- **Recommendation**:
-  - Document minimum availability: Redis must have replication + sentinel for HA
-  - Implement circuit breaker in gRPC calls: if Redis unreachable, fall back to in-memory cache for rate limiting (less accurate but service continues)
-  - Monitor Redis latency; if > 100ms, increase concurrent connections to Redis pool
+---
 
-### MPC Node Latency Impact on User Experience
-- **Issue**: Verify2FA requires sequential gRPC calls to 2 MPC nodes (5-second timeout each). Total latency: ~500-1000ms per verification attempt
-- **Files**: `twofa/internal/services/twofaService/` (when implemented)
-- **Impact**: User experience degradation; on high-latency networks, timeout is reached
-- **Severity**: LOW-MEDIUM
-- **Recommendation**:
-  - Parallelize MPC node calls: issue both calls concurrently, wait for first 2 responses (no waiting for slow node)
-  - Implement request pipelining: combine share retrieval with combine operation on same gRPC stream
-  - Cache MPC node health: avoid timeouts by pre-checking which nodes are alive
+### High: AES-256-GCM Nonce Management in MPC Nodes
 
-### PostgreSQL Concurrent Write Bottleneck
-- **Issue**: All services write audit logs to PostgreSQL. High-throughput scenarios (1000+ requests/second) cause write saturation
-- **Files**: All services' storage implementations (when implemented)
-- **Impact**: Audit log writes fail or are delayed; database connection pool exhaustion
-- **Severity**: LOW (audit is non-critical path)
-- **Recommendation**:
-  - Async audit logging: write to Kafka first, let separate consumer batch insert to PostgreSQL
-  - Use pgx batch API for bulk inserts (not single-row inserts)
-  - Monitor query latency; if > 100ms, implement read replicas for queries
+**Risk:** Each share encryption uses AES-256-GCM; nonce must be unique per operation
 
-## Fragile Areas
+**Files:** `mpc/internal/crypto/aes.go`, `mpc/internal/services/shareService/store.go`
 
-### Shamir Split/Combine Correctness
-- **Why fragile**: Custom cryptography implementation with no external audit. Single arithmetic bug invalidates entire protocol
-- **Files**: `twofa/internal/services/twofaService/shamir/gf256.go`, `shamir.go` (when implemented)
-- **Safe modification**: 
-  - Never modify GF(256) operations (add/mul/div) without understanding finite field theory
-  - Add test cases BEFORE modifying, AFTER modification verify all tests still pass
-  - Use reference implementation (e.g., Python shamir package) to generate test vectors
-  - Consider external code review for any changes
+**Problems:**
+- Nonce generated via `crypto/rand` — must be unique across all encryptions with same key
+- If same nonce reused with same key, GCM security breaks (ciphertext allows plaintext recovery)
+- Nonce stored with ciphertext in database; must be at least 12 bytes (Go crypto/cipher/gcm default)
+- Specification requires storing nonce with ciphertext for decryption, but "at-rest" implies key is persistent
 
-### API Gateway REST-to-gRPC Translation
-- **Why fragile**: Protocol translation layer is custom code. Bugs here cause field mismatches, type coercion errors, or lost data
-- **Files**: `gateway/internal/api/` (when implemented)
-- **Safe modification**:
-  - Ensure request field names match proto message field names exactly (camelCase ↔ snake_case mapping)
-  - Test each endpoint independently: call REST endpoint, verify gRPC call received correct data
-  - Add integration tests for each REST endpoint
-  - Use code generation if possible (e.g., grpc-gateway) instead of manual translation
+**Current Mitigation:**
+- Specification says "nonce через crypto/rand" and database schema includes `nonce BYTEA`
+- Design implies nonce never reused (generated fresh each time)
 
-### JWT Token Validation
-- **Why fragile**: Incorrect validation logic allows forged tokens. Common mistakes: not checking signature, not checking expiry, accepting expired tokens
-- **Files**: `auth/internal/services/authService/validate.go` and all consumers (when implemented)
-- **Safe modification**:
-  - Use standard library (`github.com/golang-jwt/jwt/v5`) for token parsing and validation
-  - Always verify: signature (using public key), expiry (iat + TTL > now), subject (user_id format)
-  - Never accept token with invalid signature or expired claim
-  - Test: pass malformed tokens, expired tokens, tokens signed with wrong key — all must be rejected
+**Recommendations:**
+- Implement nonce counter as additional safety:
+  - Store operation counter per key in database (with increment)
+  - Use counter as additional security layer (optional, performance trade-off)
+- Document nonce uniqueness guarantee:
+  - Crypto/rand is cryptographically secure
+  - In practice, 96-bit nonce collision vanishingly rare
+  - Still, add unit tests validating uniqueness across multiple encryptions
+- Audit database schema to ensure nonce is stored for every share:
+  ```sql
+  CREATE TABLE shares (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    share_index INT NOT NULL,
+    encrypted_data BYTEA NOT NULL,
+    nonce BYTEA NOT NULL,  -- MUST be present
+    created_at TIMESTAMP NOT NULL,
+    UNIQUE(user_id, share_index)
+  );
+  ```
+- Decrypt operation MUST validate nonce length (12 bytes expected)
 
-## Missing Critical Features
+---
 
-### MPC Node Backup & Recovery
-- **Issue**: No backup strategy documented for MPC node shares. If PostgreSQL on MPC node 1 is corrupted, that share is permanently lost
-- **Impact**: User loses 2FA access if 2+ nodes are non-recoverable
-- **Blocks**: Operational deployment
-- **Approach**:
-  - Implement automated PostgreSQL backups (daily snapshots to off-site storage)
-  - Document recovery procedure: restore PostgreSQL backup, restart node
-  - Monitor: ensure all 3 nodes have recent backups
+### Medium: Rate Limiting Implementation
 
-### Graceful Shutdown Implementation
-- **Issue**: Specification requires graceful shutdown for all services, but no implementation is documented
-- **Files**: `*/cmd/app/main.go` (when implemented)
-- **Impact**: Abrupt shutdown can leave connections open, uncommitted transactions, or orphaned Kafka messages
-- **Approach**:
-  - Implement signal handling (SIGTERM): 30-second drain period before shutdown
-  - During drain: stop accepting new requests, finish in-flight requests
-  - Close connections: gRPC listener, PostgreSQL pool, Redis, Kafka producer
-  - Implement HTTP health check endpoint that returns 503 during drain
-  - Document: Docker/Kubernetes should wait for graceful shutdown before force-killing
+**Risk:** 2FA verification limited to 5 attempts per 5 minutes per user_id
 
-### gRPC Health Check Protocol
-- **Issue**: Specification requires Health Check Protocol but no implementation is documented
-- **Files**: Each service's `cmd/app/main.go` (when implemented)
-- **Impact**: Kubernetes/Docker can detect dead services and restart them
-- **Approach**:
-  - Import `google.golang.org/grpc/health/grpc_health_v1`
-  - Register health service in gRPC server
-  - Implement check for each service dependency: PostgreSQL, Redis, MPC nodes (if applicable)
-  - Return SERVING only if all dependencies are healthy
+**Files:** `twofa/internal/services/twofaService/verify.go`, potentially `gateway/` for centralized rate limiting
 
-## Dependency at Risk
+**Problems:**
+- No specification of where rate limiting is enforced (TwoFA Service or Gateway?)
+- Redis integration exists in other services but rate limiting approach undefined
+- No protection against distributed attacks (attacker from multiple IP addresses)
+- No mechanism to unblock false positive lockouts (admin override)
 
-### `golang.org/x/crypto` Version Pinning
-- **Issue**: Cryptographic library must be pinned to known-good version. No version constraints documented
-- **Impact**: Automatic updates via `go get -u` could introduce breaking changes or bugs in crypto code
-- **Recommendation**: 
-  - Pin exact version in `go.mod`: `golang.org/x/crypto v0.X.Y`
-  - Test all crypto operations on upgrade (Shamir, AES, bcrypt, TOTP)
-  - Subscribe to golang security mailing list for crypto package updates
+**Current Mitigation:**
+- Specification states requirement clearly
+- Redis available for distributed state
 
-### Custom Shamir Implementation Instead of Established Library
-- **Issue**: Decision (ADR-002) to implement Shamir from scratch, not using battle-tested libraries
-- **Impact**: Maintainability, security audit difficulty, risk of cryptographic bugs
-- **Migration plan** (if risk becomes unacceptable):
-  - Consider migration to `github.com/shamirsecretsharing/go-shamir` if available and trustworthy
-  - Would require extensive testing to ensure binary-compatible share format
-  - Document in ADR why migration was done (if ever attempted)
+**Recommendations:**
+- Implement in TwoFA Service using Redis key: `2fa_verify_attempts:{user_id}`
+- Use INCR with expiry: increment counter, set TTL to 5 minutes if new key
+- Return gRPC status `ResourceExhausted` when limit reached
+- Add Prometheus metric: `twofa_rate_limit_exceeded_total`
+- Document: this prevents brute force on same user_id but not distributed attacks
+- Consider adding optional admin override mechanism (flag in service to disable limit)
 
-## Summary of Priorities
+---
 
-| Category | Count | Status |
-|----------|-------|--------|
-| Critical | 5 | Shamir GF(256), TOTP secrets, JWT keys, AES nonces, Rate limiting |
-| High | 6 | Password validation, MPC auth, TLS/mTLS, Memory zeroization, Backup codes, Graceful shutdown |
-| Medium | 7 | TOTP URI security, MPC node recovery, Scaling, Logging verification, Token revocation |
-| Low | 4 | Clock sync, Share recovery limitations, Hash cost, Code fragility |
+## Architecture & Design Concerns
 
-**Recommended next steps before any production deployment:**
-1. Implement and test all cryptographic modules with external review
-2. Implement comprehensive test suite (unit + integration) for all critical paths
-3. Implement rate limiting with Redis atomicity guarantees
-4. Implement graceful shutdown and health checks
-5. Conduct security audit by external cryptography expert
-6. Set up monitoring and alerting for all MPC nodes
-7. Document operational procedures (backups, key rotation, node recovery)
+### High: Cross-Service Communication Resilience
+
+**Risk:** TwoFA Service must contact 3 MPC nodes in parallel; one failure fails entire operation
+
+**Files:** `twofa/internal/services/twofaService/setup.go`, `twofa/internal/clients/mpc/client.go`
+
+**Problems:**
+- Specification: "Если хотя бы одна нода недоступна — ошибка"
+- This means Setup2FA requires all 3 MPC nodes healthy — tight coupling
+- No retry mechanism specified
+- No circuit breaker for failing nodes
+- Timeout set to 5 seconds per call; no adaptive backoff
+
+**Current Mitigation:**
+- Design specifies 5-second timeout and parallel calls
+- Specification explicitly requires all 3 nodes available
+
+**Recommendations:**
+- Implement retry logic with exponential backoff:
+  ```
+  Attempt 1: immediate
+  Attempt 2: 100ms delay
+  Attempt 3: 200ms delay
+  Max total time: 5 seconds
+  ```
+- Add circuit breaker pattern for nodes (track consecutive failures)
+- Document that system cannot operate with < 3 healthy MPC nodes
+- Add metrics to monitor node health:
+  - `twofa_mpc_node_availability` (per node)
+  - `twofa_mpc_share_operation_failures_total` (operation, node, reason)
+- Recommendation: Consider fallback for future resilience (not in current spec, but design for it):
+  - Could use 3-of-5 instead of 2-of-3 to tolerate 2 node failures
+  - Would add complexity; only consider if high availability required
+
+---
+
+### High: Error Handling Consistency Across Services
+
+**Risk:** Four services with different error contexts; no unified error handling pattern yet
+
+**Files:** All `internal/api/*_service_api/*.go` handler files (not yet created)
+
+**Problems:**
+- Specification requires gRPC status codes: `InvalidArgument, NotFound, Unauthenticated, AlreadyExists, Internal`
+- No documented mapping from business logic errors to gRPC statuses
+- No error context/tracing (e.g., request ID propagation)
+- Duplicate error handling code across services
+
+**Current Mitigation:**
+- Specification defines allowed status codes
+
+**Recommendations:**
+- Create shared error mapping interface (e.g., in `pkg/errors/` if shared) or document per-service:
+  - `InvalidArgument`: validation failure (password policy, OTP invalid)
+  - `NotFound`: resource doesn't exist (user, session, 2FA record)
+  - `Unauthenticated`: token invalid/expired (ValidateToken failure)
+  - `AlreadyExists`: duplicate email, 2FA already enabled
+  - `Internal`: database error, MPC node failure, crypto error
+- Implement request ID logging:
+  - Add `request_id` to gRPC metadata from Gateway
+  - Include in all logs for tracing
+  - Return in gRPC response metadata
+- Document error codes and messages in service documentation
+
+---
+
+### Medium: Database Initialization & Schema Consistency
+
+**Risk:** Four services use PostgreSQL; schema initialization via code-based `initTables()`
+
+**Files:** `auth/internal/storage/pgstorage/pgstorage.go`, `twofa/internal/storage/pgstorage/pgstorage.go`, `mpc/internal/storage/pgstorage/pgstorage.go`
+
+**Problems:**
+- No migration framework specified (Flyway, golang-migrate, or raw SQL)
+- Schema changes require code restart
+- Multiple services may try to initialize tables concurrently
+- No version tracking of schema
+- Testing requires seeding test data
+
+**Current Mitigation:**
+- Design specifies `initTables` pattern
+- Each service has its own storage layer
+
+**Recommendations:**
+- Implement idempotent initialization:
+  ```go
+  // Use CREATE TABLE IF NOT EXISTS
+  // Check current schema version before migrations
+  ```
+- Add schema version table:
+  ```sql
+  CREATE TABLE IF NOT EXISTS schema_version (
+    service VARCHAR(50) PRIMARY KEY,
+    version INT NOT NULL,
+    applied_at TIMESTAMP NOT NULL
+  );
+  ```
+- Document expected schema for each service in service documentation (`workspace/02 - Services/`)
+- Create separate database user per service (auth, twofa, mpc) with minimal permissions
+- Test with concurrent service startup to catch race conditions
+
+---
+
+## Testing & Quality Concerns
+
+### High: Incomplete Test Coverage Specification
+
+**Risk:** Testing requirements documented but scope undefined
+
+**Files:** All service test files (not yet created), `auth/internal/services/authService/password_validation_test.go`, `twofa/internal/services/twofaService/shamir/shamir_test.go`
+
+**Problems:**
+- Specification requires tests for: password validation, Shamir split/combine, TOTP, AES-256-GCM
+- No integration test framework specified (testcontainers? Docker Compose?)
+- No e2e test specification (Frontend through all services)
+- Test coverage targets not defined
+- Mocking strategy for external services (Redis, Kafka, PostgreSQL) not documented
+
+**Current Mitigation:**
+- TODO.md explicitly lists test tasks
+
+**Recommendations:**
+- Define minimum coverage targets:
+  - `auth`: 90% for password validation, JWT generation; 80% overall
+  - `twofa`: 95% for Shamir (critical), 90% for TOTP, 80% overall
+  - `mpc`: 95% for AES-256-GCM, 80% overall
+  - `gateway`: 70% (less critical, mostly routing)
+- Implement unit tests using Go's standard testing package:
+  - Create `*_test.go` files in same package as code
+  - Use interfaces for dependency injection in tests
+- Integration tests:
+  - Use `testcontainers-go` for PostgreSQL, Redis, Kafka
+  - Or `docker-compose.test.yaml` with test script
+- E2E tests:
+  - Separate test suite using gRPC client libraries
+  - May require dedicated test environment
+
+---
+
+### Medium: Secrets in Test Fixtures & Logs
+
+**Risk:** Test data may accidentally include realistic credentials
+
+**Files:** All test files (e.g., password_validation_test.go, shamir_test.go)
+
+**Problems:**
+- Tests for password validation need valid/invalid examples
+- Tests for Shamir need actual secret bytes
+- Test output (logs, error messages) must not expose secrets
+- CI/CD logs may be world-readable
+
+**Current Mitigation:**
+- Specification forbids logging secrets
+
+**Recommendations:**
+- For password tests: use clearly dummy passwords (`ValidPassword1!`, `Invalid`, etc.)
+- For cryptographic tests: use fixed test vectors (not random secrets)
+  - Example: `secret := []byte{0x01, 0x02, ...}` with documentation
+- Review all test files before commit:
+  - Search for actual email addresses, tokens, keys
+  - Use constants for repeated test data
+- Configure test output verbosity:
+  - Run tests with `-v` flag only in CI for debugging
+  - Default test runs suppress sensitive output
+
+---
+
+## Infrastructure & Deployment Concerns
+
+### High: Configuration Management Across Services
+
+**Risk:** Four independent services with separate `config.yaml` files; no centralized configuration
+
+**Files:** `auth/config.yaml`, `twofa/config.yaml`, `mpc/config.yaml`, `gateway/config.yaml`
+
+**Problems:**
+- Each service has its own configuration file
+- Cross-service settings (e.g., MPC node addresses in TwoFA config) must be kept in sync
+- Environment-specific configurations (dev, staging, prod) not addressed
+- No validation of configuration completeness at startup
+- Secrets (database passwords, encryption keys) unclear whether in config or environment
+
+**Current Mitigation:**
+- Design specifies `config.yaml` with `gopkg.in/yaml.v3`
+- Specification mentions `ENCRYPTION_KEY` as environment variable
+
+**Recommendations:**
+- Separate secrets from configuration:
+  - `config.yaml`: non-sensitive settings (service addresses, timeouts, rate limits)
+  - Environment variables: secrets (database password, Redis password, encryption keys, JWT keys)
+- Implement configuration validation at startup:
+  ```go
+  func (c *Config) Validate() error {
+      if c.PostgreSQL.DSN == "" {
+          return fmt.Errorf("missing POSTGRES_DSN")
+      }
+      // ... validate all required fields
+  }
+  ```
+- Document required environment variables per service (e.g., in README or `.env.example`)
+- For MPC node addresses in TwoFA config:
+  - Consider environment variable override: `TWOFA_MPC_NODES=node1:5001,node2:5002,node3:5003`
+  - Or service discovery mechanism (future enhancement)
+
+---
+
+### Medium: Kafka Reliability & Message Ordering
+
+**Risk:** Kafka used for audit events but reliability strategy undefined
+
+**Files:** `auth/internal/bootstrap/kafka_producer.go`, `twofa/internal/bootstrap/kafka_producer.go`, `mpc/internal/bootstrap/kafka_producer.go`
+
+**Problems:**
+- No specification of Kafka topic names or schemas
+- Producer configuration not defined (acks, retries, batching)
+- No consumer implementation for audit log processing (generates events but who reads them?)
+- Message ordering across services not guaranteed
+- Failed sends not handled (fire-and-forget? retry?)
+
+**Current Mitigation:**
+- Design includes Kafka integration
+- Services produce events: `user.registered`, `user.logged_in`, `token.refreshed`, `2fa.verified`, etc.
+
+**Recommendations:**
+- Define Kafka topics and schemas:
+  - Topic: `auth-events` (Partitions: 3 for parallelism)
+  - Topic: `twofa-events`
+  - Topic: `mpc-events`
+  - Topic: `audit-log` (aggregated)
+- Document event schema (JSON):
+  ```json
+  {
+    "user_id": "uuid",
+    "operation": "2fa.verified",
+    "timestamp": "2026-04-11T12:34:56Z",
+    "node_id": "mpc-1"
+  }
+  ```
+- Implement producer with reliability:
+  ```go
+  writer := kafka.NewWriter(kafka.WriterConfig{
+      Brokers: brokerAddrs,
+      Topic: topic,
+      Compression: kafka.Gzip,
+      MaxAttempts: 3,
+      WriteBackoffMin: 100 * time.Millisecond,
+      WriteBackoffMax: 1 * time.Second,
+  })
+  ```
+- Add error handling:
+  - Log failed sends as errors (don't panic)
+  - Metric: `kafka_produce_failures_total`
+- Document that audit events are best-effort (not transactional with database operations)
+
+---
+
+### Medium: Redis Session & Rate Limit Management
+
+**Risk:** Redis used for refresh tokens and rate limiting; no persistence strategy
+
+**Files:** `auth/internal/storage/redisstorage/session.go`, `twofa/` (rate limiting)
+
+**Problems:**
+- Redis is in-memory; restart loses all sessions
+- Refresh tokens become invalid if Redis cluster goes down
+- No backup/persistence strategy specified (RDB snapshots, AOF)
+- Rate limit state lost on restart (minor risk, resets limit)
+- No eviction policy specified (what happens when Redis runs out of memory?)
+
+**Current Mitigation:**
+- Design accepts Redis for temporary state
+- TTL specified: refresh tokens 7 days, rate limits 5 minutes
+
+**Recommendations:**
+- Document Redis deployment expectations:
+  - Persistence: enable AOF (append-only file) for production
+  - Memory limit with eviction policy: `allkeys-lru` or `volatile-lru`
+  - Replication: use Redis Sentinel or Cluster for HA
+- Implement graceful degradation:
+  - If Redis unavailable for rate limiting: log warning, allow request (degrade to no limiting)
+  - If Redis unavailable for refresh tokens: return 503 Service Unavailable
+- Metrics to monitor:
+  - `redis_connection_errors_total`
+  - `redis_operation_duration_seconds` (histogram by operation)
+
+---
+
+## Specification & Documentation Concerns
+
+### Medium: Incomplete Gateway Specification
+
+**Risk:** API Gateway specified but implementation details minimal
+
+**Files:** `gateway/` (entire service)
+
+**Problems:**
+- Gateway exists in directory structure but no proto definitions or implementation details
+- REST→gRPC translation not specified (request/response mapping)
+- Rate limiting placement unclear: Gateway or individual services?
+- Authentication enforcement (ValidateToken) not detailed
+- CORS, request validation, response formatting not documented
+- Error response format not standardized
+
+**Current Mitigation:**
+- Architecture diagram shows Gateway as entry point
+- CLAUDE.md mentions "REST→gRPC, rate limiting"
+
+**Recommendations:**
+- Create API specification document (`workspace/02 - Services/API Gateway.md`):
+  - Define REST endpoint mappings (e.g., `POST /api/auth/register` → `AuthService.Register`)
+  - Document request/response formats
+  - Specify authentication flow (Authorization header with access token)
+- Implement Gateway patterns:
+  - Use gRPC protocol buffers for service definitions
+  - Add reverse proxy middleware (e.g., grpc-gateway for REST→gRPC)
+  - Centralized request validation & rate limiting at Gateway
+  - Consistent error response format (JSON):
+    ```json
+    {
+      "error": "INVALID_ARGUMENT",
+      "message": "Email already registered",
+      "request_id": "uuid"
+    }
+    ```
+
+---
+
+### Medium: TOTP Provisioning & QR Code Generation
+
+**Risk:** Setup2FA returns provisioning URI but client-side implementation undefined
+
+**Files:** `twofa/internal/services/twofaService/totp/totp.go`
+
+**Problems:**
+- Specification requires "provisioning URI (otpauth://totp/...)"
+- QR code generation not mentioned (frontend responsibility?)
+- What if user loses their authenticator app before verifying 2FA?
+- Backup codes specification vague ("generate 10 backup-codes, hash each")
+- Backup code usage/rotation not documented
+
+**Current Mitigation:**
+- TOTP RFC 6238 documentation created (`workspace/03 - Security/TOTP RFC 6238.md`)
+- 10 backup codes generated in Setup2FA
+
+**Recommendations:**
+- Document provisioning URI generation:
+  - Format: `otpauth://totp/user%40example.com?secret=JBSWY3DPEBLW64TMMQ======&issuer=MPC2FA`
+  - Library: `github.com/pquerna/otp` can generate this
+  - Frontend: generate QR code from URI (client-side library: `qrcode.js`)
+- Handle Setup2FA cancellation:
+  - If user doesn't verify within 24 hours, delete shares and metadata
+  - Implement background job: `SELECT * FROM twofa_records WHERE is_enabled=false AND created_at < now() - interval '24 hours'`
+  - Delete shares from MPC nodes and record from database
+- Document backup codes:
+  - Format: random 8-character alphanumeric (generated at setup)
+  - Hashed with bcrypt (same as password) before storage
+  - One-time use: increment `used_count`, disable when >= 10
+  - Store `created_at, used_at, used_count` for audit
+  - User must save during setup (shown once, not retrieved later)
+
+---
+
+## Missing Features & Future Risks
+
+### Medium: No Admin/Support Operations Defined
+
+**Risk:** Production systems require administrative capabilities; not in spec
+
+**Problems:**
+- What if user loses access to authenticator app?
+- How does support reset/disable 2FA for a user?
+- No admin console or API endpoints specified
+- Audit log is write-only; no query interface
+
+**Recommendations:**
+- Define admin operations (for future phases):
+  - `AdminDisable2FA(user_id)` — force-disable without verification
+  - `AdminResetPassword(user_id)` — if email recovery needed
+  - `AuditLog.Query(user_id, operation, date_range)` — read audit events
+- Require strong authentication for admin endpoints (e.g., different API key)
+- Log all admin operations with separate audit trail
+
+---
+
+### Medium: No Account Recovery Mechanism
+
+**Risk:** If user forgets password AND loses authenticator, account is permanently locked
+
+**Problems:**
+- Specification does not include email verification or password reset
+- 2FA cannot be disabled without valid OTP
+- No recovery codes beyond 10 backup codes (all may be used)
+- No way to regain access if locked out
+
+**Current Mitigation:**
+- Backup codes allow recovery if authenticator lost
+- Specification explicitly forbids "email verification, OAuth, SSO"
+
+**Recommendations:**
+- For scope creep: consider in future
+- Current design acceptable for PoC/thesis but document limitation
+- Recommend: implement phone-based recovery or trusted device tokens in future phases
+
+---
+
+### Low: Monitoring & Alerting Not Specified
+
+**Risk:** Prometheus configured in stack but dashboards/alerts undefined
+
+**Problems:**
+- No alert thresholds specified
+- No runbook for common failures
+- No SLO/SLA targets
+
+**Current Mitigation:**
+- Prometheus + Grafana available
+- Specification requires metrics in each service
+
+**Recommendations:**
+- Define critical alerts:
+  - MPC node down (affects 2FA setup/verify)
+  - PostgreSQL connection failures
+  - Redis unavailable
+  - Kafka producer failures
+  - Auth token generation failures
+- Create Grafana dashboard:
+  - Service health (request rate, error rate, latency)
+  - Resource usage (CPU, memory, connections)
+  - Business metrics (registrations/day, 2FA setups, failures)
+
+---
+
+## Code Quality Observations
+
+### Medium: No Linting/Formatting Standards Defined
+
+**Problems:**
+- No `.eslintrc`, `.prettierrc`, or Go linting configuration specified
+- Import organization not documented
+- Naming conventions not explicit (camelCase, snake_case?)
+
+**Recommendations:**
+- Add `.golangci.yml` for linter configuration:
+  ```yaml
+  linters:
+    enable:
+      - errcheck
+      - govet
+      - ineffassign
+      - unused
+      - staticcheck
+  ```
+- Define Go code style:
+  - Use `gofmt` standard (enforced)
+  - Use `go vet` for common errors
+  - Add pre-commit hooks in `.git/hooks/pre-commit`
+- Document naming conventions in CONVENTIONS.md
+
+---
+
+## Summary Table
+
+| Concern | Severity | Status | File(s) |
+|---------|----------|--------|---------|
+| Shamir implementation correctness | Critical | Not started | `twofa/internal/services/twofaService/shamir/` |
+| TOTP secret memory safety | Critical | Not started | `twofa/internal/services/twofaService/` |
+| JWT key management | High | Not started | `auth/internal/services/authService/jwt.go` |
+| AES-256-GCM nonce management | High | Not started | `mpc/internal/crypto/aes.go` |
+| MPC node resilience | High | Not started | `twofa/internal/services/twofaService/setup.go` |
+| Error handling consistency | High | Not started | All service handlers |
+| Rate limiting implementation | Medium | Not started | `twofa/internal/services/twofaService/verify.go` |
+| Database schema initialization | Medium | Not started | All `pgstorage` packages |
+| Test coverage specification | High | Not started | All test files |
+| Configuration management | High | Not started | All `config.yaml` files |
+| Kafka reliability | Medium | Not started | All kafka producer files |
+| Redis persistence | Medium | Not started | `auth/internal/storage/redisstorage/` |
+| Gateway implementation | Medium | Not started | `gateway/` |
+| TOTP provisioning & backup codes | Medium | Not started | `twofa/internal/services/twofaService/totp/` |
+| Admin operations | Medium | Future phase | Not applicable |
+| Account recovery | Medium | Out of scope | Not applicable |
+| Monitoring & alerting | Low | Not started | `monitoring/` |
 
 ---
 

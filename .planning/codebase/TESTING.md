@@ -5,54 +5,77 @@
 ## Test Framework
 
 **Runner:**
-- `go test` (Go standard testing framework)
-- No external test framework required
-- Config: Tests discovered automatically in `*_test.go` files
+- **Framework**: `testing` (Go built-in standard library)
+- **Config**: No separate config file — test discovery is automatic
+- **Test discovery**: Any file matching `*_test.go` in the same package is discovered automatically
+- **Execution**: `go test ./...` or `go test -v ./...` with verbose output
 
 **Assertion Library:**
-- No external assertion library (use standard `if` comparisons + `t.Errorf()`)
-- Pattern: Explicit error messages for failures
+- **Approach**: Manual assertions using `if`, `reflect.DeepEqual()`, or custom helpers
+- **No external assertion libraries** (keeping dependencies minimal)
+- **Example**:
+  ```go
+  if err != nil {
+    t.Errorf("expected no error, got %v", err)
+  }
+  
+  if !reflect.DeepEqual(result, expected) {
+    t.Errorf("expected %v, got %v", expected, result)
+  }
+  ```
 
 **Run Commands:**
 ```bash
-go test ./...              # Run all tests
-go test -v ./...           # Verbose output with test names
-go test -run TestName ./...# Run specific test by name
-go test -cover ./...       # Show coverage percentage
-go test -coverprofile=coverage.out ./...  # Generate coverage profile
-go tool cover -html=coverage.out          # View coverage in browser
-go test -race ./...        # Run with race detector
-go test -timeout 10s ./...  # Set timeout (default 10m)
+go test ./...              # Run all tests in all packages
+go test -v ./...           # Run all tests with verbose output
+go test -race ./...        # Run all tests with race detector enabled
+go test -cover ./...       # Run all tests and show coverage summary
+go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out  # Generate HTML coverage report
+go test ./internal/services/authService/...  # Run tests in specific package
+go test -run TestPasswordValidation ./...    # Run only tests matching pattern
+go test -timeout 30s ./... # Run tests with 30-second timeout
 ```
 
 ## Test File Organization
 
 **Location:**
-- Co-located with implementation: `password_validation_test.go` next to `password_validation.go`
-- Tests in same package as code being tested (e.g., `authservice_test` package for `authservice` code)
+- **Co-located pattern** — test files live in the same package as implementation
+- **Example structure**:
+  ```
+  internal/services/authService/
+  ├── auth_service.go
+  ├── register.go
+  ├── login.go
+  ├── password_validation.go
+  └── password_validation_test.go    # test for password_validation.go
+  ```
 
 **Naming:**
-- File: `<module>_test.go`
-- Test function: `Test<FunctionName>` (e.g., `TestValidatePassword`, `TestRegister`, `TestGenerateToken`)
-- Subtests: Use `t.Run("scenario", func(t *testing.T) { ... })` for variations
+- `<implementation>_test.go` (e.g., `password_validation_test.go`)
+- Test functions: `Test<FunctionName>` (e.g., `TestValidatePassword`, `TestValidatePasswordInvalidLength`)
+- Subtests: `t.Run("description", func(t *testing.T) { ... })`
 
 **Structure:**
 ```
-auth/
-├── internal/
-│   ├── services/
-│   │   └── authservice/
-│   │       ├── auth_service.go
-│   │       ├── register.go
-│   │       ├── login.go
-│   │       ├── password_validation.go
-│   │       ├── password_validation_test.go    # Tests for password_validation.go
-│   │       └── auth_service_test.go           # Tests for auth_service.go (integration-style)
-│   ├── storage/
-│   │   └── pgstorage/
-│   │       ├── pgstorage.go
-│   │       ├── user.go
-│   │       └── user_test.go                   # Tests for user.go
+internal/
+├── services/
+│   └── authService/
+│       ├── password_validation.go
+│       ├── password_validation_test.go   # Tests for password validation rules
+│       ├── shamir/
+│       │   ├── shamir.go
+│       │   └── shamir_test.go            # Tests for Shamir split/combine
+│       └── totp/
+│           ├── totp.go
+│           └── totp_test.go              # Tests for TOTP generation/validation
+├── storage/
+│   └── pgstorage/
+│       ├── user.go
+│       ├── session.go
+│       └── ... (repository tests would go here if using integration testing)
+└── crypto/
+    ├── aes.go
+    └── aes_test.go                       # Tests for AES encryption/decryption
 ```
 
 ## Test Structure
@@ -60,514 +83,578 @@ auth/
 **Suite Organization:**
 ```go
 // password_validation_test.go
-package authservice
+package authService
 
-import (
-    "testing"
-)
+import "testing"
 
 func TestValidatePassword(t *testing.T) {
-    tests := []struct {
-        name      string
-        password  string
-        wantError bool
-        errMsg    string
-    }{
-        {
-            name:      "valid password",
-            password:  "MyP@ssw0rd123",
-            wantError: false,
-        },
-        {
-            name:      "too short",
-            password:  "Short1!",
-            wantError: true,
-            errMsg:    "password must be at least 12 characters",
-        },
-        {
-            name:      "no uppercase",
-            password:  "mypassword123!",
-            wantError: true,
-            errMsg:    "password must contain at least one uppercase letter",
-        },
-        {
-            name:      "sequential digits",
-            password:  "MyPass1234!",
-            wantError: true,
-            errMsg:    "password contains 4 sequential characters",
-        },
-    }
-
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            err := ValidatePassword(tt.password)
-            if (err != nil) != tt.wantError {
-                t.Errorf("ValidatePassword() error = %v, wantError %v", err, tt.wantError)
-            }
-            if tt.wantError && err != nil && tt.errMsg != "" {
-                if err.Error() != tt.errMsg {
-                    t.Errorf("ValidatePassword() error message = %q, want %q", err.Error(), tt.errMsg)
-                }
-            }
-        })
-    }
+  tests := []struct {
+    name      string
+    password  string
+    wantError bool
+    reason    string
+  }{
+    {
+      name:      "valid_password",
+      password:  "SecureP@ss123",
+      wantError: false,
+    },
+    {
+      name:      "too_short",
+      password:  "Short@1",
+      wantError: true,
+      reason:    "less than 12 characters",
+    },
+    {
+      name:      "no_uppercase",
+      password:  "securepass@ss1",
+      wantError: true,
+      reason:    "missing uppercase letter",
+    },
+    // ... more test cases
+  }
+  
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      err := ValidatePassword(tt.password)
+      if (err != nil) != tt.wantError {
+        t.Errorf("ValidatePassword() error = %v, wantError %v", err, tt.wantError)
+      }
+    })
+  }
 }
 ```
 
 **Patterns:**
-- Setup: Initialize fixtures in test function (not shared setup) to keep tests independent
-- Teardown: Defer cleanup operations (e.g., `defer db.Close()`)
-- Assertion: Use `if ... t.Errorf(...)` pattern, never `t.Fatal()` unless test must stop
-- Subtest loop: Table-driven tests with `t.Run()` for organization
+- **Setup/Teardown**: Use `func setup()` and `func teardown()` for test-wide setup
+  ```go
+  func setup() *TestContext {
+    // Initialize test database, mocks, etc.
+    return &TestContext{...}
+  }
+  
+  func TestSomething(t *testing.T) {
+    ctx := setup()
+    defer ctx.teardown()
+    
+    // Test code
+  }
+  ```
+- **Table-driven tests**: Use struct slice for multiple test cases (see example above)
+- **Assertions**: Use helper functions for common checks
+  ```go
+  func assertError(t *testing.T, got error, want error) {
+    if !errors.Is(got, want) {
+      t.Errorf("expected %v, got %v", want, got)
+    }
+  }
+  
+  func assertEqual(t *testing.T, got, want interface{}) {
+    if !reflect.DeepEqual(got, want) {
+      t.Errorf("expected %v, got %v", want, got)
+    }
+  }
+  ```
 
-**Example with Subtests:**
+## Unit Tests
+
+**Scope**: Single function/method in isolation
+
+**Approach**:
+- **Mock external dependencies**: Interfaces are mocked in-memory
+- **No database access**: Use in-memory doubles or pass mock implementations
+- **Fast execution**: Milliseconds per test
+- **Deterministic**: No randomness, controlled inputs
+
+**Example** (`internal/services/authService/password_validation_test.go`):
 ```go
-func TestRegister(t *testing.T) {
-    t.Run("successful registration", func(t *testing.T) {
-        // Setup
-        mockRepo := &mockUserRepository{}
-        service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
+package authService
 
-        // Execute
-        user, err := service.Register(context.Background(), "user@example.com", "SecurePass123!")
+import "testing"
 
-        // Assert
-        if err != nil {
-            t.Errorf("Register() unexpected error: %v", err)
-        }
-        if user == nil {
-            t.Errorf("Register() returned nil user")
-        }
-        if user.Email != "user@example.com" {
-            t.Errorf("Register() email = %q, want %q", user.Email, "user@example.com")
-        }
+func TestValidatePassword_MinimumLength(t *testing.T) {
+  tests := []struct {
+    password string
+    wantErr  bool
+  }{
+    {"Secure@Pass1", false},  // 12 chars — valid
+    {"Secur@Pass1", true},     // 11 chars — too short
+    {"SecureP@ss1", false},    // 12 chars exactly — valid
+  }
+  
+  for _, tt := range tests {
+    err := ValidatePassword(tt.password)
+    if (err != nil) != tt.wantErr {
+      t.Errorf("password %q: error = %v, wantErr %v", tt.password, err != nil, tt.wantErr)
+    }
+  }
+}
+
+func TestValidatePassword_SequenceDetection(t *testing.T) {
+  tests := []struct {
+    password string
+    wantErr  bool
+    desc     string
+  }{
+    {"Pass@1234word", true, "numeric sequence 1234"},
+    {"Pass@1233word", false, "numeric sequence 3 chars"},
+    {"Pass@abcdword", true, "alphabetic sequence abcd"},
+    {"Pass@abcword", false, "alphabetic sequence 3 chars"},
+    {"Qwer@Pass1234", true, "keyboard sequence qwer"},
+  }
+  
+  for _, tt := range tests {
+    err := ValidatePassword(tt.password)
+    if (err != nil) != tt.wantErr {
+      t.Errorf("%s: password %q error = %v, wantErr %v", tt.desc, tt.password, err, tt.wantErr)
+    }
+  }
+}
+```
+
+**Mocking Pattern** (for services with dependencies):
+```go
+// In password_validation_test.go or separate mock file
+type mockStorage struct {
+  calls map[string]int
+  users map[string]*User
+}
+
+func (m *mockStorage) GetByEmail(ctx context.Context, email string) (*User, error) {
+  m.calls["GetByEmail"]++
+  if user, ok := m.users[email]; ok {
+    return user, nil
+  }
+  return nil, ErrNotFound
+}
+
+func TestRegister_DuplicateEmail(t *testing.T) {
+  mock := &mockStorage{
+    calls: make(map[string]int),
+    users: map[string]*User{
+      "existing@example.com": {Email: "existing@example.com"},
+    },
+  }
+  
+  svc := &AuthService{storage: mock}
+  _, err := svc.Register(context.Background(), "existing@example.com", "ValidP@ss123")
+  
+  if err != ErrEmailExists {
+    t.Errorf("expected ErrEmailExists, got %v", err)
+  }
+  if mock.calls["GetByEmail"] != 1 {
+    t.Errorf("expected GetByEmail to be called once, was called %d times", mock.calls["GetByEmail"])
+  }
+}
+```
+
+## Integration Tests (Limited)
+
+**Scope**: Multiple components working together (e.g., service + repository)
+
+**Approach**:
+- **Real PostgreSQL test database**: Use `docker-compose.test.yaml` with PostgreSQL container
+- **Setup/teardown**: Spin up container before tests, clean up after
+- **Not the primary testing method** — focus on unit tests for speed
+
+**Example pattern** (if needed):
+```go
+// database_test.go (only if doing database integration testing)
+func TestGetUserIntegration(t *testing.T) {
+  if testing.Short() {
+    t.Skip("skipping integration test")
+  }
+  
+  // Setup: connect to test database
+  pool := setupTestDB(t)
+  defer pool.Close()
+  
+  storage := NewPGStorage(pool)
+  
+  // Test
+  user := &User{ID: uuid.New(), Email: "test@example.com", ...}
+  err := storage.CreateUser(context.Background(), user)
+  if err != nil {
+    t.Fatalf("CreateUser failed: %v", err)
+  }
+  
+  retrieved, err := storage.GetByEmail(context.Background(), "test@example.com")
+  if err != nil {
+    t.Fatalf("GetByEmail failed: %v", err)
+  }
+  
+  if retrieved.ID != user.ID {
+    t.Errorf("expected ID %v, got %v", user.ID, retrieved.ID)
+  }
+}
+```
+
+## Testing Cryptographic Functions
+
+**Shamir Secret Sharing Tests** (`internal/services/twofaService/shamir/shamir_test.go`):
+
+```go
+package shamir
+
+import (
+  "bytes"
+  "testing"
+)
+
+func TestSplit_Basic(t *testing.T) {
+  secret := []byte("supersecretdata")
+  n := 3    // total shares
+  threshold := 2  // minimum shares to recover
+  
+  shares := Split(secret, n, threshold)
+  
+  if len(shares) != n {
+    t.Errorf("expected %d shares, got %d", n, len(shares))
+  }
+  
+  for i, share := range shares {
+    if share == nil || len(share) == 0 {
+      t.Errorf("share %d is empty", i)
+    }
+  }
+}
+
+func TestSplit_Combine_AnyTwo(t *testing.T) {
+  secret := []byte("supersecretdata")
+  shares := Split(secret, 3, 2)
+  
+  tests := []struct {
+    name   string
+    indices []int  // which shares to use
+  }{
+    {"shares_0_1", []int{0, 1}},
+    {"shares_0_2", []int{0, 2}},
+    {"shares_1_2", []int{1, 2}},
+  }
+  
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      selected := make([][]byte, 0, len(tt.indices))
+      for _, i := range tt.indices {
+        selected = append(selected, shares[i])
+      }
+      
+      recovered, err := Combine(selected)
+      if err != nil {
+        t.Fatalf("Combine failed: %v", err)
+      }
+      
+      if !bytes.Equal(recovered, secret) {
+        t.Errorf("recovered secret doesn't match original")
+      }
     })
+  }
+}
 
-    t.Run("duplicate email returns error", func(t *testing.T) {
-        // Setup
-        mockRepo := &mockUserRepository{
-            getByEmailErr: ErrUserAlreadyExists,
-        }
-        service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
+func TestSplit_OnlyOneShare_Fails(t *testing.T) {
+  secret := []byte("supersecretdata")
+  shares := Split(secret, 3, 2)
+  
+  // Attempt to recover with only 1 share (threshold=2)
+  recovered, err := Combine([][]byte{shares[0]})
+  
+  if err == nil {
+    t.Fatal("expected error when combining only 1 share with threshold=2")
+  }
+  
+  if len(recovered) > 0 {
+    t.Errorf("should not recover secret with insufficient shares")
+  }
+}
 
-        // Execute
-        user, err := service.Register(context.Background(), "existing@example.com", "SecurePass123!")
+func TestSplit_AllThreeShares(t *testing.T) {
+  secret := []byte("supersecretdata")
+  shares := Split(secret, 3, 2)
+  
+  // Should work with all 3 shares too
+  recovered, err := Combine(shares)
+  if err != nil {
+    t.Fatalf("Combine with all shares failed: %v", err)
+  }
+  
+  if !bytes.Equal(recovered, secret) {
+    t.Errorf("recovered secret doesn't match original")
+  }
+}
+```
 
-        // Assert
-        if err == nil {
-            t.Errorf("Register() expected error for duplicate email, got nil")
-        }
-        if user != nil {
-            t.Errorf("Register() should return nil user on error")
-        }
-        if !errors.Is(err, ErrUserAlreadyExists) {
-            t.Errorf("Register() error = %v, want ErrUserAlreadyExists", err)
-        }
+**TOTP Tests** (`internal/services/twofaService/totp/totp_test.go`):
+
+```go
+package totp
+
+import (
+  "testing"
+  "time"
+)
+
+func TestGenerateSecret(t *testing.T) {
+  secret := GenerateSecret()
+  
+  if len(secret) != 20 {
+    t.Errorf("expected 20-byte secret, got %d", len(secret))
+  }
+  
+  // Ensure it's not empty/all zeros
+  zero := make([]byte, 20)
+  if bytes.Equal(secret, zero) {
+    t.Errorf("secret is all zeros")
+  }
+}
+
+func TestGenerateAndVerify(t *testing.T) {
+  secret := GenerateSecret()
+  now := time.Now()
+  
+  // Generate code at current time
+  code := GenerateCode(secret, now)
+  
+  // Should verify at same time
+  if !Verify(secret, code, now) {
+    t.Errorf("failed to verify code at generation time")
+  }
+  
+  // Should verify within ±1 window (±30 sec)
+  if !Verify(secret, code, now.Add(-30*time.Second)) {
+    t.Errorf("failed to verify at -30 sec window")
+  }
+  
+  if !Verify(secret, code, now.Add(30*time.Second)) {
+    t.Errorf("failed to verify at +30 sec window")
+  }
+  
+  // Should NOT verify outside window (±2 periods)
+  if Verify(secret, code, now.Add(-65*time.Second)) {
+    t.Errorf("incorrectly verified code at -65 sec")
+  }
+}
+
+func TestVerify_WrongCode(t *testing.T) {
+  secret := GenerateSecret()
+  now := time.Now()
+  
+  wrongCode := "000000"
+  
+  if Verify(secret, wrongCode, now) {
+    t.Errorf("incorrectly verified wrong code")
+  }
+}
+
+func TestProvisioningURI(t *testing.T) {
+  secret := GenerateSecret()
+  issuer := "MPC-2FA"
+  account := "user@example.com"
+  
+  uri := ProvisioningURI(secret, issuer, account)
+  
+  if !bytes.HasPrefix(uri, []byte("otpauth://totp/")) {
+    t.Errorf("invalid provisioning URI format")
+  }
+  
+  // URI should contain escaped account and issuer
+  if !bytes.Contains(uri, []byte(issuer)) {
+    t.Errorf("provisioning URI missing issuer")
+  }
+}
+```
+
+**AES Encryption Tests** (`internal/crypto/aes_test.go`):
+
+```go
+package crypto
+
+import (
+  "bytes"
+  "testing"
+)
+
+func TestEncryptDecrypt(t *testing.T) {
+  key := make([]byte, 32) // AES-256
+  for i := range key {
+    key[i] = byte(i)
+  }
+  
+  plaintext := []byte("secret data to encrypt")
+  
+  ciphertext, nonce, err := Encrypt(plaintext, key)
+  if err != nil {
+    t.Fatalf("Encrypt failed: %v", err)
+  }
+  
+  // Nonce should be unique and non-empty
+  if len(nonce) != 12 {
+    t.Errorf("expected 12-byte nonce, got %d", len(nonce))
+  }
+  
+  // Decrypt
+  decrypted, err := Decrypt(ciphertext, nonce, key)
+  if err != nil {
+    t.Fatalf("Decrypt failed: %v", err)
+  }
+  
+  if !bytes.Equal(decrypted, plaintext) {
+    t.Errorf("decrypted data doesn't match original")
+  }
+}
+
+func TestDecrypt_WrongKey_Fails(t *testing.T) {
+  key := make([]byte, 32)
+  plaintext := []byte("secret data")
+  
+  ciphertext, nonce, _ := Encrypt(plaintext, key)
+  
+  // Try with different key
+  wrongKey := make([]byte, 32)
+  for i := range wrongKey {
+    wrongKey[i] = 0xFF
+  }
+  
+  _, err := Decrypt(ciphertext, nonce, wrongKey)
+  if err == nil {
+    t.Fatal("expected error when decrypting with wrong key")
+  }
+}
+
+func TestEncrypt_UniquNonce(t *testing.T) {
+  key := make([]byte, 32)
+  plaintext := []byte("data")
+  
+  nonce1 := make([]byte, 0)
+  nonce2 := make([]byte, 0)
+  
+  _, nonce1, _ = Encrypt(plaintext, key)
+  _, nonce2, _ = Encrypt(plaintext, key)
+  
+  if bytes.Equal(nonce1, nonce2) {
+    t.Errorf("nonces should be unique for each encryption")
+  }
+}
+```
+
+## Password Validation Tests
+
+**Complete example** (`internal/services/authService/password_validation_test.go`):
+
+```go
+package authService
+
+import "testing"
+
+func TestValidatePassword_AllRules(t *testing.T) {
+  tests := []struct {
+    name      string
+    password  string
+    wantError bool
+  }{
+    // Valid cases
+    {"all_requirements_met", "MySecure@Pwd123", false},
+    {"special_char_at_end", "ValidPass@123!", false},
+    {"all_special_chars", "P@ssw0rd!#$", false},
+    
+    // Length violations
+    {"too_short_11_chars", "Secur@Pass12", true},
+    {"empty_password", "", true},
+    
+    // Missing uppercase
+    {"no_uppercase", "mysecure@pass123", true},
+    
+    // Missing lowercase
+    {"no_lowercase", "MYSECURE@PASS123", true},
+    
+    // Missing digit
+    {"no_digit", "MySecurePass@", true},
+    
+    // Missing special character
+    {"no_special_char", "MySecurePass123", true},
+    
+    // Sequence violations (4+ chars)
+    {"numeric_sequence_1234", "Seq@1234pass", true},
+    {"numeric_sequence_5678", "Seq@5678pass", true},
+    {"alphabetic_sequence_abcd", "Seq@abcdpass", true},
+    {"alphabetic_sequence_xyz", "Seq@xyzpass", true},
+    {"keyboard_qwer", "Pass@qwerty123", true},
+    {"keyboard_asdf", "Pass@asdfgh123", true},
+    
+    // Sequence accepted (3 chars)
+    {"numeric_3chars_123", "Pass@123456", false},
+    {"alphabetic_3chars_abc", "Pass@abcdef", false},
+    
+    // Reverse sequences
+    {"reverse_numeric_4321", "Seq@4321pass", true},
+    {"reverse_alphabetic_dcba", "Seq@dcbapass", true},
+  }
+  
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      err := ValidatePassword(tt.password)
+      if (err != nil) != tt.wantError {
+        t.Errorf("ValidatePassword(%q) error = %v, wantError %v", tt.password, err, tt.wantError)
+      }
     })
+  }
 }
 ```
 
-## Mocking
+## Error Handling Tests
 
-**Framework:** Manual mocks (interfaces + test implementations, no external library)
-
-**Patterns:**
+**Pattern for testing error cases**:
 ```go
-// Define interface in service package (authservice/auth_service.go)
-type UserRepository interface {
-    GetByEmail(ctx context.Context, email string) (*User, error)
-    Create(ctx context.Context, user *User) error
-    GetByID(ctx context.Context, id string) (*User, error)
-}
-
-// In test file (auth_service_test.go)
-type mockUserRepository struct {
-    getByEmailFunc func(ctx context.Context, email string) (*User, error)
-    createFunc     func(ctx context.Context, user *User) error
-    getByIDFunc    func(ctx context.Context, id string) (*User, error)
-    
-    // Track calls for assertions
-    callsGetByEmail int
-    callsCreate     int
-}
-
-func (m *mockUserRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
-    m.callsGetByEmail++
-    if m.getByEmailFunc != nil {
-        return m.getByEmailFunc(ctx, email)
+func TestRegister_InvalidPassword(t *testing.T) {
+  svc := &AuthService{storage: &mockStorage{}}
+  
+  // Test each password validation failure
+  tests := []struct {
+    password string
+    expectedErr error
+  }{
+    {"short", ErrInvalidPassword},
+    {"NoSpecial123", ErrInvalidPassword},
+    {"Pass@123seq1234", ErrInvalidPassword}, // contains 1234 sequence
+  }
+  
+  for _, tt := range tests {
+    _, err := svc.Register(context.Background(), "user@example.com", tt.password)
+    if !errors.Is(err, tt.expectedErr) {
+      t.Errorf("expected %v, got %v", tt.expectedErr, err)
     }
-    return nil, nil
+  }
 }
-
-func (m *mockUserRepository) Create(ctx context.Context, user *User) error {
-    m.callsCreate++
-    if m.createFunc != nil {
-        return m.createFunc(ctx, user)
-    }
-    return nil
-}
-
-func (m *mockUserRepository) GetByID(ctx context.Context, id string) (*User, error) {
-    if m.getByIDFunc != nil {
-        return m.getByIDFunc(ctx, id)
-    }
-    return nil, nil
-}
-
-// Usage in test
-func TestRegisterCallsRepository(t *testing.T) {
-    mockRepo := &mockUserRepository{
-        getByEmailFunc: func(ctx context.Context, email string) (*User, error) {
-            return nil, nil // Simulate user doesn't exist
-        },
-    }
-    service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
-    
-    service.Register(context.Background(), "new@example.com", "SecurePass123!")
-    
-    if mockRepo.callsGetByEmail != 1 {
-        t.Errorf("Register() should call GetByEmail once, called %d times", mockRepo.callsGetByEmail)
-    }
-}
-```
-
-**What to Mock:**
-- External dependencies: Database (UserRepository), cache (TokenStore), message queue (KafkaProducer)
-- Network calls: Never hit real services in unit tests
-- Time-dependent code: Use `time.Now()` injection or freezegun-style mocking
-- Random values: Seed deterministically in tests
-
-**What NOT to Mock:**
-- Internal business logic: Test the real logic, not a mock of it
-- Password validation: Test the actual algorithm
-- Shamir arithmetic: Test real GF(256) operations (these are security-critical)
-- Error formatting: Test actual error values, not mocked ones
-
-## Fixtures and Factories
-
-**Test Data:**
-```go
-// In auth_service_test.go - factory functions for test data
-func makeTestUser(id, email string) *User {
-    return &User{
-        ID:        id,
-        Email:     email,
-        Password:  "hashedpassword123",
-        CreatedAt: time.Now(),
-    }
-}
-
-func makeTestTokenPair() *TokenPair {
-    return &TokenPair{
-        AccessToken:  "eyJhbGciOiJSUzI1NiJ...",
-        RefreshToken: "refresh_token_123",
-        ExpiresIn:    900, // 15 minutes
-    }
-}
-
-func TestLogin(t *testing.T) {
-    mockRepo := &mockUserRepository{
-        getByEmailFunc: func(ctx context.Context, email string) (*User, error) {
-            return makeTestUser("user123", "user@example.com"), nil
-        },
-    }
-    service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
-    
-    tokens, err := service.Login(context.Background(), "user@example.com", "password")
-    // assertions...
-}
-```
-
-**Location:**
-- Test fixtures: In same file as test, as helper functions
-- Shared fixtures: In `testdata/` subdirectory if reused across multiple test files
-- Database fixtures: Use `fixtures.sql` in `testdata/` or populate via helper functions in tests
-
-**Example fixtures directory:**
-```
-auth/internal/services/authservice/
-├── auth_service.go
-├── auth_service_test.go
-└── testdata/
-    ├── fixtures.sql        # SQL for seeding test database
-    └── golden.json         # Expected output for golden tests (if used)
 ```
 
 ## Coverage
 
-**Requirements:** No hard minimum enforced, but aim for:
-- All service layer (`internal/services/`): 80%+ coverage
-- Handlers (`internal/api/`): 60%+ coverage (mocking calls to services)
-- Storage layer (`internal/storage/`): 70%+ (use test database for integration tests)
-- Utility functions (password validation, etc.): 90%+
+**Requirements:** No strict coverage target enforced, but aim for:
+- 100% coverage of crypto functions (Shamir, TOTP, AES, password validation)
+- 80%+ coverage of service business logic
+- 70%+ coverage overall for critical paths
 
 **View Coverage:**
 ```bash
+# Generate coverage report
 go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out        # Opens browser
+
+# View in terminal
+go tool cover -func=coverage.out
+
+# View in browser (HTML)
 go tool cover -html=coverage.out -o coverage.html
+open coverage.html
 
-# Get coverage for specific package
-go test -coverprofile=coverage.out ./internal/services/authservice/
-go tool cover -func=coverage.out        # Text output by function
+# Coverage by package
+go test -cover ./internal/services/authService/...
 ```
 
-**Uncovered code to avoid:**
-- Main graceful shutdown paths (hard to test, covered by manual testing)
-- Initialization code in `main()` (covered by manual testing)
-- Error cases in database migrations (test in isolation, not in unit tests)
+## What NOT to Test
 
-## Test Types
-
-**Unit Tests:**
-- Scope: Single function or method
-- Approach: Mock all dependencies
-- Location: `*_test.go` file next to implementation
-- Example: Test password validation, token generation, error handling
-- These should run in <1ms per test
-
-**Integration Tests:**
-- Scope: Service layer + real dependencies (test database, redis)
-- Approach: Use test containers or in-memory alternatives
-- Location: Same package, but marked with `// +build integration` tag (or use `TestIntegration` prefix)
-- Example: Test register flow with real database, test token refresh from redis
-- Run separately: `go test -tags integration ./...`
-- Setup: Use `TestMain(m *testing.M)` to initialize test database
-
-**Example Integration Test Setup:**
-```go
-// +build integration
-
-package authservice
-
-import (
-    "testing"
-    "github.com/jackc/pgx/v5/pgxpool"
-)
-
-var testDB *pgxpool.Pool
-
-func TestMain(m *testing.M) {
-    var err error
-    // Connect to test database (e.g., postgres://test:test@localhost:5432/2fa_test)
-    testDB, err = pgxpool.New(context.Background(), os.Getenv("TEST_DATABASE_URL"))
-    if err != nil {
-        panic(err)
-    }
-    defer testDB.Close()
-    
-    // Run migrations
-    // ...
-    
-    code := m.Run()
-    os.Exit(code)
-}
-
-func TestRegisterIntegration(t *testing.T) {
-    if testing.Short() {
-        t.Skip("skipping integration test in short mode")
-    }
-    
-    // Real storage
-    storage := pgstorage.NewPGStorage(testDB)
-    service := NewAuthService(storage, mockTokenStore, mockLogger)
-    
-    user, err := service.Register(context.Background(), "test@example.com", "SecurePass123!")
-    if err != nil {
-        t.Fatalf("Register() failed: %v", err)
-    }
-    
-    // Verify in database
-    retrieved, err := storage.GetByEmail(context.Background(), "test@example.com")
-    if err != nil {
-        t.Fatalf("GetByEmail() failed: %v", err)
-    }
-    if retrieved.ID != user.ID {
-        t.Errorf("Register() user ID = %q, retrieved %q", user.ID, retrieved.ID)
-    }
-}
-```
-
-**E2E Tests:**
-- Not implemented in initial phase
-- If added later: Use gRPC client to test full service workflows
-- Location: Separate `e2e/` directory
-- Tools: Could use `grpcurl` or generated gRPC client
-
-## Common Patterns
-
-**Async Testing:**
-```go
-func TestRefreshTokenConcurrency(t *testing.T) {
-    service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
-    
-    // Test concurrent token refresh
-    done := make(chan bool, 10)
-    for i := 0; i < 10; i++ {
-        go func() {
-            _, err := service.RefreshToken(context.Background(), "refresh_token_123")
-            if err != nil {
-                t.Errorf("RefreshToken() failed: %v", err)
-            }
-            done <- true
-        }()
-    }
-    
-    // Wait for all goroutines
-    for i := 0; i < 10; i++ {
-        <-done
-    }
-}
-```
-
-**Context Testing:**
-```go
-func TestRegisterContextCancellation(t *testing.T) {
-    mockRepo := &mockUserRepository{
-        createFunc: func(ctx context.Context, user *User) error {
-            // Simulate slow operation
-            <-ctx.Done()
-            return context.Canceled
-        },
-    }
-    service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
-    
-    ctx, cancel := context.WithCancel(context.Background())
-    cancel() // Cancel immediately
-    
-    _, err := service.Register(ctx, "test@example.com", "SecurePass123!")
-    if err == nil {
-        t.Errorf("Register() should fail with canceled context")
-    }
-}
-```
-
-**Error Testing:**
-```go
-func TestRegisterErrorHandling(t *testing.T) {
-    tests := []struct {
-        name        string
-        email       string
-        password    string
-        repoErr     error
-        expectedErr error
-    }{
-        {
-            name:        "invalid email",
-            email:       "",
-            password:    "SecurePass123!",
-            expectedErr: ErrInvalidEmail,
-        },
-        {
-            name:        "invalid password",
-            email:       "test@example.com",
-            password:    "short",
-            expectedErr: ErrInvalidPassword,
-        },
-        {
-            name:        "database error",
-            email:       "test@example.com",
-            password:    "SecurePass123!",
-            repoErr:     ErrDatabase,
-            expectedErr: ErrDatabase,
-        },
-    }
-    
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            mockRepo := &mockUserRepository{
-                createFunc: func(ctx context.Context, user *User) error {
-                    return tt.repoErr
-                },
-            }
-            service := NewAuthService(mockRepo, mockTokenStore, mockLogger)
-            
-            _, err := service.Register(context.Background(), tt.email, tt.password)
-            if !errors.Is(err, tt.expectedErr) {
-                t.Errorf("Register() error = %v, want %v", err, tt.expectedErr)
-            }
-        })
-    }
-}
-```
-
-**Secrets Protection in Tests:**
-- Never hardcode real private keys or TOTP secrets
-- Use test keys generated in test setup (e.g., `crypto/rand`)
-- Mock crypto operations where testing algorithm is not the goal
-- Example: Test JWT token expiry with fake key, not real RSA key
-
-## Security-Critical Testing
-
-**Password Validation Tests:**
-- Test all rules: length, character classes, sequence detection
-- Test boundary conditions: exactly 11 chars (fail), exactly 12 chars (pass)
-- Test sequences: "1234", "abcd", "qwer" and reverse sequences
-- Coverage: 100% for this module
-
-**Shamir Secret Sharing Tests:**
-- Test split/combine correctness: split 32 bytes, get 3 shares, combine 2 → original
-- Test with different thresholds: 2-of-3
-- Test share validation: invalid shares should be rejected
-- Use deterministic test vectors (known input → known output)
-- Coverage: 100% for GF(256) arithmetic
-
-**JWT Token Tests:**
-- Test valid token parsing: RS256 with test key
-- Test expired token: should be rejected
-- Test tampered token: signature verification should fail
-- Test token generation: verify claims are set correctly
-- Never test with real private keys; generate test keys
-
-**AES-GCM Tests (for MPC nodes):**
-- Test encryption/decryption roundtrip
-- Test different nonce sizes (16 bytes required for GCM)
-- Test authentication: tampered ciphertext should fail
-- Test with deterministic nonce (for testing), crypto/rand in production
-
-## Test Isolation
-
-**No Shared State:**
-- Each test function is independent
-- No `init()` or `var` at package level for test data
-- Database: Each test starts fresh (truncate tables or use transactions that rollback)
-- Redis: Each test uses unique key prefixes
-
-**Example Cleanup:**
-```go
-func TestUserRepository(t *testing.T) {
-    t.Run("create user", func(t *testing.T) {
-        // Setup test database connection
-        db := setupTestDB(t)
-        defer db.Close() // Cleanup
-        
-        repo := pgstorage.NewPGStorage(db)
-        // Test...
-    })
-    
-    t.Run("get user by email", func(t *testing.T) {
-        // Fresh setup for this test
-        db := setupTestDB(t)
-        defer db.Close()
-        
-        repo := pgstorage.NewPGStorage(db)
-        // Test...
-    })
-}
-
-func setupTestDB(t *testing.T) *pgxpool.Pool {
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
-    
-    db, err := pgxpool.New(ctx, os.Getenv("TEST_DATABASE_URL"))
-    if err != nil {
-        t.Fatalf("failed to connect to test database: %v", err)
-    }
-    
-    // Run migrations or truncate tables here
-    return db
-}
-```
+- **Standard library functions** — don't test `bcrypt.GenerateFromPassword` behavior
+- **Database driver functions** — don't test `pgx.QueryRow` behavior directly (integration tests only)
+- **gRPC framework code** — don't test how `grpc.NewServer` works
+- **External service APIs** — use mocks/stubs instead
 
 ---
 
