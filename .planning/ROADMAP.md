@@ -34,11 +34,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `docker-compose up` starts PostgreSQL and Redis for local development
   4. Each service starts, loads config.yaml, and listens on its gRPC port
   5. Bootstrap factories wire dependencies through interfaces (handler -> service -> repository)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Go modules, proto definitions, generate.sh, Makefiles
+- [ ] 01-02-PLAN.md — Docker Compose, config, Clean Architecture skeleton (storage, services, handlers, bootstrap, main.go)
 
 ### Phase 2: Auth Registration
 **Goal**: Users can create accounts with strongly validated passwords
@@ -49,7 +49,7 @@ Plans:
   2. Password below 12 chars or missing any required character class is rejected with clear error
   3. Password containing 4+ sequential characters (1234, abcd, qwer, dcba) is rejected
   4. Unit tests cover every password validation rule including boundary cases (3 vs 4 sequential)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 02-01: TBD
@@ -65,7 +65,7 @@ Plans:
   3. Reusing a previously rotated refresh token revokes ALL tokens for that user (theft detection)
   4. User can logout and their refresh token is deleted from Redis
   5. Another service can validate an access token and receive user_id and claims; algorithm confusion (non-RS256) is rejected
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 03-01: TBD
@@ -80,7 +80,7 @@ Plans:
   2. Combine with any 2-of-3 shares recovers the original secret exactly
   3. Combine with only 1-of-3 shares does NOT recover the secret
   4. GF(256) arithmetic passes property tests (associativity, commutativity, distributivity)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 04-01: TBD
@@ -94,7 +94,7 @@ Plans:
   2. GenerateOTP produces a 6-digit code using SHA-1 with 30-second periods matching RFC 6238 test vectors
   3. ValidateOTP accepts codes from the current time step and +-1 adjacent windows
   4. GenerateProvisioningURI returns a valid otpauth://totp/... URI with issuer, account, and secret
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 05-01: TBD
@@ -109,7 +109,7 @@ Plans:
   3. DeleteShare removes all shares for a given user from the node
   4. Storing a duplicate (user_id, share_index) is rejected by unique constraint
   5. Requests without valid shared secret in gRPC metadata are rejected by the interceptor
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 06-01: TBD
@@ -124,7 +124,7 @@ Plans:
   2. The TOTP secret is split into 3 shares and all 3 are stored across MPC nodes; if any node is unreachable, setup fails completely
   3. The TOTP secret is zeroized from memory after share distribution — never persisted whole
   4. Backup codes are bcrypt-hashed before storage in PostgreSQL
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 07-01: TBD
@@ -140,7 +140,7 @@ Plans:
   3. More than 5 failed verification attempts within 5 minutes are rejected (rate limiting via Redis)
   4. User can disable 2FA (requires valid OTP first, then shares deleted from all nodes and metadata removed)
   5. User can check 2FA status (is_enabled, created_at) and OTP reuse within the same time window is rejected
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 08-01: TBD
@@ -156,7 +156,7 @@ Plans:
   3. Each service exposes Prometheus metrics (request count, duration, service-specific counters) on a metrics endpoint
   4. Log output is structured JSON via slog; grep for passwords/secrets/shares/keys returns zero matches
   5. Each service publishes audit events to Kafka (user_id, operation, timestamp) with no secret data; gRPC errors contain no internal state
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 09-01: TBD
