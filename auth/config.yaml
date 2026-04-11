@@ -1,0 +1,21 @@
+server:
+  port: 9090
+
+database:
+  dsn: "postgres://auth_user:auth_pass@localhost:5433/auth_db?sslmode=disable"
+
+redis:
+  addr: "localhost:6380"
+  password: ""
+  db: 0
+
+kafka:
+  brokers:
+    - "localhost:9092"
+  topic: "auth-events"
+
+jwt:
+  private_key_path: "keys/private.pem"
+  public_key_path: "keys/public.pem"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
