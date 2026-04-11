@@ -115,58 +115,58 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| AUTH-05 | TBD | Pending |
-| AUTH-06 | TBD | Pending |
-| AUTH-07 | TBD | Pending |
-| AUTH-08 | TBD | Pending |
-| 2FA-01 | TBD | Pending |
-| 2FA-02 | TBD | Pending |
-| 2FA-03 | TBD | Pending |
-| 2FA-04 | TBD | Pending |
-| 2FA-05 | TBD | Pending |
-| 2FA-06 | TBD | Pending |
-| 2FA-07 | TBD | Pending |
-| 2FA-08 | TBD | Pending |
-| 2FA-09 | TBD | Pending |
-| CRYPTO-01 | TBD | Pending |
-| CRYPTO-02 | TBD | Pending |
-| CRYPTO-03 | TBD | Pending |
-| CRYPTO-04 | TBD | Pending |
-| CRYPTO-05 | TBD | Pending |
-| CRYPTO-06 | TBD | Pending |
-| CRYPTO-07 | TBD | Pending |
-| MPC-01 | TBD | Pending |
-| MPC-02 | TBD | Pending |
-| MPC-03 | TBD | Pending |
-| MPC-04 | TBD | Pending |
-| MPC-05 | TBD | Pending |
-| MPC-06 | TBD | Pending |
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
-| INFRA-05 | TBD | Pending |
-| INFRA-06 | TBD | Pending |
-| INFRA-07 | TBD | Pending |
-| INFRA-08 | TBD | Pending |
-| INFRA-09 | TBD | Pending |
-| INFRA-10 | TBD | Pending |
-| INFRA-11 | TBD | Pending |
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| SEC-04 | TBD | Pending |
-| SEC-05 | TBD | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 3 | Pending |
+| AUTH-04 | Phase 3 | Pending |
+| AUTH-05 | Phase 3 | Pending |
+| AUTH-06 | Phase 3 | Pending |
+| AUTH-07 | Phase 3 | Pending |
+| AUTH-08 | Phase 2 | Pending |
+| 2FA-01 | Phase 7 | Pending |
+| 2FA-02 | Phase 7 | Pending |
+| 2FA-03 | Phase 8 | Pending |
+| 2FA-04 | Phase 8 | Pending |
+| 2FA-05 | Phase 8 | Pending |
+| 2FA-06 | Phase 8 | Pending |
+| 2FA-07 | Phase 8 | Pending |
+| 2FA-08 | Phase 7 | Pending |
+| 2FA-09 | Phase 8 | Pending |
+| CRYPTO-01 | Phase 4 | Pending |
+| CRYPTO-02 | Phase 4 | Pending |
+| CRYPTO-03 | Phase 4 | Pending |
+| CRYPTO-04 | Phase 5 | Pending |
+| CRYPTO-05 | Phase 5 | Pending |
+| CRYPTO-06 | Phase 5 | Pending |
+| CRYPTO-07 | Phase 5 | Pending |
+| MPC-01 | Phase 6 | Pending |
+| MPC-02 | Phase 6 | Pending |
+| MPC-03 | Phase 6 | Pending |
+| MPC-04 | Phase 6 | Pending |
+| MPC-05 | Phase 6 | Pending |
+| MPC-06 | Phase 6 | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 9 | Pending |
+| INFRA-04 | Phase 9 | Pending |
+| INFRA-05 | Phase 9 | Pending |
+| INFRA-06 | Phase 9 | Pending |
+| INFRA-07 | Phase 9 | Pending |
+| INFRA-08 | Phase 1 | Pending |
+| INFRA-09 | Phase 1 | Pending |
+| INFRA-10 | Phase 1 | Pending |
+| INFRA-11 | Phase 1 | Pending |
+| SEC-01 | Phase 3 | Pending |
+| SEC-02 | Phase 9 | Pending |
+| SEC-03 | Phase 3 | Pending |
+| SEC-04 | Phase 7 | Pending |
+| SEC-05 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 0
-- Unmapped: 42
+- v1 requirements: 46 total
+- Mapped to phases: 46
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 after initial definition*
+*Last updated: 2026-04-11 after roadmap creation*
