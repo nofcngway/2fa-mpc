@@ -1,0 +1,16 @@
+syntax = "proto3";
+package twofa_models;
+option go_package = "github.com/vbncursed/vkr/twofa/internal/pb/models";
+
+message TwoFARecord {
+    string user_id = 1;
+    bool is_enabled = 2;
+    string created_at = 3;
+}
+
+message BackupCode {
+    string id = 1;
+    string user_id = 2;
+    string code_hash = 3;
+    bool is_used = 4;
+}
