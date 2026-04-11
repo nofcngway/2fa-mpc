@@ -34,11 +34,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `docker-compose up` starts PostgreSQL and Redis for local development
   4. Each service starts, loads config.yaml, and listens on its gRPC port
   5. Bootstrap factories wire dependencies through interfaces (handler -> service -> repository)
-**Plans**: 2 plans
+**Plans**: 6 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Go modules, proto definitions, generate.sh, Makefiles
-- [ ] 01-02-PLAN.md — Docker Compose, config, Clean Architecture skeleton (storage, services, handlers, bootstrap, main.go)
+- [ ] 01-01-PLAN.md — Auth Go module, proto definitions, generate.sh, Makefile
+- [ ] 01-02-PLAN.md — TwoFA Go module, proto definitions, generate.sh, Makefile
+- [ ] 01-03-PLAN.md — MPC Go module, proto definitions, generate.sh, Makefile
+- [ ] 01-04-PLAN.md — Auth Docker Compose, config, Clean Architecture skeleton
+- [ ] 01-05-PLAN.md — TwoFA Docker Compose, config, Clean Architecture skeleton
+- [ ] 01-06-PLAN.md — MPC Docker Compose, config, Clean Architecture skeleton
 
 ### Phase 2: Auth Registration
 **Goal**: Users can create accounts with strongly validated passwords

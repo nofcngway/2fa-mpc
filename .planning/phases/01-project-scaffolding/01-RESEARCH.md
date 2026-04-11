@@ -496,22 +496,25 @@ message RegisterResponse {
 | A2 | `paths=source_relative` with protoc generates files relative to proto source location | Common Pitfalls | Proto generation puts files in wrong directory -- fixable by adjusting proto options |
 | A3 | segmentio/kafka-go Writer can block on initial connection to unavailable broker | Common Pitfalls | May not block but could error -- either way D-10 requires graceful handling |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **RSA Key Generation for Auth Service**
    - What we know: D-07 says keys go in `auth/keys/`, generated via Makefile target, not committed
    - What's unclear: Exact key size (2048 or 4096 bit) -- CLAUDE.md says RSA-2048 + SHA-256
    - Recommendation: Use 2048-bit as stated in CLAUDE.md, add `make generate-keys` target using `openssl genrsa`
+   - RESOLVED: Use RSA-2048 per CLAUDE.md. Auth Makefile `generate-keys` target runs `openssl genrsa 2048`, keys stored in `auth/keys/`, gitignored.
 
 2. **Shared Kafka Instance Across Services**
    - What we know: D-04 allows shared Kafka for local dev
    - What's unclear: Whether to put Kafka in one service's compose or a separate shared compose
    - Recommendation: Include Kafka in auth's docker-compose (first service started), other services reference same broker address. Document that only one needs to be up.
+   - RESOLVED: Each service includes its own Kafka in docker-compose with unique host ports (9092/9093/9094). For local dev, only one Kafka instance is needed; services can share a single broker address.
 
 3. **Proto Models Sharing**
    - What we know: D-02 requires proto models match workspace docs
    - What's unclear: Whether services need to share any proto model definitions or each defines its own
    - Recommendation: Each service defines its own models independently. No cross-service proto imports in Phase 1. TwoFA will generate MPC client stubs from MPC's proto in Phase 7.
+   - RESOLVED: Each service defines its own proto models independently. No cross-service proto imports. TwoFA generates MPC gRPC client stubs from MPC proto in Phase 7.
 
 ## Environment Availability
 
