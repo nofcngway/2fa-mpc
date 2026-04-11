@@ -1,0 +1,22 @@
+server:
+  port: 9091
+
+database:
+  dsn: "postgres://twofa_user:twofa_pass@localhost:5434/twofa_db?sslmode=disable"
+
+redis:
+  addr: "localhost:6381"
+  password: ""
+  db: 0
+
+kafka:
+  brokers:
+    - "localhost:9093"
+  topic: "twofa-events"
+
+mpc_nodes:
+  - addr: "localhost:9100"
+  - addr: "localhost:9101"
+  - addr: "localhost:9102"
+
+shared_secret: "dev-shared-secret-change-in-production"
