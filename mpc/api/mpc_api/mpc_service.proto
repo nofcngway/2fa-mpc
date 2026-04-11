@@ -1,0 +1,36 @@
+syntax = "proto3";
+package mpc_api;
+option go_package = "github.com/vbncursed/vkr/mpc/internal/pb/mpc_api";
+
+service MPCNodeService {
+    rpc StoreShare(StoreShareRequest) returns (StoreShareResponse);
+    rpc RetrieveShare(RetrieveShareRequest) returns (RetrieveShareResponse);
+    rpc DeleteShare(DeleteShareRequest) returns (DeleteShareResponse);
+}
+
+message StoreShareRequest {
+    string user_id = 1;
+    int32 share_index = 2;
+    bytes share_data = 3;
+}
+
+message StoreShareResponse {
+    string share_id = 1;
+}
+
+message RetrieveShareRequest {
+    string user_id = 1;
+    int32 share_index = 2;
+}
+
+message RetrieveShareResponse {
+    bytes share_data = 1;
+}
+
+message DeleteShareRequest {
+    string user_id = 1;
+}
+
+message DeleteShareResponse {
+    int32 deleted_count = 1;
+}

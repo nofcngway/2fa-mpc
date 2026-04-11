@@ -1,0 +1,12 @@
+syntax = "proto3";
+package mpc_models;
+option go_package = "github.com/vbncursed/vkr/mpc/internal/pb/models";
+
+message Share {
+    string id = 1;
+    string user_id = 2;
+    int32 share_index = 3;
+    bytes encrypted_data = 4;
+    bytes nonce = 5;
+    string created_at = 6;
+}
