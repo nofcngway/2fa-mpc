@@ -152,39 +152,29 @@ func (rs *RedisStorage) DeleteTokenFamily(ctx context.Context, family, userID st
 	return nil
 }
 
+// deleteAllScript is a Lua script that atomically reads and deletes all tokens,
+// families, and the user-tokens set for a given user. Running on the Redis server
+// avoids TOCTOU races with concurrent token rotation (WR-01).
+var deleteAllScript = redis.NewScript(`
+	local families = redis.call('SMEMBERS', KEYS[1])
+	for _, family in ipairs(families) do
+		local jtis = redis.call('SMEMBERS', 'token_family:' .. family)
+		for _, jti in ipairs(jtis) do
+			redis.call('DEL', 'refresh_token:' .. jti)
+		end
+		redis.call('DEL', 'token_family:' .. family)
+	end
+	redis.call('DEL', KEYS[1])
+	return 1
+`)
+
 // DeleteAllUserTokens removes all tokens and families for a user.
-// Uses MULTI/EXEC (TxPipelined) to avoid TOCTOU races with concurrent token rotation.
+// Uses a Lua script for true atomicity — reads and deletes happen in a single
+// server-side operation, preventing TOCTOU races with concurrent StoreRefreshToken.
 func (rs *RedisStorage) DeleteAllUserTokens(ctx context.Context, userID string) error {
-	// Get all families for the user
-	families, err := rs.client.SMembers(ctx, prefixUserTokens+userID).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return nil
-		}
-		return fmt.Errorf("get user families: %w", err)
-	}
-
-	_, err = rs.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		for _, family := range families {
-			jtis, err := rs.client.SMembers(ctx, prefixTokenFamily+family).Result()
-			if err != nil && err != redis.Nil {
-				return fmt.Errorf("get family %s members: %w", family, err)
-			}
-
-			for _, jti := range jtis {
-				pipe.Del(ctx, prefixRefreshToken+jti)
-			}
-
-			pipe.Del(ctx, prefixTokenFamily+family)
-		}
-
-		// Delete the user tokens set
-		pipe.Del(ctx, prefixUserTokens+userID)
-		return nil
-	})
-	if err != nil {
+	err := deleteAllScript.Run(ctx, rs.client, []string{prefixUserTokens + userID}).Err()
+	if err != nil && err != redis.Nil {
 		return fmt.Errorf("delete all user tokens: %w", err)
 	}
-
 	return nil
 }
