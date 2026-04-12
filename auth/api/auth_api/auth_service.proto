@@ -10,6 +10,7 @@ service AuthService {
     rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
     rpc Logout(LogoutRequest) returns (LogoutResponse);
     rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse);
 }
 
 message RegisterRequest {
@@ -54,3 +55,9 @@ message ValidateTokenResponse {
     string user_id = 1;
     string email = 2;
 }
+
+message LogoutAllRequest {
+    string user_id = 1;
+}
+
+message LogoutAllResponse {}

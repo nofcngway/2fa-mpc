@@ -11,6 +11,14 @@ var (
 	ErrInvalidEmail   = errors.New("invalid email format")
 )
 
+// JWT and session errors.
+var (
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrInvalidToken       = errors.New("invalid or malformed token")
+	ErrTokenExpired       = errors.New("token has expired")
+	ErrTokenRevoked       = errors.New("token has been revoked")
+)
+
 // Password validation errors.
 var (
 	ErrPasswordTooShort   = errors.New("password must be at least 12 characters")

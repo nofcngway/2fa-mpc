@@ -2,9 +2,12 @@ package authService_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gotest.tools/v3/assert"
@@ -25,9 +28,18 @@ type registerSuite struct {
 }
 
 func newRegisterSuite(t *testing.T) *registerSuite {
+	t.Helper()
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
-	service := authService.NewAuthService(storage, nil)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	assert.NilError(t, err, "failed to generate RSA key pair for test")
+
+	service := authService.NewAuthService(
+		storage, nil,
+		privateKey, &privateKey.PublicKey,
+		15*time.Minute, 168*time.Hour,
+	)
 	return &registerSuite{
 		mc:      mc,
 		storage: storage,
