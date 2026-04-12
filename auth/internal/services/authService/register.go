@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/vbncursed/vkr/auth/internal/domain"
 	"github.com/vbncursed/vkr/auth/internal/models"
 )
 
@@ -34,7 +36,7 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*mo
 		return nil, fmt.Errorf("check existing user: %w", err)
 	}
 	if existing != nil {
-		return nil, ErrDuplicateEmail
+		return nil, domain.ErrDuplicateEmail
 	}
 
 	// 4. Hash password with bcrypt cost=12
@@ -54,6 +56,10 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*mo
 	}
 
 	if err := s.storage.CreateUser(ctx, user); err != nil {
+		// Handle race condition: concurrent insert hit unique constraint
+		if errors.Is(err, domain.ErrDuplicateEmail) {
+			return nil, domain.ErrDuplicateEmail
+		}
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
@@ -64,20 +70,20 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*mo
 func validateEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
-		return ErrInvalidEmail
+		return domain.ErrInvalidEmail
 	}
 	if strings.Contains(email, " ") {
-		return ErrInvalidEmail
+		return domain.ErrInvalidEmail
 	}
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
-		return ErrInvalidEmail
+		return domain.ErrInvalidEmail
 	}
 	if parts[0] == "" || parts[1] == "" {
-		return ErrInvalidEmail
+		return domain.ErrInvalidEmail
 	}
 	if !strings.Contains(parts[1], ".") {
-		return ErrInvalidEmail
+		return domain.ErrInvalidEmail
 	}
 	return nil
 }

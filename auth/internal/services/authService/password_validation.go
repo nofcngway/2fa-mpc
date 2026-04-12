@@ -1,45 +1,12 @@
 package authService
 
 import (
-	"errors"
 	"strings"
 	"unicode"
+	"unicode/utf8"
+
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
-
-// ErrPasswordTooShort indicates the password is shorter than 12 characters.
-var ErrPasswordTooShort = errors.New("password must be at least 12 characters")
-
-// ErrMissingUppercase indicates the password has no uppercase letter.
-var ErrMissingUppercase = errors.New("password must contain at least one uppercase letter")
-
-// ErrMissingLowercase indicates the password has no lowercase letter.
-var ErrMissingLowercase = errors.New("password must contain at least one lowercase letter")
-
-// ErrMissingDigit indicates the password has no digit.
-var ErrMissingDigit = errors.New("password must contain at least one digit")
-
-// ErrMissingSpecialChar indicates the password has no special character.
-var ErrMissingSpecialChar = errors.New("password must contain at least one special character")
-
-// ErrSequentialChars indicates the password contains 4 or more sequential characters.
-var ErrSequentialChars = errors.New("password must not contain 4 or more sequential characters")
-
-// ErrRepeatedChars indicates the password contains 4 or more identical consecutive characters.
-var ErrRepeatedChars = errors.New("password must not contain 4 or more identical consecutive characters")
-
-// PasswordValidationError aggregates all password validation violations.
-type PasswordValidationError struct {
-	Violations []error
-}
-
-// Error returns a semicolon-separated string of all violation messages.
-func (e *PasswordValidationError) Error() string {
-	msgs := make([]string, len(e.Violations))
-	for i, v := range e.Violations {
-		msgs[i] = v.Error()
-	}
-	return strings.Join(msgs, "; ")
-}
 
 // MIN_PASSWORD_LENGTH is the minimum required password length.
 const MIN_PASSWORD_LENGTH = 12
@@ -62,8 +29,8 @@ var sequences = []string{
 func ValidatePassword(password string) error {
 	var violations []error
 
-	if len(password) < MIN_PASSWORD_LENGTH {
-		violations = append(violations, ErrPasswordTooShort)
+	if utf8.RuneCountInString(password) < MIN_PASSWORD_LENGTH {
+		violations = append(violations, domain.ErrPasswordTooShort)
 	}
 
 	hasUpper, hasLower, hasDigit, hasSpecial := false, false, false, false
@@ -81,28 +48,28 @@ func ValidatePassword(password string) error {
 	}
 
 	if !hasUpper {
-		violations = append(violations, ErrMissingUppercase)
+		violations = append(violations, domain.ErrMissingUppercase)
 	}
 	if !hasLower {
-		violations = append(violations, ErrMissingLowercase)
+		violations = append(violations, domain.ErrMissingLowercase)
 	}
 	if !hasDigit {
-		violations = append(violations, ErrMissingDigit)
+		violations = append(violations, domain.ErrMissingDigit)
 	}
 	if !hasSpecial {
-		violations = append(violations, ErrMissingSpecialChar)
+		violations = append(violations, domain.ErrMissingSpecialChar)
 	}
 
 	if containsSequential(password, SEQUENCE_THRESHOLD) {
-		violations = append(violations, ErrSequentialChars)
+		violations = append(violations, domain.ErrSequentialChars)
 	}
 
 	if containsRepeated(password, SEQUENCE_THRESHOLD) {
-		violations = append(violations, ErrRepeatedChars)
+		violations = append(violations, domain.ErrRepeatedChars)
 	}
 
 	if len(violations) > 0 {
-		return &PasswordValidationError{Violations: violations}
+		return &domain.PasswordValidationError{Violations: violations}
 	}
 	return nil
 }

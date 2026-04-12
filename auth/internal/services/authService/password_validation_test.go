@@ -3,15 +3,21 @@ package authService
 import (
 	"errors"
 	"testing"
+
+	"gotest.tools/v3/assert"
+
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
-func TestValidatePassword(t *testing.T) {
-	tests := []struct {
-		name      string
-		password  string
-		wantErr   bool
-		wantRules []error
-	}{
+type passwordValidationCase struct {
+	name      string
+	password  string
+	wantErr   bool
+	wantRules []error
+}
+
+func passwordValidationSuite() []passwordValidationCase {
+	return []passwordValidationCase{
 		// Valid passwords
 		{
 			name:     "valid strong password",
@@ -34,13 +40,13 @@ func TestValidatePassword(t *testing.T) {
 			name:      "too short 11 chars",
 			password:  "Short1!aaBc",
 			wantErr:   true,
-			wantRules: []error{ErrPasswordTooShort},
+			wantRules: []error{domain.ErrPasswordTooShort},
 		},
 		{
 			name:      "too short 9 chars",
 			password:  "Short1!aB",
 			wantErr:   true,
-			wantRules: []error{ErrPasswordTooShort},
+			wantRules: []error{domain.ErrPasswordTooShort},
 		},
 
 		// Missing character classes
@@ -48,25 +54,25 @@ func TestValidatePassword(t *testing.T) {
 			name:      "missing uppercase",
 			password:  "alllowercase1!ab",
 			wantErr:   true,
-			wantRules: []error{ErrMissingUppercase},
+			wantRules: []error{domain.ErrMissingUppercase},
 		},
 		{
 			name:      "missing lowercase",
 			password:  "ALLUPPERCASE1!AB",
 			wantErr:   true,
-			wantRules: []error{ErrMissingLowercase},
+			wantRules: []error{domain.ErrMissingLowercase},
 		},
 		{
 			name:      "missing digit",
 			password:  "NoDigitsHere!!Ab",
 			wantErr:   true,
-			wantRules: []error{ErrMissingDigit},
+			wantRules: []error{domain.ErrMissingDigit},
 		},
 		{
 			name:      "missing special char",
 			password:  "NoSpecial1Charrr",
 			wantErr:   true,
-			wantRules: []error{ErrMissingSpecialChar},
+			wantRules: []error{domain.ErrMissingSpecialChar},
 		},
 
 		// ASCII sequential (4+)
@@ -74,13 +80,13 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential abcd ascending",
 			password:  "Te$t00abcdXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:      "sequential dcba descending",
 			password:  "Te$t00dcbaXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:     "3 sequential abc allowed",
@@ -93,13 +99,13 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential qwer forward",
 			password:  "Te$t00qwerXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:      "sequential rewq reversed",
 			password:  "Te$t00rewqXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:     "3 qwerty qwe allowed",
@@ -112,13 +118,13 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential asdf row 2",
 			password:  "Te$t00asdfXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:      "sequential fdsa row 2 reversed",
 			password:  "Te$t00fdsaXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 
 		// QWERTY row 3
@@ -126,7 +132,7 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential zxcv row 3",
 			password:  "Te$t00zxcvXY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 
 		// Numpad
@@ -134,7 +140,7 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential 7894 numpad",
 			password:  "Te$tAA7894xY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:     "3 numpad 789 allowed",
@@ -147,13 +153,13 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential 1234 digits ascending",
 			password:  "Te$tAA1234xY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 		{
 			name:      "sequential 4321 digits descending",
 			password:  "Te$tAA4321xY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 
 		// Case-insensitive sequential
@@ -161,7 +167,7 @@ func TestValidatePassword(t *testing.T) {
 			name:      "sequential ABCD case insensitive",
 			password:  "te$t00ABCDxY",
 			wantErr:   true,
-			wantRules: []error{ErrSequentialChars},
+			wantRules: []error{domain.ErrSequentialChars},
 		},
 
 		// Repeated characters
@@ -169,7 +175,7 @@ func TestValidatePassword(t *testing.T) {
 			name:      "4 repeated aaaa",
 			password:  "Te$t00aaaaXY",
 			wantErr:   true,
-			wantRules: []error{ErrRepeatedChars},
+			wantRules: []error{domain.ErrRepeatedChars},
 		},
 		{
 			name:     "3 repeated aaa allowed",
@@ -180,7 +186,7 @@ func TestValidatePassword(t *testing.T) {
 			name:      "4 repeated 1111",
 			password:  "Te$tAA1111xY",
 			wantErr:   true,
-			wantRules: []error{ErrRepeatedChars},
+			wantRules: []error{domain.ErrRepeatedChars},
 		},
 
 		// Multi-error case
@@ -189,44 +195,42 @@ func TestValidatePassword(t *testing.T) {
 			password: "ab",
 			wantErr:  true,
 			wantRules: []error{
-				ErrPasswordTooShort,
-				ErrMissingUppercase,
-				ErrMissingDigit,
-				ErrMissingSpecialChar,
+				domain.ErrPasswordTooShort,
+				domain.ErrMissingUppercase,
+				domain.ErrMissingDigit,
+				domain.ErrMissingSpecialChar,
 			},
 		},
 	}
+}
 
-	for _, tt := range tests {
+func TestValidatePassword(t *testing.T) {
+	for _, tt := range passwordValidationSuite() {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidatePassword(tt.password)
 
-			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("expected error but got nil")
-				}
+			if !tt.wantErr {
+				assert.NilError(t, err)
+				return
+			}
 
-				var validationErr *PasswordValidationError
-				if !errors.As(err, &validationErr) {
-					t.Fatalf("expected *PasswordValidationError, got %T", err)
-				}
+			assert.Assert(t, err != nil, "expected error but got nil")
 
-				for _, wantRule := range tt.wantRules {
-					found := false
-					for _, violation := range validationErr.Violations {
-						if errors.Is(violation, wantRule) {
-							found = true
-							break
-						}
-					}
-					if !found {
-						t.Errorf("expected violation %v not found in %v", wantRule, validationErr.Violations)
+			var validationErr *domain.PasswordValidationError
+			assert.Assert(t, errors.As(err, &validationErr), "expected *domain.PasswordValidationError, got %T", err)
+
+			assert.Equal(t, len(validationErr.Violations), len(tt.wantRules),
+				"expected %d violations, got %d: %v", len(tt.wantRules), len(validationErr.Violations), validationErr.Violations)
+
+			for _, wantRule := range tt.wantRules {
+				found := false
+				for _, violation := range validationErr.Violations {
+					if errors.Is(violation, wantRule) {
+						found = true
+						break
 					}
 				}
-			} else {
-				if err != nil {
-					t.Fatalf("expected no error but got: %v", err)
-				}
+				assert.Assert(t, found, "expected violation %v not found in %v", wantRule, validationErr.Violations)
 			}
 		})
 	}

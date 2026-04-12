@@ -39,7 +39,7 @@ func NewRedisStorage(ctx context.Context, cfg *config.Config) (*redisstorage.Red
 }
 
 // NewAuthService creates a new AuthService with the provided storage dependencies.
-func NewAuthService(storage authService.Storage, sessionStorage *redisstorage.RedisStorage) *authService.AuthService {
+func NewAuthService(storage authService.Storage, sessionStorage authService.SessionStorage) *authService.AuthService {
 	return authService.NewAuthService(storage, sessionStorage)
 }
 

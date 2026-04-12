@@ -7,147 +7,145 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
+	"gotest.tools/v3/assert"
 
+	"github.com/gojuno/minimock/v3"
+
+	"github.com/vbncursed/vkr/auth/internal/domain"
 	"github.com/vbncursed/vkr/auth/internal/models"
 	"github.com/vbncursed/vkr/auth/internal/services/authService"
+	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
 )
 
-type mockStorage struct {
-	users     map[string]*models.User
-	createErr error
+// registerSuite holds shared setup for register tests.
+type registerSuite struct {
+	mc      *minimock.Controller
+	storage *mocks.StorageMock
+	service *authService.AuthService
 }
 
-func newMockStorage() *mockStorage {
-	return &mockStorage{users: make(map[string]*models.User)}
-}
-
-// CreateUser stores the user in the mock map.
-func (m *mockStorage) CreateUser(ctx context.Context, user *models.User) error {
-	if m.createErr != nil {
-		return m.createErr
+func newRegisterSuite(t *testing.T) *registerSuite {
+	mc := minimock.NewController(t)
+	storage := mocks.NewStorageMock(mc)
+	service := authService.NewAuthService(storage, nil)
+	return &registerSuite{
+		mc:      mc,
+		storage: storage,
+		service: service,
 	}
-	m.users[user.Email] = user
-	return nil
 }
 
-// GetUserByEmail returns the user if found, (nil, nil) otherwise.
-func (m *mockStorage) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	user, ok := m.users[email]
-	if !ok {
-		return nil, nil
-	}
-	return user, nil
+func TestRegister_Success(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, nil)
+	s.storage.CreateUserMock.Set(func(_ context.Context, user *models.User) error {
+		assert.Assert(t, user.ID != "", "user ID should not be empty")
+		assert.Equal(t, user.Email, "test@example.com")
+		assert.Assert(t, user.PasswordHash != "", "password hash should not be empty")
+		return nil
+	})
+
+	user, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+
+	assert.NilError(t, err)
+	assert.Assert(t, user != nil, "expected user, got nil")
+	assert.Assert(t, user.ID != "", "user ID should not be empty")
+	assert.Equal(t, user.Email, "test@example.com")
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte("MyStr0ng!Pass99"))
+	assert.NilError(t, err, "password hash does not match original password with bcrypt")
 }
 
-func TestRegister(t *testing.T) {
-	tests := []struct {
-		name        string
-		email       string
-		password    string
-		setupMock   func(*mockStorage)
-		wantErr     bool
-		wantErrType string // "validation", "duplicate", "invalid_email", ""
+func TestRegister_InvalidEmail(t *testing.T) {
+	cases := []struct {
+		name  string
+		email string
 	}{
-		{
-			name:     "successful registration",
-			email:    "test@example.com",
-			password: "MyStr0ng!Pass99",
-			wantErr:  false,
-		},
-		{
-			name:        "invalid email no at sign",
-			email:       "invalid-email",
-			password:    "MyStr0ng!Pass99",
-			wantErr:     true,
-			wantErrType: "invalid_email",
-		},
-		{
-			name:        "invalid email no domain",
-			email:       "user@",
-			password:    "MyStr0ng!Pass99",
-			wantErr:     true,
-			wantErrType: "invalid_email",
-		},
-		{
-			name:        "invalid email no dot in domain",
-			email:       "user@localhost",
-			password:    "MyStr0ng!Pass99",
-			wantErr:     true,
-			wantErrType: "invalid_email",
-		},
-		{
-			name:        "empty email",
-			email:       "",
-			password:    "MyStr0ng!Pass99",
-			wantErr:     true,
-			wantErrType: "invalid_email",
-		},
-		{
-			name:        "weak password",
-			email:       "test@example.com",
-			password:    "short",
-			wantErr:     true,
-			wantErrType: "validation",
-		},
-		{
-			name:     "duplicate email",
-			email:    "existing@example.com",
-			password: "MyStr0ng!Pass99",
-			setupMock: func(m *mockStorage) {
-				m.users["existing@example.com"] = &models.User{Email: "existing@example.com"}
-			},
-			wantErr:     true,
-			wantErrType: "duplicate",
-		},
+		{"no at sign", "invalid-email"},
+		{"no domain", "user@"},
+		{"no dot in domain", "user@localhost"},
+		{"empty email", ""},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := newMockStorage()
-			if tt.setupMock != nil {
-				tt.setupMock(mock)
-			}
-			svc := authService.NewAuthService(mock, nil)
-			user, err := svc.Register(context.Background(), tt.email, tt.password)
+			s := newRegisterSuite(t)
 
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				switch tt.wantErrType {
-				case "validation":
-					var valErr *authService.PasswordValidationError
-					if !errors.As(err, &valErr) {
-						t.Fatalf("expected PasswordValidationError, got %T: %v", err, err)
-					}
-				case "duplicate":
-					if !errors.Is(err, authService.ErrDuplicateEmail) {
-						t.Fatalf("expected ErrDuplicateEmail, got: %v", err)
-					}
-				case "invalid_email":
-					if !errors.Is(err, authService.ErrInvalidEmail) {
-						t.Fatalf("expected ErrInvalidEmail, got: %v", err)
-					}
-				}
-				return
-			}
+			_, err := s.service.Register(context.Background(), tt.email, "MyStr0ng!Pass99")
 
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if user == nil {
-				t.Fatal("expected user, got nil")
-			}
-			if user.ID == "" {
-				t.Error("user ID should not be empty")
-			}
-			if user.Email != strings.ToLower(strings.TrimSpace(tt.email)) {
-				t.Errorf("email mismatch: got %q", user.Email)
-			}
-			// Verify password was hashed with bcrypt
-			if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(tt.password)); err != nil {
-				t.Error("password hash does not match original password with bcrypt")
-			}
+			assert.Assert(t, err != nil, "expected error for email %q", tt.email)
+			assert.Assert(t, errors.Is(err, domain.ErrInvalidEmail),
+				"expected ErrInvalidEmail, got: %v", err)
 		})
 	}
+}
+
+func TestRegister_WeakPassword(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	_, err := s.service.Register(context.Background(), "test@example.com", "short")
+
+	assert.Assert(t, err != nil, "expected error for weak password")
+
+	var valErr *domain.PasswordValidationError
+	assert.Assert(t, errors.As(err, &valErr),
+		"expected PasswordValidationError, got %T: %v", err, err)
+}
+
+func TestRegister_DuplicateEmail_PreCheck(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "existing@example.com").
+		Return(&models.User{Email: "existing@example.com"}, nil)
+
+	_, err := s.service.Register(context.Background(), "existing@example.com", "MyStr0ng!Pass99")
+
+	assert.Assert(t, err != nil, "expected error for duplicate email")
+	assert.Assert(t, errors.Is(err, domain.ErrDuplicateEmail),
+		"expected ErrDuplicateEmail, got: %v", err)
+}
+
+func TestRegister_DuplicateEmail_RaceCondition(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	// Pre-check passes (user not found), but CreateUser hits unique constraint
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "race@example.com").Return(nil, nil)
+	s.storage.CreateUserMock.Return(domain.ErrDuplicateEmail)
+
+	_, err := s.service.Register(context.Background(), "race@example.com", "MyStr0ng!Pass99")
+
+	assert.Assert(t, err != nil, "expected error for race condition duplicate")
+	assert.Assert(t, errors.Is(err, domain.ErrDuplicateEmail),
+		"expected ErrDuplicateEmail from race condition, got: %v", err)
+}
+
+func TestRegister_StorageError(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, nil)
+	s.storage.CreateUserMock.Return(errors.New("connection refused"))
+
+	_, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+
+	assert.Assert(t, err != nil, "expected error for storage failure")
+	assert.Assert(t, !errors.Is(err, domain.ErrDuplicateEmail),
+		"storage error should not be ErrDuplicateEmail")
+	assert.Assert(t, strings.Contains(err.Error(), "create user"),
+		"error should be wrapped with context, got: %v", err)
+}
+
+func TestRegister_EmailNormalization(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "user@example.com").Return(nil, nil)
+	s.storage.CreateUserMock.Set(func(_ context.Context, user *models.User) error {
+		assert.Equal(t, user.Email, "user@example.com", "email should be lowercased and trimmed")
+		return nil
+	})
+
+	user, err := s.service.Register(context.Background(), "  User@Example.COM  ", "MyStr0ng!Pass99")
+
+	assert.NilError(t, err)
+	assert.Equal(t, user.Email, "user@example.com")
 }

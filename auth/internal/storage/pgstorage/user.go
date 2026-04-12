@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/vbncursed/vkr/auth/internal/domain"
 	"github.com/vbncursed/vkr/auth/internal/models"
 )
 
@@ -19,7 +20,7 @@ func (ps *PGStorage) CreateUser(ctx context.Context, user *models.User) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return err
+			return domain.ErrDuplicateEmail
 		}
 		return err
 	}
