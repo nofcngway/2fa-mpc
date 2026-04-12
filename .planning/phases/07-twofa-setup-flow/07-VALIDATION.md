@@ -1,10 +1,11 @@
 ---
 phase: 7
 slug: twofa-setup-flow
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-12
+audited: 2026-04-12
 ---
 
 # Phase 7 — Validation Strategy
@@ -38,12 +39,12 @@ created: 2026-04-12
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 07-01-01 | 01 | 1 | 2FA-01 | — | Setup2FA returns provisioning URI | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup -count=1` | ❌ W0 | ⬜ pending |
-| 07-01-02 | 01 | 1 | 2FA-02 | — | Secret split into 3 shares, all stored | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestShareDistribution -count=1` | ❌ W0 | ⬜ pending |
-| 07-01-03 | 01 | 1 | SEC-04 | T-7-01 | Secret zeroized after distribution | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestZeroization -count=1` | ❌ W0 | ⬜ pending |
-| 07-02-01 | 02 | 1 | 2FA-08 | — | 10 backup codes generated, bcrypt-hashed | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestBackupCodes -count=1` | ❌ W0 | ⬜ pending |
-| 07-02-02 | 02 | 1 | 2FA-01 | — | Compensating delete on partial MPC failure | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestPartialFailure -count=1` | ❌ W0 | ⬜ pending |
-| 07-02-03 | 02 | 1 | 2FA-01 | — | Duplicate setup returns AlreadyExists | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestDuplicateSetup -count=1` | ❌ W0 | ⬜ pending |
+| 07-01-01 | 01 | 1 | 2FA-01 | — | Setup2FA returns provisioning URI | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup_Success -count=1` | ✅ setup_test.go | ✅ green |
+| 07-01-02 | 01 | 1 | 2FA-02 | — | Secret split into 3 shares, all stored | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup_StoreShareReceivesCorrectData -count=1` | ✅ setup_test.go | ✅ green |
+| 07-01-03 | 01 | 1 | SEC-04 | T-7-01 | Secret zeroized after distribution | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup_SecretZeroized -count=1` | ✅ setup_test.go | ✅ green |
+| 07-02-01 | 02 | 1 | 2FA-08 | — | 10 backup codes generated, bcrypt-hashed | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup_BackupCode -count=1` | ✅ setup_test.go | ✅ green |
+| 07-02-02 | 02 | 1 | 2FA-01 | — | Compensating delete on partial MPC failure | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup_PartialMPCFailure -count=1` | ✅ setup_test.go | ✅ green |
+| 07-02-03 | 02 | 1 | 2FA-01 | — | Duplicate setup returns AlreadyExists | unit | `cd twofa && go test ./internal/services/twofaService/... -run TestSetup_DuplicateEnabled -count=1` | ✅ setup_test.go | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,8 +52,8 @@ created: 2026-04-12
 
 ## Wave 0 Requirements
 
-- [ ] `twofa/internal/services/twofaService/setup_test.go` — stubs for 2FA-01, 2FA-02, 2FA-08, SEC-04
-- [ ] Mock interfaces for Storage, MPC clients
+- [x] `twofa/internal/services/twofaService/setup_test.go` — 17 tests covering 2FA-01, 2FA-02, 2FA-08, SEC-04
+- [x] Mock interfaces for Storage, MPC clients (minimock-generated in `mocks/`)
 
 *Existing infrastructure covers crypto package tests (shamir, totp from Phases 4-5).*
 
@@ -68,11 +69,37 @@ created: 2026-04-12
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
+
+---
+
+## Validation Audit 2026-04-12
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+### Test Coverage Summary
+
+| Test File | Test Count | Status |
+|-----------|-----------|--------|
+| `twofa/internal/services/twofaService/setup_test.go` | 17 | All green |
+| `twofa/internal/crypto/zeroize_test.go` | 4 (subtests) | All green |
+
+### Requirement-to-Test Cross-Reference
+
+| Requirement | Tests |
+|-------------|-------|
+| 2FA-01 | TestSetup_Success, TestSetup_ProvisioningURIContainsEmail, TestSetup_PartialMPCFailure_*, TestSetup_DuplicateEnabled |
+| 2FA-02 | TestSetup_StoreShareReceivesCorrectData |
+| 2FA-08 | TestSetup_BackupCodeFormat, TestSetup_BackupCodeUniqueness, TestSetup_BackupCodeHashing |
+| SEC-04 | TestSetup_SecretZeroized, TestSetup_SharesZeroized, TestZeroize (crypto pkg) |
