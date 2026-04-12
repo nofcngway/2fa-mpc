@@ -25,6 +25,7 @@ const (
 type Setup2FARequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,6 +63,13 @@ func (*Setup2FARequest) Descriptor() ([]byte, []int) {
 func (x *Setup2FARequest) GetUserId() string {
 	if x != nil {
 		return x.UserId
+	}
+	return ""
+}
+
+func (x *Setup2FARequest) GetEmail() string {
+	if x != nil {
+		return x.Email
 	}
 	return ""
 }
@@ -410,9 +418,10 @@ var File_twofa_api_twofa_service_proto protoreflect.FileDescriptor
 
 const file_twofa_api_twofa_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1dtwofa_api/twofa_service.proto\x12\ttwofa_api\x1a\x13models/models.proto\"*\n" +
+	"\x1dtwofa_api/twofa_service.proto\x12\ttwofa_api\x1a\x13models/models.proto\"@\n" +
 	"\x0fSetup2FARequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"`\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\"`\n" +
 	"\x10Setup2FAResponse\x12)\n" +
 	"\x10provisioning_uri\x18\x01 \x01(\tR\x0fprovisioningUri\x12!\n" +
 	"\fbackup_codes\x18\x02 \x03(\tR\vbackupCodes\"F\n" +

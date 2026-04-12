@@ -13,6 +13,7 @@ service TwoFAService {
 
 message Setup2FARequest {
     string user_id = 1;
+    string email = 2;
 }
 
 message Setup2FAResponse {
