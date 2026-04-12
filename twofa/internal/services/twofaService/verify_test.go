@@ -221,7 +221,9 @@ func TestVerify_OTPReuse(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	shamirPkg := shamirSplit(t, testSecret)
+	// Anchor to middle of current TOTP window to avoid boundary flakiness
 	now := time.Now().Unix()
+	now = now - (now % 30) + 15
 	code := makeValidCode(now)
 	// The counter that ValidateOTPWithCounter would match
 	expectedCounter := now / 30
