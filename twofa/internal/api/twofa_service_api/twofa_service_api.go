@@ -1,12 +1,14 @@
 package twofa_service_api
 
 import (
+	"context"
+
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
 )
 
 // Service defines the contract the API layer requires from the TwoFA service.
 type Service interface {
-	// Methods added in Phase 7
+	Setup(ctx context.Context, userID, email string) (string, []string, error)
 }
 
 // TwoFAServiceAPI implements the gRPC TwoFAServiceServer interface.

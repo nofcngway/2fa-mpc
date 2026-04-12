@@ -34,7 +34,16 @@ func main() {
 		defer redisStorage.Close()
 	}
 
-	service := bootstrap.NewTwoFAService(pgStorage, redisStorage)
+	mpcClients, mpcConns, err := bootstrap.NewMPCClients(cfg)
+	if err != nil {
+		slog.Error("failed to create MPC clients", "error", err)
+		os.Exit(1)
+	}
+	for _, conn := range mpcConns {
+		defer conn.Close()
+	}
+
+	service := bootstrap.NewTwoFAService(pgStorage, redisStorage, mpcClients, cfg)
 	api := bootstrap.NewTwoFAServiceAPI(service)
 	grpcServer := bootstrap.NewGRPCServer(api)
 

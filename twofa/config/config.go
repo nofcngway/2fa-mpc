@@ -3,9 +3,13 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+// DefaultMPCTimeout is the default timeout for MPC node gRPC calls.
+const DefaultMPCTimeout = 5 * time.Second
 
 // Config represents the TwoFA service configuration.
 type Config struct {
@@ -15,6 +19,15 @@ type Config struct {
 	Kafka        KafkaConfig     `yaml:"kafka"`
 	MPCNodes     []MPCNodeConfig `yaml:"mpc_nodes"`
 	SharedSecret string          `yaml:"shared_secret"`
+	MPCTimeout   time.Duration   `yaml:"mpc_timeout"`
+}
+
+// GetMPCTimeout returns the configured MPC timeout or the default (5s).
+func (c *Config) GetMPCTimeout() time.Duration {
+	if c.MPCTimeout == 0 {
+		return DefaultMPCTimeout
+	}
+	return c.MPCTimeout
 }
 
 // ServerConfig holds gRPC server settings.
