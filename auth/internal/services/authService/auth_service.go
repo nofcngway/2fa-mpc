@@ -1,13 +1,23 @@
 package authService
 
 import (
-	"github.com/vbncursed/vkr/auth/internal/storage/pgstorage"
+	"context"
+	"errors"
+
+	"github.com/vbncursed/vkr/auth/internal/models"
 	"github.com/vbncursed/vkr/auth/internal/storage/redisstorage"
 )
 
+// ErrDuplicateEmail indicates a user with this email already exists.
+var ErrDuplicateEmail = errors.New("user with this email already exists")
+
+// ErrInvalidEmail indicates the email format is invalid.
+var ErrInvalidEmail = errors.New("invalid email format")
+
 // Storage defines the interface for persistent data access.
 type Storage interface {
-	// Methods added in Phase 2 (CreateUser, GetUserByEmail, etc.)
+	CreateUser(ctx context.Context, user *models.User) error
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 }
 
 // SessionStorage defines the interface for session/cache operations.
@@ -17,12 +27,12 @@ type SessionStorage interface {
 
 // AuthService implements authentication business logic.
 type AuthService struct {
-	storage        *pgstorage.PGStorage
+	storage        Storage
 	sessionStorage *redisstorage.RedisStorage
 }
 
 // NewAuthService creates a new AuthService instance.
-func NewAuthService(storage *pgstorage.PGStorage, sessionStorage *redisstorage.RedisStorage) *AuthService {
+func NewAuthService(storage Storage, sessionStorage *redisstorage.RedisStorage) *AuthService {
 	return &AuthService{
 		storage:        storage,
 		sessionStorage: sessionStorage,
