@@ -56,8 +56,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Password validation with TDD (sequential/repeated char detection, error types, 20+ boundary tests)
-- [ ] 02-02-PLAN.md — Registration flow (Storage interface refactor, CreateUser/GetUserByEmail, Register service+handler, mocked tests)
+- [x] 02-01-PLAN.md — Password validation with TDD (sequential/repeated char detection, error types, 20+ boundary tests)
+- [x] 02-02-PLAN.md — Registration flow (Storage interface refactor, CreateUser/GetUserByEmail, Register service+handler, mocked tests)
 
 ### Phase 3: Auth Sessions & JWT
 **Goal**: Users can authenticate, maintain sessions, and other services can validate their identity
