@@ -22,28 +22,31 @@ import (
 
 // registerSuite holds shared setup for register tests.
 type registerSuite struct {
-	mc      *minimock.Controller
-	storage *mocks.StorageMock
-	service *authService.AuthService
+	mc             *minimock.Controller
+	storage        *mocks.StorageMock
+	sessionStorage *mocks.SessionStorageMock
+	service        *authService.AuthService
 }
 
 func newRegisterSuite(t *testing.T) *registerSuite {
 	t.Helper()
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
+	sessionStorage := mocks.NewSessionStorageMock(mc)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
 	service := authService.NewAuthService(
-		storage, nil,
+		storage, sessionStorage,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
 	return &registerSuite{
-		mc:      mc,
-		storage: storage,
-		service: service,
+		mc:             mc,
+		storage:        storage,
+		sessionStorage: sessionStorage,
+		service:        service,
 	}
 }
 
@@ -57,13 +60,22 @@ func TestRegister_Success(t *testing.T) {
 		assert.Assert(t, user.PasswordHash != "", "password hash should not be empty")
 		return nil
 	})
+	s.sessionStorage.StoreRefreshTokenMock.Set(func(_ context.Context, jti, userID, tokenFamily string, ttl time.Duration) error {
+		assert.Assert(t, jti != "", "JTI should not be empty")
+		assert.Assert(t, userID != "", "userID should not be empty")
+		assert.Assert(t, tokenFamily != "", "token family should not be empty")
+		assert.Equal(t, ttl, 168*time.Hour)
+		return nil
+	})
 
-	user, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+	user, accessToken, refreshToken, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
 
 	assert.NilError(t, err)
 	assert.Assert(t, user != nil, "expected user, got nil")
 	assert.Assert(t, user.ID != "", "user ID should not be empty")
 	assert.Equal(t, user.Email, "test@example.com")
+	assert.Assert(t, accessToken != "", "access token should not be empty")
+	assert.Assert(t, refreshToken != "", "refresh token should not be empty")
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte("MyStr0ng!Pass99"))
 	assert.NilError(t, err, "password hash does not match original password with bcrypt")
@@ -84,7 +96,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newRegisterSuite(t)
 
-			_, err := s.service.Register(context.Background(), tt.email, "MyStr0ng!Pass99")
+			_, _, _, err := s.service.Register(context.Background(), tt.email, "MyStr0ng!Pass99")
 
 			assert.Assert(t, err != nil, "expected error for email %q", tt.email)
 			assert.Assert(t, errors.Is(err, domain.ErrInvalidEmail),
@@ -96,7 +108,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 func TestRegister_WeakPassword(t *testing.T) {
 	s := newRegisterSuite(t)
 
-	_, err := s.service.Register(context.Background(), "test@example.com", "short")
+	_, _, _, err := s.service.Register(context.Background(), "test@example.com", "short")
 
 	assert.Assert(t, err != nil, "expected error for weak password")
 
@@ -111,7 +123,7 @@ func TestRegister_DuplicateEmail_PreCheck(t *testing.T) {
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "existing@example.com").
 		Return(&models.User{Email: "existing@example.com"}, nil)
 
-	_, err := s.service.Register(context.Background(), "existing@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(context.Background(), "existing@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for duplicate email")
 	assert.Assert(t, errors.Is(err, domain.ErrDuplicateEmail),
@@ -125,7 +137,7 @@ func TestRegister_DuplicateEmail_RaceCondition(t *testing.T) {
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "race@example.com").Return(nil, nil)
 	s.storage.CreateUserMock.Return(domain.ErrDuplicateEmail)
 
-	_, err := s.service.Register(context.Background(), "race@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(context.Background(), "race@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for race condition duplicate")
 	assert.Assert(t, errors.Is(err, domain.ErrDuplicateEmail),
@@ -138,7 +150,7 @@ func TestRegister_StorageError(t *testing.T) {
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, nil)
 	s.storage.CreateUserMock.Return(errors.New("connection refused"))
 
-	_, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for storage failure")
 	assert.Assert(t, !errors.Is(err, domain.ErrDuplicateEmail),
@@ -155,9 +167,33 @@ func TestRegister_EmailNormalization(t *testing.T) {
 		assert.Equal(t, user.Email, "user@example.com", "email should be lowercased and trimmed")
 		return nil
 	})
+	s.sessionStorage.StoreRefreshTokenMock.Return(nil)
 
-	user, err := s.service.Register(context.Background(), "  User@Example.COM  ", "MyStr0ng!Pass99")
+	user, accessToken, refreshToken, err := s.service.Register(context.Background(), "  User@Example.COM  ", "MyStr0ng!Pass99")
 
 	assert.NilError(t, err)
 	assert.Equal(t, user.Email, "user@example.com")
+	assert.Assert(t, accessToken != "", "access token should not be empty after register")
+	assert.Assert(t, refreshToken != "", "refresh token should not be empty after register")
+}
+
+func TestRegister_StoresRefreshToken(t *testing.T) {
+	s := newRegisterSuite(t)
+
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "store@example.com").Return(nil, nil)
+	s.storage.CreateUserMock.Return(nil)
+
+	storeCalled := false
+	s.sessionStorage.StoreRefreshTokenMock.Set(func(_ context.Context, jti, userID, tokenFamily string, ttl time.Duration) error {
+		storeCalled = true
+		assert.Assert(t, jti != "", "JTI should not be empty")
+		assert.Assert(t, userID != "", "userID should not be empty")
+		assert.Assert(t, tokenFamily != "", "token family should not be empty")
+		assert.Equal(t, ttl, 168*time.Hour)
+		return nil
+	})
+
+	_, _, _, err := s.service.Register(context.Background(), "store@example.com", "MyStr0ng!Pass99")
+	assert.NilError(t, err)
+	assert.Assert(t, storeCalled, "StoreRefreshToken should have been called after registration")
 }

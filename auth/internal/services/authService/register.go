@@ -19,30 +19,31 @@ import (
 const COST_BCRYPT = 12
 
 // Register creates a new user account with the given email and password.
-func (s *AuthService) Register(ctx context.Context, email, password string) (*models.User, error) {
+// Returns the created user and JWT tokens for auto-login.
+func (s *AuthService) Register(ctx context.Context, email, password string) (*models.User, string, string, error) {
 	// 1. Validate email (basic format check)
 	if err := validateEmail(email); err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
 	// 2. Validate password (calls ValidatePassword from password_validation.go)
 	if err := ValidatePassword(password); err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
 	// 3. Check if email already exists
 	existing, err := s.storage.GetUserByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
 	if err != nil {
-		return nil, fmt.Errorf("check existing user: %w", err)
+		return nil, "", "", fmt.Errorf("check existing user: %w", err)
 	}
 	if existing != nil {
-		return nil, domain.ErrDuplicateEmail
+		return nil, "", "", domain.ErrDuplicateEmail
 	}
 
 	// 4. Hash password with bcrypt cost=12
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), COST_BCRYPT)
 	if err != nil {
-		return nil, fmt.Errorf("hash password: %w", err)
+		return nil, "", "", fmt.Errorf("hash password: %w", err)
 	}
 
 	// 5. Create user
@@ -58,12 +59,29 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*mo
 	if err := s.storage.CreateUser(ctx, user); err != nil {
 		// Handle race condition: concurrent insert hit unique constraint
 		if errors.Is(err, domain.ErrDuplicateEmail) {
-			return nil, domain.ErrDuplicateEmail
+			return nil, "", "", domain.ErrDuplicateEmail
 		}
-		return nil, fmt.Errorf("create user: %w", err)
+		return nil, "", "", fmt.Errorf("create user: %w", err)
 	}
 
-	return user, nil
+	// 6. Generate tokens for auto-login
+	tokenFamily := uuid.New().String()
+
+	accessToken, _, err := s.GenerateAccessToken(user.ID, user.Email)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("generate access token: %w", err)
+	}
+
+	refreshToken, refreshJTI, err := s.GenerateRefreshToken(user.ID, user.Email, tokenFamily)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("generate refresh token: %w", err)
+	}
+
+	if err := s.sessionStorage.StoreRefreshToken(ctx, refreshJTI, user.ID, tokenFamily, s.refreshTokenTTL); err != nil {
+		return nil, "", "", fmt.Errorf("store refresh token: %w", err)
+	}
+
+	return user, accessToken, refreshToken, nil
 }
 
 // validateEmail performs basic email format validation.

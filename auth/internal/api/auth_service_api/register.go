@@ -20,7 +20,7 @@ func (api *AuthServiceAPI) Register(ctx context.Context, req *pb.RegisterRequest
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	user, err := api.service.Register(ctx, req.Email, req.Password)
+	user, accessToken, refreshToken, err := api.service.Register(ctx, req.Email, req.Password)
 	if err != nil {
 		var validErr *domain.PasswordValidationError
 		if errors.As(err, &validErr) {
@@ -37,7 +37,10 @@ func (api *AuthServiceAPI) Register(ctx context.Context, req *pb.RegisterRequest
 	}
 
 	return &pb.RegisterResponse{
-		Tokens: nil, // D-06: tokens deferred to Phase 3
+		Tokens: &pbmodels.TokenPair{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		},
 		User: &pbmodels.User{
 			Id:        user.ID,
 			Email:     user.Email,
