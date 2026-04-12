@@ -6,6 +6,8 @@ import (
 	"github.com/vbncursed/vkr/auth/internal/models"
 )
 
+//go:generate minimock -i Storage -o ./mocks/ -s _mock.go
+
 // Storage defines the interface for persistent data access.
 type Storage interface {
 	CreateUser(ctx context.Context, user *models.User) error

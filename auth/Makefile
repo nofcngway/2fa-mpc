@@ -1,7 +1,10 @@
-.PHONY: generate build run test clean generate-keys tidy
+.PHONY: generate generate-mocks build run test clean generate-keys tidy
 
 generate:
 	bash scripts/generate.sh
+
+generate-mocks:
+	minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.Storage -o internal/services/authService/mocks/ -s "_mock.go"
 
 build: generate
 	go build -o bin/auth ./cmd/app
