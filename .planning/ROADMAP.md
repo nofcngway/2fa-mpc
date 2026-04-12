@@ -151,8 +151,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md — ValidateOTPWithCounter, interface extensions, Redis/PG storage methods, retrieve_shares helper, Verify service method, unit tests
+- [ ] 08-02-PLAN.md — Disable and GetStatus service methods, gRPC handlers (Verify2FA, Disable2FA, Get2FAStatus), error mapping
 
 ### Phase 9: Cross-Service Hardening
 **Goal**: All services meet production-readiness standards for observability, reliability, and security hygiene
