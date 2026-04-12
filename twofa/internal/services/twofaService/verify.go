@@ -100,7 +100,7 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 	}
 
 	// Check OTP reuse (per D-10)
-	if hasLastCounter && lastCounter == matchedCounter && lastCounter != 0 {
+	if hasLastCounter && lastCounter == matchedCounter {
 		return false, false, ErrOTPReused
 	}
 
