@@ -482,6 +482,41 @@ func TestSetup_SharesZeroized(t *testing.T) {
 	// by checking that the service completes successfully with the zeroize defer.
 }
 
+func TestSetup_SecretZeroized(t *testing.T) {
+	s := newSetupSuite(t)
+
+	// Capture the raw secret slice to verify zeroization after Setup
+	var capturedRaw []byte
+	originalGenerate := twofaService.GenerateSecretFunc
+	twofaService.GenerateSecretFunc = func() ([]byte, string, error) {
+		raw, base32, err := originalGenerate()
+		capturedRaw = raw
+		return raw, base32, err
+	}
+	defer func() { twofaService.GenerateSecretFunc = originalGenerate }()
+
+	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
+	s.storage.CreateTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil)
+	s.storage.StoreBatchBackupCodesMock.Set(func(_ context.Context, _ string, _ []string) error {
+		return nil
+	})
+
+	for i := 0; i < 3; i++ {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
+			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+		})
+	}
+
+	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+
+	assert.NilError(t, err)
+	assert.Assert(t, capturedRaw != nil, "capturedRaw should not be nil")
+	assert.Assert(t, len(capturedRaw) == 20, "TOTP secret should be 20 bytes, got %d", len(capturedRaw))
+	for i, b := range capturedRaw {
+		assert.Equal(t, byte(0), b, "raw secret byte at index %d should be zero after Setup, got %d", i, b)
+	}
+}
+
 // contains is a simple helper to check substring presence.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && searchSubstring(s, substr)

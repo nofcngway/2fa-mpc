@@ -14,6 +14,10 @@ import (
 	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 )
 
+// GenerateSecretFunc is the function used to generate TOTP secrets.
+// Exported to allow test injection for zeroization verification.
+var GenerateSecretFunc = totp.GenerateSecret
+
 // ErrAlreadyEnabled is returned when 2FA is already active for the user.
 var ErrAlreadyEnabled = errors.New("2fa: already enabled for this user")
 
@@ -41,7 +45,7 @@ func (s *TwoFAService) Setup(ctx context.Context, userID, email string) (string,
 	}
 
 	// 2. Generate TOTP secret (SEC-04: defer zeroize immediately, D-08)
-	raw, base32Secret, err := totp.GenerateSecret()
+	raw, base32Secret, err := GenerateSecretFunc()
 	if err != nil {
 		return "", nil, fmt.Errorf("generate totp secret: %w", err)
 	}
