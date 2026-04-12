@@ -30,6 +30,7 @@ type SessionStorage interface {
 type AuthService struct {
 	storage         Storage
 	sessionStorage  SessionStorage
+	eventProducer   EventProducer
 	privateKey      *rsa.PrivateKey
 	publicKey       *rsa.PublicKey
 	accessTokenTTL  time.Duration
@@ -40,6 +41,7 @@ type AuthService struct {
 func NewAuthService(
 	storage Storage,
 	sessionStorage SessionStorage,
+	eventProducer EventProducer,
 	privateKey *rsa.PrivateKey,
 	publicKey *rsa.PublicKey,
 	accessTokenTTL time.Duration,
@@ -48,6 +50,7 @@ func NewAuthService(
 	return &AuthService{
 		storage:         storage,
 		sessionStorage:  sessionStorage,
+		eventProducer:   eventProducer,
 		privateKey:      privateKey,
 		publicKey:       publicKey,
 		accessTokenTTL:  accessTokenTTL,

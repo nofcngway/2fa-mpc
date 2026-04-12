@@ -90,6 +90,11 @@ func (s *TwoFAService) Setup(ctx context.Context, userID, email string) (string,
 
 	slog.Info("2FA setup completed", "user_id", userID)
 
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "2fa.setup", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "2fa.setup", "error", err)
+	}
+
 	// 8. Return URI + plaintext codes (D-06: plaintext returned only once)
 	return uri, plaintextCodes, nil
 }

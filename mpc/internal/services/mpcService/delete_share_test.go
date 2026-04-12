@@ -22,8 +22,11 @@ func newDeleteSuite(t *testing.T) *deleteSuite {
 	t.Helper()
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
 	key := []byte("01234567890123456789012345678901") // exactly 32 bytes
-	service := mpcService.NewMPCService(storage, key, 1)
+	service := mpcService.NewMPCService(storage, key, 1, eventProducer)
 	return &deleteSuite{mc: mc, storage: storage, service: service}
 }
 

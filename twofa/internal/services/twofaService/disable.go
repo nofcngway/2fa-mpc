@@ -86,6 +86,12 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 	}
 
 	slog.Info("2FA disabled", "user_id", userID)
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "2fa.disabled", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "2fa.disabled", "error", err)
+	}
+
 	return nil
 }
 

@@ -46,6 +46,7 @@ type TwoFAService struct {
 	storage        Storage
 	sessionStorage SessionStorage
 	mpcClients     []MPCClient
+	eventProducer  EventProducer
 	sharedSecret   string
 	mpcTimeout     time.Duration
 }
@@ -55,6 +56,7 @@ func NewTwoFAService(
 	storage Storage,
 	sessionStorage SessionStorage,
 	mpcClients []MPCClient,
+	eventProducer EventProducer,
 	sharedSecret string,
 	mpcTimeout time.Duration,
 ) *TwoFAService {
@@ -62,6 +64,7 @@ func NewTwoFAService(
 		storage:        storage,
 		sessionStorage: sessionStorage,
 		mpcClients:     mpcClients,
+		eventProducer:  eventProducer,
 		sharedSecret:   sharedSecret,
 		mpcTimeout:     mpcTimeout,
 	}

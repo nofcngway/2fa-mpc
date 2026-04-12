@@ -52,7 +52,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	authSvc, err := bootstrap.NewAuthService(cfg, pgStorage, redisStorage)
+	kafkaProducer := bootstrap.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
+
+	authSvc, err := bootstrap.NewAuthService(cfg, pgStorage, redisStorage, kafkaProducer)
 	if err != nil {
 		slog.Error("failed to create auth service", "error", err)
 		os.Exit(1)
@@ -103,17 +105,23 @@ func main() {
 	grpcServer.GracefulStop()
 	slog.Info("gRPC server stopped")
 
-	// 2. Close Redis
+	// 2. Flush Kafka (pending audit events)
+	if err := kafkaProducer.Close(); err != nil {
+		slog.Error("failed to close Kafka producer", "error", err)
+	}
+	slog.Info("Kafka producer closed")
+
+	// 3. Close Redis
 	if redisStorage != nil {
 		redisStorage.Close()
 		slog.Info("Redis connection closed")
 	}
 
-	// 3. Close PostgreSQL
+	// 4. Close PostgreSQL
 	pgStorage.Close()
 	slog.Info("PostgreSQL connection closed")
 
-	// 4. Shutdown metrics HTTP server
+	// 5. Shutdown metrics HTTP server
 	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("failed to shutdown metrics server", "error", err)
 	}

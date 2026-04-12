@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,6 +34,11 @@ func (s *MPCService) StoreShare(ctx context.Context, userID string, shareIndex i
 			return "", models.ErrDuplicateShare
 		}
 		return "", fmt.Errorf("store share: %w", err)
+	}
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "share.stored", "success", s.nodeID)); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "share.stored", "error", err)
 	}
 
 	return share.ID, nil

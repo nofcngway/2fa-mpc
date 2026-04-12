@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
@@ -13,5 +14,14 @@ func (s *AuthService) Logout(ctx context.Context, refreshTokenStr string) error 
 		return domain.ErrInvalidToken
 	}
 
-	return s.sessionStorage.DeleteRefreshToken(ctx, claims.ID)
+	if err := s.sessionStorage.DeleteRefreshToken(ctx, claims.ID); err != nil {
+		return err
+	}
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(claims.Subject, "user.logged_out", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "user.logged_out", "error", err)
+	}
+
+	return nil
 }

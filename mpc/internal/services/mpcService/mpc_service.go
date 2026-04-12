@@ -21,13 +21,15 @@ type MPCService struct {
 	storage       Storage
 	encryptionKey []byte
 	nodeID        int
+	eventProducer EventProducer
 }
 
 // NewMPCService creates a new MPCService instance.
-func NewMPCService(storage Storage, encryptionKey []byte, nodeID int) *MPCService {
+func NewMPCService(storage Storage, encryptionKey []byte, nodeID int, eventProducer EventProducer) *MPCService {
 	return &MPCService{
 		storage:       storage,
 		encryptionKey: encryptionKey,
 		nodeID:        nodeID,
+		eventProducer: eventProducer,
 	}
 }

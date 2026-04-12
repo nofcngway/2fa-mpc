@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
@@ -26,6 +27,12 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	if tokenData == nil {
 		// Token was already rotated -- this is a reuse attempt (stolen token)
 		_ = s.sessionStorage.DeleteTokenFamily(ctx, claims.TokenFamily, claims.Subject)
+
+		// Fire-and-forget audit event for reuse detection
+		if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(claims.Subject, "token.refresh_reuse_detected", "alert")); err != nil {
+			slog.Warn("failed to publish audit event", "operation", "token.refresh_reuse_detected", "error", err)
+		}
+
 		return "", "", domain.ErrTokenRevoked
 	}
 
@@ -50,6 +57,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 
 	// 7. Delete old JTI (best-effort — it will expire naturally on TTL if this fails)
 	_ = s.sessionStorage.DeleteRefreshToken(ctx, claims.ID)
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(tokenData.UserID, "token.refreshed", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "token.refreshed", "error", err)
+	}
 
 	return newAccess, newRefresh, nil
 }

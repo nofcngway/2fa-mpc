@@ -41,8 +41,12 @@ func newVerifySuite(t *testing.T) *verifySuite {
 		mpcInterfaces[i] = mpcClients[i]
 	}
 
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
+
 	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcInterfaces, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcInterfaces, eventProducer, "test-secret", 5*time.Second,
 	)
 
 	return &verifySuite{

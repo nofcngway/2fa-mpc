@@ -40,8 +40,12 @@ func newSetupSuite(t *testing.T) *setupSuite {
 		mpcInterfaces[i] = mpcClients[i]
 	}
 
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
+
 	service := twofaService.NewTwoFAService(
-		storage, nil, mpcInterfaces, "test-secret", 5*time.Second,
+		storage, nil, mpcInterfaces, eventProducer, "test-secret", 5*time.Second,
 	)
 
 	return &setupSuite{

@@ -81,12 +81,14 @@ func NewTwoFAService(
 	storage *pgstorage.PGStorage,
 	sessionStorage *redisstorage.RedisStorage,
 	mpcClients []twofaService.MPCClient,
+	eventProducer twofaService.EventProducer,
 	cfg *config.Config,
 ) *twofaService.TwoFAService {
 	return twofaService.NewTwoFAService(
 		storage,
 		sessionStorage,
 		mpcClients,
+		eventProducer,
 		cfg.SharedSecret,
 		cfg.GetMPCTimeout(),
 	)

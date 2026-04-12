@@ -53,7 +53,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	service := bootstrap.NewTwoFAService(pgStorage, redisStorage, mpcClients, cfg)
+	kafkaProducer := bootstrap.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
+
+	service := bootstrap.NewTwoFAService(pgStorage, redisStorage, mpcClients, kafkaProducer, cfg)
 	api := bootstrap.NewTwoFAServiceAPI(service)
 	grpcServer := bootstrap.NewGRPCServer(api)
 
@@ -100,23 +102,29 @@ func main() {
 	grpcServer.GracefulStop()
 	slog.Info("gRPC server stopped")
 
-	// 2. Close Redis
+	// 2. Flush Kafka (pending audit events)
+	if err := kafkaProducer.Close(); err != nil {
+		slog.Error("failed to close Kafka producer", "error", err)
+	}
+	slog.Info("Kafka producer closed")
+
+	// 3. Close Redis
 	if redisStorage != nil {
 		redisStorage.Close()
 		slog.Info("Redis connection closed")
 	}
 
-	// 3. Close MPC connections
+	// 4. Close MPC connections
 	for _, conn := range mpcConns {
 		conn.Close()
 	}
 	slog.Info("MPC connections closed")
 
-	// 4. Close PostgreSQL
+	// 5. Close PostgreSQL
 	pgStorage.Close()
 	slog.Info("PostgreSQL connection closed")
 
-	// 5. Shutdown metrics HTTP server
+	// 6. Shutdown metrics HTTP server
 	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("failed to shutdown metrics server", "error", err)
 	}

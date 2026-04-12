@@ -9,6 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 
+	"github.com/vbncursed/vkr/auth/internal/bootstrap"
 	"github.com/vbncursed/vkr/auth/internal/domain"
 	"github.com/vbncursed/vkr/auth/internal/services/authService"
 )
@@ -23,7 +24,7 @@ func generateTestKeyPair(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
 func newJWTTestService(t *testing.T) *authService.AuthService {
 	t.Helper()
 	privateKey, publicKey := generateTestKeyPair(t)
-	return authService.NewAuthService(nil, nil, privateKey, publicKey, 15*time.Minute, 168*time.Hour)
+	return authService.NewAuthService(nil, nil, &bootstrap.NoOpProducer{}, privateKey, publicKey, 15*time.Minute, 168*time.Hour)
 }
 
 func TestJWT_GenerateAccessToken_ValidClaims(t *testing.T) {
@@ -122,7 +123,7 @@ func TestJWT_ParseToken_RejectsHS256_AlgorithmConfusion(t *testing.T) {
 func TestJWT_ParseToken_ExpiredToken(t *testing.T) {
 	privateKey, publicKey := generateTestKeyPair(t)
 	// Create service with very short TTL
-	svc := authService.NewAuthService(nil, nil, privateKey, publicKey, 1*time.Millisecond, 168*time.Hour)
+	svc := authService.NewAuthService(nil, nil, &bootstrap.NoOpProducer{}, privateKey, publicKey, 1*time.Millisecond, 168*time.Hour)
 
 	tokenStr, _, err := svc.GenerateAccessToken("user-789", "expired@test.com")
 	assert.NilError(t, err)

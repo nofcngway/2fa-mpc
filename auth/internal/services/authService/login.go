@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -48,6 +49,11 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 	// 7. Store refresh token in Redis
 	if err := s.sessionStorage.StoreRefreshToken(ctx, refreshJTI, user.ID, tokenFamily, s.refreshTokenTTL); err != nil {
 		return nil, "", "", err
+	}
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(user.ID, "user.logged_in", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "user.logged_in", "error", err)
 	}
 
 	return user, accessToken, refreshToken, nil

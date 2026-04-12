@@ -31,12 +31,15 @@ func newValidateSuite(t *testing.T) *validateSuite {
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
 	sessionStorage := mocks.NewSessionStorageMock(mc)
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
 	service := authService.NewAuthService(
-		storage, sessionStorage,
+		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
@@ -66,8 +69,11 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 	s := newValidateSuite(t)
 
 	// Create service with very short access TTL
+	shortEventProducer := mocks.NewEventProducerMock(s.mc)
+	shortEventProducer.PublishEventMock.Optional().Return(nil)
+	shortEventProducer.CloseMock.Optional().Return(nil)
 	shortService := authService.NewAuthService(
-		s.storage, s.sessionStorage,
+		s.storage, s.sessionStorage, shortEventProducer,
 		s.privateKey, &s.privateKey.PublicKey,
 		1*time.Nanosecond, 168*time.Hour,
 	)

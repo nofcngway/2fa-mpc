@@ -115,9 +115,21 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 			return false, false, fmt.Errorf("enable twofa: %w", err)
 		}
 		slog.Info("2FA enabled on first verification", "user_id", userID)
+
+		// Fire-and-forget audit event
+		if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "2fa.verified", "success")); err != nil {
+			slog.Warn("failed to publish audit event", "operation", "2fa.verified", "error", err)
+		}
+
 		return true, true, nil
 	}
 
 	slog.Info("2FA verification successful", "user_id", userID)
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "2fa.verified", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "2fa.verified", "error", err)
+	}
+
 	return true, false, nil
 }

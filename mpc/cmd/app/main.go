@@ -49,7 +49,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	service, err := bootstrap.NewMPCService(storage, cfg)
+	kafkaProducer := bootstrap.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
+
+	service, err := bootstrap.NewMPCService(storage, cfg, kafkaProducer)
 	if err != nil {
 		slog.Error("failed to create MPC service", "error", err)
 		os.Exit(1)
@@ -100,11 +102,17 @@ func main() {
 	grpcServer.GracefulStop()
 	slog.Info("gRPC server stopped")
 
-	// 2. Close PostgreSQL
+	// 2. Flush Kafka (pending audit events)
+	if err := kafkaProducer.Close(); err != nil {
+		slog.Error("failed to close Kafka producer", "error", err)
+	}
+	slog.Info("Kafka producer closed")
+
+	// 3. Close PostgreSQL
 	storage.Close()
 	slog.Info("PostgreSQL connection closed")
 
-	// 3. Shutdown metrics HTTP server
+	// 4. Shutdown metrics HTTP server
 	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("failed to shutdown metrics server", "error", err)
 	}

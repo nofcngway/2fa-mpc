@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -81,6 +82,11 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*do
 
 	if err := s.sessionStorage.StoreRefreshToken(ctx, refreshJTI, user.ID, tokenFamily, s.refreshTokenTTL); err != nil {
 		return nil, "", "", fmt.Errorf("store refresh token: %w", err)
+	}
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(user.ID, "user.registered", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "user.registered", "error", err)
 	}
 
 	return user, accessToken, refreshToken, nil

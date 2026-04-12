@@ -29,5 +29,10 @@ func (s *MPCService) RetrieveShare(ctx context.Context, userID string, shareInde
 		return nil, fmt.Errorf("decrypt share: %w", err)
 	}
 
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "share.retrieved", "success", s.nodeID)); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "share.retrieved", "error", err)
+	}
+
 	return plaintext, nil
 }

@@ -28,12 +28,15 @@ func newLogoutAllSuite(t *testing.T) *logoutAllSuite {
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
 	sessionStorage := mocks.NewSessionStorageMock(mc)
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
 	service := authService.NewAuthService(
-		storage, sessionStorage,
+		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)

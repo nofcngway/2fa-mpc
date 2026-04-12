@@ -29,8 +29,12 @@ func TestGetStatus_Found(t *testing.T) {
 		mpcClients[i] = m
 	}
 
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
+
 	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcClients, eventProducer, "test-secret", 5*time.Second,
 	)
 
 	// Make all optional
@@ -76,8 +80,12 @@ func TestGetStatus_NotFound(t *testing.T) {
 		mpcClients[i] = m
 	}
 
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
+
 	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcClients, eventProducer, "test-secret", 5*time.Second,
 	)
 
 	storage.CreateTwoFARecordMock.Optional()
@@ -112,8 +120,12 @@ func TestGetStatus_Error(t *testing.T) {
 		mpcClients[i] = m
 	}
 
+	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer.PublishEventMock.Optional().Return(nil)
+	eventProducer.CloseMock.Optional().Return(nil)
+
 	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcClients, eventProducer, "test-secret", 5*time.Second,
 	)
 
 	storage.CreateTwoFARecordMock.Optional()
