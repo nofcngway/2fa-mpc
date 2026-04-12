@@ -10,6 +10,10 @@ import (
 )
 
 // LogoutAll revokes all sessions for a given user.
+// NOTE: This is an internal operation — the caller (Gateway) must authenticate
+// the user via access token and extract user_id before forwarding the request.
+// Direct calls to this RPC without prior authentication bypass authorization.
+// TODO: Add gRPC interceptor to enforce caller identity (e.g., mTLS or service token).
 func (api *AuthServiceAPI) LogoutAll(ctx context.Context, req *pb.LogoutAllRequest) (*pb.LogoutAllResponse, error) {
 	if req.UserId == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
