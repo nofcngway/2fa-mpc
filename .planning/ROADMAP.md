@@ -72,8 +72,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — JWT infrastructure: RS256 token helper, SessionStorage interface, Redis three-key implementation, domain errors, mock generation
+- [ ] 03-02-PLAN.md — Session business logic: Login, RefreshToken with theft detection, Logout, LogoutAll, ValidateToken, Register auto-login, all gRPC handlers
 
 ### Phase 4: Shamir Secret Sharing
 **Goal**: A tested, from-scratch Shamir Secret Sharing library operates correctly in GF(256)
