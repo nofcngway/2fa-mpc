@@ -2,6 +2,7 @@ package totp
 
 import (
 	"encoding/base32"
+	"strings"
 	"testing"
 )
 
@@ -215,5 +216,85 @@ func TestValidateOTP_BoundaryTransition(t *testing.T) {
 	code30 := GenerateOTP(secret, 30)
 	if code29 == code30 {
 		t.Errorf("codes at boundary should differ: t=29 %q, t=30 %q", code29, code30)
+	}
+}
+
+// --- URI Tests ---
+
+// TestGenerateProvisioningURI_BasicFormat verifies the URI structure with a standard email.
+func TestGenerateProvisioningURI_BasicFormat(t *testing.T) {
+	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "user@example.com")
+
+	if !strings.HasPrefix(uri, "otpauth://totp/") {
+		t.Errorf("URI must start with otpauth://totp/, got %q", uri)
+	}
+	if !strings.Contains(uri, "MPC-2FA:") {
+		t.Errorf("URI must contain issuer label MPC-2FA:, got %q", uri)
+	}
+	// @ may be encoded as %40 by url.PathEscape.
+	if !strings.Contains(uri, "user%40example.com") && !strings.Contains(uri, "user@example.com") {
+		t.Errorf("URI must contain email, got %q", uri)
+	}
+	if !strings.Contains(uri, "?secret=JBSWY3DPEHPK3PXP") {
+		t.Errorf("URI must contain secret param, got %q", uri)
+	}
+	if !strings.Contains(uri, "issuer=MPC-2FA") {
+		t.Errorf("URI must contain issuer param, got %q", uri)
+	}
+	if !strings.Contains(uri, "algorithm=SHA1") {
+		t.Errorf("URI must contain algorithm=SHA1, got %q", uri)
+	}
+	if !strings.Contains(uri, "digits=6") {
+		t.Errorf("URI must contain digits=6, got %q", uri)
+	}
+	if !strings.Contains(uri, "period=30") {
+		t.Errorf("URI must contain period=30, got %q", uri)
+	}
+}
+
+// TestGenerateProvisioningURI_SpecialCharsEmail verifies URL encoding of special characters in email.
+func TestGenerateProvisioningURI_SpecialCharsEmail(t *testing.T) {
+	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "user+tag@exam ple.com")
+
+	if !strings.HasPrefix(uri, "otpauth://totp/") {
+		t.Errorf("URI must start with otpauth://totp/, got %q", uri)
+	}
+	// Space must be encoded as %20.
+	if !strings.Contains(uri, "%20") {
+		t.Errorf("URI must encode space as %%20, got %q", uri)
+	}
+	// Plus may be encoded as %2B.
+	if !strings.Contains(uri, "%2B") && !strings.Contains(uri, "+") {
+		t.Errorf("URI must contain plus (raw or encoded), got %q", uri)
+	}
+}
+
+// TestGenerateProvisioningURI_FullRoundtrip generates a secret and builds a URI,
+// verifying the generated base32 secret appears in the output.
+func TestGenerateProvisioningURI_FullRoundtrip(t *testing.T) {
+	_, encoded, err := GenerateSecret()
+	if err != nil {
+		t.Fatalf("GenerateSecret error: %v", err)
+	}
+
+	uri := GenerateProvisioningURI(encoded, "roundtrip@test.com")
+
+	if !strings.Contains(uri, "secret="+encoded) {
+		t.Errorf("URI must contain generated secret, got %q", uri)
+	}
+	if !strings.HasPrefix(uri, "otpauth://totp/MPC-2FA:") {
+		t.Errorf("URI must start with otpauth://totp/MPC-2FA:, got %q", uri)
+	}
+}
+
+// TestGenerateProvisioningURI_EmptyEmail verifies that an empty email produces a valid URI.
+func TestGenerateProvisioningURI_EmptyEmail(t *testing.T) {
+	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "")
+
+	if !strings.HasPrefix(uri, "otpauth://totp/MPC-2FA:") {
+		t.Errorf("URI must start with otpauth://totp/MPC-2FA:, got %q", uri)
+	}
+	if !strings.Contains(uri, "?secret=JBSWY3DPEHPK3PXP") {
+		t.Errorf("URI must contain secret param even with empty email, got %q", uri)
 	}
 }
