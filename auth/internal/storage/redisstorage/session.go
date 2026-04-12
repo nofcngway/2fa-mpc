@@ -149,6 +149,7 @@ func (rs *RedisStorage) DeleteTokenFamily(ctx context.Context, family string) er
 }
 
 // DeleteAllUserTokens removes all tokens and families for a user.
+// Uses MULTI/EXEC (TxPipelined) to avoid TOCTOU races with concurrent token rotation.
 func (rs *RedisStorage) DeleteAllUserTokens(ctx context.Context, userID string) error {
 	// Get all families for the user
 	families, err := rs.client.SMembers(ctx, prefixUserTokens+userID).Result()
@@ -159,26 +160,24 @@ func (rs *RedisStorage) DeleteAllUserTokens(ctx context.Context, userID string) 
 		return fmt.Errorf("get user families: %w", err)
 	}
 
-	pipe := rs.client.Pipeline()
+	_, err = rs.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		for _, family := range families {
+			jtis, err := rs.client.SMembers(ctx, prefixTokenFamily+family).Result()
+			if err != nil && err != redis.Nil {
+				return fmt.Errorf("get family %s members: %w", family, err)
+			}
 
-	// For each family, get JTIs and delete them
-	for _, family := range families {
-		jtis, err := rs.client.SMembers(ctx, prefixTokenFamily+family).Result()
-		if err != nil && err != redis.Nil {
-			return fmt.Errorf("get family %s members: %w", family, err)
+			for _, jti := range jtis {
+				pipe.Del(ctx, prefixRefreshToken+jti)
+			}
+
+			pipe.Del(ctx, prefixTokenFamily+family)
 		}
 
-		for _, jti := range jtis {
-			pipe.Del(ctx, prefixRefreshToken+jti)
-		}
-
-		pipe.Del(ctx, prefixTokenFamily+family)
-	}
-
-	// Delete the user tokens set
-	pipe.Del(ctx, prefixUserTokens+userID)
-
-	_, err = pipe.Exec(ctx)
+		// Delete the user tokens set
+		pipe.Del(ctx, prefixUserTokens+userID)
+		return nil
+	})
 	if err != nil {
 		return fmt.Errorf("delete all user tokens: %w", err)
 	}
