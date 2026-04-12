@@ -32,11 +32,10 @@ func main() {
 
 	redisStorage, err := bootstrap.NewRedisStorage(ctx, cfg)
 	if err != nil {
-		slog.Warn("Redis unavailable, continuing without Redis", "error", err)
+		slog.Error("failed to connect to Redis", "error", err)
+		os.Exit(1)
 	}
-	if redisStorage != nil {
-		defer redisStorage.Close()
-	}
+	defer redisStorage.Close()
 
 	authSvc, err := bootstrap.NewAuthService(cfg, pgStorage, redisStorage)
 	if err != nil {
