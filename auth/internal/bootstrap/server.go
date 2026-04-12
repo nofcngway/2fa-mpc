@@ -13,7 +13,10 @@ import (
 // NewGRPCServer creates and configures a gRPC server with interceptors and health check.
 func NewGRPCServer(api *auth_service_api.AuthServiceAPI) *grpc.Server {
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.LoggingInterceptor),
+		grpc.ChainUnaryInterceptor(
+			middleware.MetricsInterceptor,
+			middleware.LoggingInterceptor,
+		),
 	)
 
 	pb.RegisterAuthServiceServer(server, api)

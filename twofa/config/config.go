@@ -32,7 +32,9 @@ func (c *Config) GetMPCTimeout() time.Duration {
 
 // ServerConfig holds gRPC server settings.
 type ServerConfig struct {
-	Port int `yaml:"port"`
+	Port        int    `yaml:"port"`
+	MetricsPort int    `yaml:"metrics_port"`
+	LogLevel    string `yaml:"log_level"`
 }
 
 // DatabaseConfig holds PostgreSQL connection settings.

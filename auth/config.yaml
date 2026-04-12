@@ -1,5 +1,7 @@
 server:
   port: 9090
+  metrics_port: 9100
+  log_level: "info"
 
 database:
   dsn: "postgres://auth_user:auth_pass@localhost:5433/auth_db?sslmode=disable"

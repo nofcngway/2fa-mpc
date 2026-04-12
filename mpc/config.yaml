@@ -1,5 +1,7 @@
 server:
   port: 9100
+  metrics_port: 9102
+  log_level: "info"
 
 database:
   dsn: "postgres://mpc_user:mpc_pass@localhost:5435/mpc_db?sslmode=disable"

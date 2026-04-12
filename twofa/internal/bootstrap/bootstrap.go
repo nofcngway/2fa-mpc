@@ -100,7 +100,10 @@ func NewTwoFAServiceAPI(service twofa_service_api.Service) *twofa_service_api.Tw
 // NewGRPCServer creates and configures a new gRPC server with registered services.
 func NewGRPCServer(api *twofa_service_api.TwoFAServiceAPI) *grpc.Server {
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.LoggingInterceptor),
+		grpc.ChainUnaryInterceptor(
+			middleware.MetricsInterceptor,
+			middleware.LoggingInterceptor,
+		),
 	)
 
 	pb.RegisterTwoFAServiceServer(server, api)

@@ -50,6 +50,7 @@ func NewMPCServiceAPI(service mpc_service_api.Service) *mpc_service_api.MPCServi
 func NewGRPCServer(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) *grpc.Server {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			middleware.MetricsInterceptor,
 			middleware.AuthInterceptor(cfg.SharedSecret),
 			middleware.LoggingInterceptor,
 		),

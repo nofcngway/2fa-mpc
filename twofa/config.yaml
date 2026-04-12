@@ -1,5 +1,7 @@
 server:
   port: 9091
+  metrics_port: 9101
+  log_level: "info"
 
 database:
   dsn: "postgres://twofa_user:twofa_pass@localhost:5434/twofa_db?sslmode=disable"
