@@ -101,6 +101,14 @@ func TestDisable_Success(t *testing.T) {
 	ds.storage.DeleteBackupCodesMock.Expect(minimock.AnyContext, "test-user").Return(nil)
 	ds.storage.DeleteTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(nil)
 
+	// OTP reuse check: no prior counter stored
+	ds.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
+		return 0, nil
+	})
+	ds.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
+		return nil
+	})
+
 	// Redis cleanup
 	ds.sessionStorage.DeleteKeysMock.Set(func(_ context.Context, keys ...string) error {
 		return nil
@@ -162,6 +170,14 @@ func TestDisable_ShareDeletionFails(t *testing.T) {
 			return &mpc_api.RetrieveShareResponse{ShareData: data}, nil
 		})
 	}
+
+	// OTP reuse check: no prior counter stored
+	ds.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
+		return 0, nil
+	})
+	ds.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
+		return nil
+	})
 
 	// First 2 succeed, third fails
 	ds.mpcClients[0].DeleteShareMock.Set(func(_ context.Context, req *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
