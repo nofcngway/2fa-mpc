@@ -88,7 +88,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — GF(256) finite field arithmetic with TDD (log/exp tables, add, mul, div, inv, 14 property tests)
+- [ ] 04-02-PLAN.md — Shamir Split/Combine with TDD (Share type, polynomial evaluation, Lagrange interpolation, 16+ tests)
 
 ### Phase 5: TOTP Implementation
 **Goal**: A tested TOTP library generates and validates one-time passwords per RFC 6238
