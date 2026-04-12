@@ -72,7 +72,8 @@ func makeValidCode(unixTime int64) string {
 func (vs *verifySuite) setupMPCReturnsShares(allShareData [3][]byte) {
 	for i := 0; i < 3; i++ {
 		data := allShareData[i]
-		vs.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, req *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
+		// Optional because first-2-wins may skip the 3rd client.
+		vs.mpcClients[i].RetrieveShareMock.Optional().Set(func(_ context.Context, req *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
 			return &mpc_api.RetrieveShareResponse{ShareData: data}, nil
 		})
 	}
@@ -83,8 +84,6 @@ func TestVerify_Success(t *testing.T) {
 
 	// Use real Shamir split to get valid shares
 	shamirPkg := shamirSplit(t, testSecret)
-	now := time.Now().Unix()
-	code := makeValidCode(now)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
 		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
@@ -107,6 +106,8 @@ func TestVerify_Success(t *testing.T) {
 	vs.sessionStorage.GetRateLimitMock.Optional()
 	vs.sessionStorage.DeleteKeysMock.Optional()
 
+	// Generate code at the last moment to avoid TOTP window drift
+	code := makeValidCode(time.Now().Unix())
 	valid, isNewlyEnabled, err := vs.service.Verify(context.Background(), "test-user", code)
 
 	assert.NilError(t, err)
@@ -118,8 +119,6 @@ func TestVerify_EnablesOnFirst(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	shamirPkg := shamirSplit(t, testSecret)
-	now := time.Now().Unix()
-	code := makeValidCode(now)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
 		&models.TwoFARecord{UserID: "test-user", IsEnabled: false}, nil,
@@ -142,6 +141,8 @@ func TestVerify_EnablesOnFirst(t *testing.T) {
 	vs.sessionStorage.GetRateLimitMock.Optional()
 	vs.sessionStorage.DeleteKeysMock.Optional()
 
+	// Generate code at the last moment to avoid TOTP window drift
+	code := makeValidCode(time.Now().Unix())
 	valid, isNewlyEnabled, err := vs.service.Verify(context.Background(), "test-user", code)
 
 	assert.NilError(t, err)
@@ -188,8 +189,6 @@ func TestVerify_RateLimit_RedisDown(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	shamirPkg := shamirSplit(t, testSecret)
-	now := time.Now().Unix()
-	code := makeValidCode(now)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
 		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
@@ -215,6 +214,8 @@ func TestVerify_RateLimit_RedisDown(t *testing.T) {
 	vs.sessionStorage.GetRateLimitMock.Optional()
 	vs.sessionStorage.DeleteKeysMock.Optional()
 
+	// Generate code at the last moment to avoid TOTP window drift from prior tests
+	code := makeValidCode(time.Now().Unix())
 	valid, _, err := vs.service.Verify(context.Background(), "test-user", code)
 
 	assert.NilError(t, err)
@@ -225,12 +226,6 @@ func TestVerify_OTPReuse(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	shamirPkg := shamirSplit(t, testSecret)
-	// Anchor to middle of current TOTP window to avoid boundary flakiness
-	now := time.Now().Unix()
-	now = now - (now % 30) + 15
-	code := makeValidCode(now)
-	// The counter that ValidateOTPWithCounter would match
-	expectedCounter := now / 30
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
 		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
@@ -239,8 +234,12 @@ func TestVerify_OTPReuse(t *testing.T) {
 		return 1, nil
 	})
 	vs.setupMPCReturnsShares(shamirPkg)
-	// Return the same counter as what would match -- OTP reuse
-	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(expectedCounter, nil)
+	// Return a counter dynamically matching what ValidateOTPWithCounter will compute
+	// at the actual moment of verification (avoids timing drift from prior tests).
+	vs.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
+		now := time.Now().Unix()
+		return now / 30, nil
+	})
 
 	// Make remaining mocks optional
 	vs.storage.EnableTwoFAMock.Optional()
@@ -251,6 +250,9 @@ func TestVerify_OTPReuse(t *testing.T) {
 	vs.sessionStorage.SetUsedOTPCounterMock.Optional()
 	vs.sessionStorage.GetRateLimitMock.Optional()
 	vs.sessionStorage.DeleteKeysMock.Optional()
+
+	// Generate code at the last moment so it matches the current TOTP window
+	code := makeValidCode(time.Now().Unix())
 
 	_, _, err := vs.service.Verify(context.Background(), "test-user", code)
 
@@ -363,8 +365,6 @@ func TestVerify_Zeroization(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	shamirPkg := shamirSplit(t, testSecret)
-	now := time.Now().Unix()
-	code := makeValidCode(now)
 
 	// Create copies of share data that the mocks will return.
 	// We keep references to check zeroization after Verify returns.
@@ -376,7 +376,8 @@ func TestVerify_Zeroization(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		data := capturedShares[i]
-		vs.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, _ *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
+		// Optional because first-2-wins may skip the 3rd client.
+		vs.mpcClients[i].RetrieveShareMock.Optional().Set(func(_ context.Context, _ *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
 			return &mpc_api.RetrieveShareResponse{ShareData: data}, nil
 		})
 	}
@@ -401,6 +402,8 @@ func TestVerify_Zeroization(t *testing.T) {
 	vs.sessionStorage.GetRateLimitMock.Optional()
 	vs.sessionStorage.DeleteKeysMock.Optional()
 
+	// Generate code at the last moment to avoid TOTP window drift
+	code := makeValidCode(time.Now().Unix())
 	valid, _, err := vs.service.Verify(context.Background(), "test-user", code)
 
 	assert.NilError(t, err)
