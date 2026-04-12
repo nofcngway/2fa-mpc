@@ -57,7 +57,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **INFRA-04**: Graceful shutdown with ordered teardown (gRPC stop → Kafka flush → Redis close → PG close)
 - [ ] **INFRA-05**: Prometheus metrics per service (requests total, duration, service-specific counters)
 - [ ] **INFRA-06**: Structured logging with slog — secrets, passwords, shares, encryption keys NEVER logged
-- [ ] **INFRA-07**: Kafka audit events per service (user_id, operation, timestamp — no secret data)
+- [x] **INFRA-07**: Kafka audit events per service (user_id, operation, timestamp — no secret data)
 - [ ] **INFRA-08**: Configuration via config.yaml loaded in config/config.go
 - [ ] **INFRA-09**: Proto definitions in api/ with generate.sh for protobuf code generation
 - [ ] **INFRA-10**: Each service is separate Go module (github.com/vbncursed/vkr/{auth,twofa,mpc})
@@ -151,7 +151,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-04 | Phase 9 | Pending |
 | INFRA-05 | Phase 9 | Pending |
 | INFRA-06 | Phase 9 | Pending |
-| INFRA-07 | Phase 9 | Pending |
+| INFRA-07 | Phase 9 | Complete |
 | INFRA-08 | Phase 1 | Pending |
 | INFRA-09 | Phase 1 | Pending |
 | INFRA-10 | Phase 1 | Pending |

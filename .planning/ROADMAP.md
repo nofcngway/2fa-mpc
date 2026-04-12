@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: MPC Node Service** - Encrypted share storage with AES-256-GCM, gRPC auth interceptor, CRUD operations
 - [ ] **Phase 7: TwoFA Setup Flow** - Orchestrate 2FA setup: generate secret, Shamir split, distribute to MPC nodes, backup codes
 - [ ] **Phase 8: TwoFA Verification & Management** - OTP verification, rate limiting, disable 2FA, status check, single-use enforcement
-- [ ] **Phase 9: Cross-Service Hardening** - Health checks, graceful shutdown, Prometheus metrics, structured logging, Kafka audit, error sanitization
+- [x] **Phase 9: Cross-Service Hardening** - Health checks, graceful shutdown, Prometheus metrics, structured logging, Kafka audit, error sanitization (completed 2026-04-12)
 
 ## Phase Details
 
@@ -167,8 +167,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Prometheus metrics, slog JSON handler, ordered graceful shutdown across all 3 services
-- [ ] 09-02-PLAN.md — Kafka EventProducer + audit event publishing in all service methods + test updates
+- [x] 09-01-PLAN.md — Prometheus metrics, slog JSON handler, ordered graceful shutdown across all 3 services
+- [x] 09-02-PLAN.md — Kafka EventProducer + audit event publishing in all service methods + test updates
 
 ## Progress
 
@@ -186,4 +186,4 @@ Note: Phases 4, 5, 6 can execute in parallel after Phase 1 (no mutual dependenci
 | 6. MPC Node Service | 0/2 | Not started | - |
 | 7. TwoFA Setup Flow | 0/2 | Not started | - |
 | 8. TwoFA Verification & Management | 0/2 | Not started | - |
-| 9. Cross-Service Hardening | 0/2 | Not started | - |
+| 9. Cross-Service Hardening | 2/2 | Complete   | 2026-04-12 |
