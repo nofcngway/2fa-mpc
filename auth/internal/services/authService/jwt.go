@@ -82,7 +82,7 @@ func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
 		return s.publicKey, nil
 	},
 		jwt.WithValidMethods([]string{"RS256"}),
-		jwt.WithIssuers("mpc-2fa-auth"),
+		jwt.WithIssuer("mpc-2fa-auth"),
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil {
