@@ -15,7 +15,6 @@ import (
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/models"
 	"github.com/vbncursed/vkr/auth/internal/services/authService"
 	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
 )
@@ -54,7 +53,7 @@ func TestRegister_Success(t *testing.T) {
 	s := newRegisterSuite(t)
 
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, nil)
-	s.storage.CreateUserMock.Set(func(_ context.Context, user *models.User) error {
+	s.storage.CreateUserMock.Set(func(_ context.Context, user *domain.User) error {
 		assert.Assert(t, user.ID != "", "user ID should not be empty")
 		assert.Equal(t, user.Email, "test@example.com")
 		assert.Assert(t, user.PasswordHash != "", "password hash should not be empty")
@@ -121,7 +120,7 @@ func TestRegister_DuplicateEmail_PreCheck(t *testing.T) {
 	s := newRegisterSuite(t)
 
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "existing@example.com").
-		Return(&models.User{Email: "existing@example.com"}, nil)
+		Return(&domain.User{Email: "existing@example.com"}, nil)
 
 	_, _, _, err := s.service.Register(context.Background(), "existing@example.com", "MyStr0ng!Pass99")
 
@@ -163,7 +162,7 @@ func TestRegister_EmailNormalization(t *testing.T) {
 	s := newRegisterSuite(t)
 
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "user@example.com").Return(nil, nil)
-	s.storage.CreateUserMock.Set(func(_ context.Context, user *models.User) error {
+	s.storage.CreateUserMock.Set(func(_ context.Context, user *domain.User) error {
 		assert.Equal(t, user.Email, "user@example.com", "email should be lowercased and trimmed")
 		return nil
 	})

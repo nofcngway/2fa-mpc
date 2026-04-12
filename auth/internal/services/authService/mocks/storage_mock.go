@@ -11,7 +11,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/vbncursed/vkr/auth/internal/models"
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
 // StorageMock implements mm_authService.Storage
@@ -19,14 +19,14 @@ type StorageMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcCreateUser          func(ctx context.Context, user *models.User) (err error)
+	funcCreateUser          func(ctx context.Context, user *domain.User) (err error)
 	funcCreateUserOrigin    string
-	inspectFuncCreateUser   func(ctx context.Context, user *models.User)
+	inspectFuncCreateUser   func(ctx context.Context, user *domain.User)
 	afterCreateUserCounter  uint64
 	beforeCreateUserCounter uint64
 	CreateUserMock          mStorageMockCreateUser
 
-	funcGetUserByEmail          func(ctx context.Context, email string) (up1 *models.User, err error)
+	funcGetUserByEmail          func(ctx context.Context, email string) (up1 *domain.User, err error)
 	funcGetUserByEmailOrigin    string
 	inspectFuncGetUserByEmail   func(ctx context.Context, email string)
 	afterGetUserByEmailCounter  uint64
@@ -80,13 +80,13 @@ type StorageMockCreateUserExpectation struct {
 // StorageMockCreateUserParams contains parameters of the Storage.CreateUser
 type StorageMockCreateUserParams struct {
 	ctx  context.Context
-	user *models.User
+	user *domain.User
 }
 
 // StorageMockCreateUserParamPtrs contains pointers to parameters of the Storage.CreateUser
 type StorageMockCreateUserParamPtrs struct {
 	ctx  *context.Context
-	user **models.User
+	user **domain.User
 }
 
 // StorageMockCreateUserResults contains results of the Storage.CreateUser
@@ -112,7 +112,7 @@ func (mmCreateUser *mStorageMockCreateUser) Optional() *mStorageMockCreateUser {
 }
 
 // Expect sets up expected params for Storage.CreateUser
-func (mmCreateUser *mStorageMockCreateUser) Expect(ctx context.Context, user *models.User) *mStorageMockCreateUser {
+func (mmCreateUser *mStorageMockCreateUser) Expect(ctx context.Context, user *domain.User) *mStorageMockCreateUser {
 	if mmCreateUser.mock.funcCreateUser != nil {
 		mmCreateUser.mock.t.Fatalf("StorageMock.CreateUser mock is already set by Set")
 	}
@@ -160,7 +160,7 @@ func (mmCreateUser *mStorageMockCreateUser) ExpectCtxParam1(ctx context.Context)
 }
 
 // ExpectUserParam2 sets up expected param user for Storage.CreateUser
-func (mmCreateUser *mStorageMockCreateUser) ExpectUserParam2(user *models.User) *mStorageMockCreateUser {
+func (mmCreateUser *mStorageMockCreateUser) ExpectUserParam2(user *domain.User) *mStorageMockCreateUser {
 	if mmCreateUser.mock.funcCreateUser != nil {
 		mmCreateUser.mock.t.Fatalf("StorageMock.CreateUser mock is already set by Set")
 	}
@@ -183,7 +183,7 @@ func (mmCreateUser *mStorageMockCreateUser) ExpectUserParam2(user *models.User) 
 }
 
 // Inspect accepts an inspector function that has same arguments as the Storage.CreateUser
-func (mmCreateUser *mStorageMockCreateUser) Inspect(f func(ctx context.Context, user *models.User)) *mStorageMockCreateUser {
+func (mmCreateUser *mStorageMockCreateUser) Inspect(f func(ctx context.Context, user *domain.User)) *mStorageMockCreateUser {
 	if mmCreateUser.mock.inspectFuncCreateUser != nil {
 		mmCreateUser.mock.t.Fatalf("Inspect function is already set for StorageMock.CreateUser")
 	}
@@ -208,7 +208,7 @@ func (mmCreateUser *mStorageMockCreateUser) Return(err error) *StorageMock {
 }
 
 // Set uses given function f to mock the Storage.CreateUser method
-func (mmCreateUser *mStorageMockCreateUser) Set(f func(ctx context.Context, user *models.User) (err error)) *StorageMock {
+func (mmCreateUser *mStorageMockCreateUser) Set(f func(ctx context.Context, user *domain.User) (err error)) *StorageMock {
 	if mmCreateUser.defaultExpectation != nil {
 		mmCreateUser.mock.t.Fatalf("Default expectation is already set for the Storage.CreateUser method")
 	}
@@ -224,7 +224,7 @@ func (mmCreateUser *mStorageMockCreateUser) Set(f func(ctx context.Context, user
 
 // When sets expectation for the Storage.CreateUser which will trigger the result defined by the following
 // Then helper
-func (mmCreateUser *mStorageMockCreateUser) When(ctx context.Context, user *models.User) *StorageMockCreateUserExpectation {
+func (mmCreateUser *mStorageMockCreateUser) When(ctx context.Context, user *domain.User) *StorageMockCreateUserExpectation {
 	if mmCreateUser.mock.funcCreateUser != nil {
 		mmCreateUser.mock.t.Fatalf("StorageMock.CreateUser mock is already set by Set")
 	}
@@ -266,7 +266,7 @@ func (mmCreateUser *mStorageMockCreateUser) invocationsDone() bool {
 }
 
 // CreateUser implements mm_authService.Storage
-func (mmCreateUser *StorageMock) CreateUser(ctx context.Context, user *models.User) (err error) {
+func (mmCreateUser *StorageMock) CreateUser(ctx context.Context, user *domain.User) (err error) {
 	mm_atomic.AddUint64(&mmCreateUser.beforeCreateUserCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateUser.afterCreateUserCounter, 1)
 
@@ -433,7 +433,7 @@ type StorageMockGetUserByEmailParamPtrs struct {
 
 // StorageMockGetUserByEmailResults contains results of the Storage.GetUserByEmail
 type StorageMockGetUserByEmailResults struct {
-	up1 *models.User
+	up1 *domain.User
 	err error
 }
 
@@ -537,7 +537,7 @@ func (mmGetUserByEmail *mStorageMockGetUserByEmail) Inspect(f func(ctx context.C
 }
 
 // Return sets up results that will be returned by Storage.GetUserByEmail
-func (mmGetUserByEmail *mStorageMockGetUserByEmail) Return(up1 *models.User, err error) *StorageMock {
+func (mmGetUserByEmail *mStorageMockGetUserByEmail) Return(up1 *domain.User, err error) *StorageMock {
 	if mmGetUserByEmail.mock.funcGetUserByEmail != nil {
 		mmGetUserByEmail.mock.t.Fatalf("StorageMock.GetUserByEmail mock is already set by Set")
 	}
@@ -551,7 +551,7 @@ func (mmGetUserByEmail *mStorageMockGetUserByEmail) Return(up1 *models.User, err
 }
 
 // Set uses given function f to mock the Storage.GetUserByEmail method
-func (mmGetUserByEmail *mStorageMockGetUserByEmail) Set(f func(ctx context.Context, email string) (up1 *models.User, err error)) *StorageMock {
+func (mmGetUserByEmail *mStorageMockGetUserByEmail) Set(f func(ctx context.Context, email string) (up1 *domain.User, err error)) *StorageMock {
 	if mmGetUserByEmail.defaultExpectation != nil {
 		mmGetUserByEmail.mock.t.Fatalf("Default expectation is already set for the Storage.GetUserByEmail method")
 	}
@@ -582,7 +582,7 @@ func (mmGetUserByEmail *mStorageMockGetUserByEmail) When(ctx context.Context, em
 }
 
 // Then sets up Storage.GetUserByEmail return parameters for the expectation previously defined by the When method
-func (e *StorageMockGetUserByEmailExpectation) Then(up1 *models.User, err error) *StorageMock {
+func (e *StorageMockGetUserByEmailExpectation) Then(up1 *domain.User, err error) *StorageMock {
 	e.results = &StorageMockGetUserByEmailResults{up1, err}
 	return e.mock
 }
@@ -609,7 +609,7 @@ func (mmGetUserByEmail *mStorageMockGetUserByEmail) invocationsDone() bool {
 }
 
 // GetUserByEmail implements mm_authService.Storage
-func (mmGetUserByEmail *StorageMock) GetUserByEmail(ctx context.Context, email string) (up1 *models.User, err error) {
+func (mmGetUserByEmail *StorageMock) GetUserByEmail(ctx context.Context, email string) (up1 *domain.User, err error) {
 	mm_atomic.AddUint64(&mmGetUserByEmail.beforeGetUserByEmailCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetUserByEmail.afterGetUserByEmailCounter, 1)
 

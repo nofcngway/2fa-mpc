@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/models"
 )
 
 // COST_BCRYPT is the bcrypt hashing cost factor.
@@ -20,7 +19,7 @@ const COST_BCRYPT = 12
 
 // Register creates a new user account with the given email and password.
 // Returns the created user and JWT tokens for auto-login.
-func (s *AuthService) Register(ctx context.Context, email, password string) (*models.User, string, string, error) {
+func (s *AuthService) Register(ctx context.Context, email, password string) (*domain.User, string, string, error) {
 	// 1. Validate email (basic format check)
 	if err := validateEmail(email); err != nil {
 		return nil, "", "", err
@@ -48,7 +47,7 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*mo
 
 	// 5. Create user
 	now := time.Now()
-	user := &models.User{
+	user := &domain.User{
 		ID:           uuid.New().String(),
 		Email:        strings.ToLower(strings.TrimSpace(email)),
 		PasswordHash: string(hash),

@@ -57,7 +57,7 @@ func TestRefreshToken_Success(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Mock: GetRefreshToken returns existing data
-	s.sessionStorage.GetRefreshTokenMock.Expect(minimock.AnyContext, refreshJTI).Return(&authService.RefreshTokenData{
+	s.sessionStorage.GetRefreshTokenMock.Expect(minimock.AnyContext, refreshJTI).Return(&domain.RefreshTokenData{
 		UserID:      "user-123",
 		TokenFamily: "family-abc",
 	}, nil)
@@ -145,7 +145,7 @@ func TestRefreshToken_DeletesOldAndStoresNew(t *testing.T) {
 	refreshToken, refreshJTI, err := s.service.GenerateRefreshToken("user-123", "test@example.com", "family-abc")
 	assert.NilError(t, err)
 
-	s.sessionStorage.GetRefreshTokenMock.Expect(minimock.AnyContext, refreshJTI).Return(&authService.RefreshTokenData{
+	s.sessionStorage.GetRefreshTokenMock.Expect(minimock.AnyContext, refreshJTI).Return(&domain.RefreshTokenData{
 		UserID:      "user-123",
 		TokenFamily: "family-abc",
 	}, nil)

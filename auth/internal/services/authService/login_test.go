@@ -14,7 +14,6 @@ import (
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/models"
 	"github.com/vbncursed/vkr/auth/internal/services/authService"
 	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
 )
@@ -55,7 +54,7 @@ func TestLogin_Success(t *testing.T) {
 	hash, err := bcrypt.GenerateFromPassword([]byte("MyStr0ng!Pass99"), 4)
 	assert.NilError(t, err)
 
-	existingUser := &models.User{
+	existingUser := &domain.User{
 		ID:           "user-123",
 		Email:        "test@example.com",
 		PasswordHash: string(hash),
@@ -99,7 +98,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 	hash, err := bcrypt.GenerateFromPassword([]byte("MyStr0ng!Pass99"), 4)
 	assert.NilError(t, err)
 
-	existingUser := &models.User{
+	existingUser := &domain.User{
 		ID:           "user-123",
 		Email:        "test@example.com",
 		PasswordHash: string(hash),
@@ -120,7 +119,7 @@ func TestLogin_StoresRefreshToken(t *testing.T) {
 	hash, err := bcrypt.GenerateFromPassword([]byte("MyStr0ng!Pass99"), 4)
 	assert.NilError(t, err)
 
-	existingUser := &models.User{
+	existingUser := &domain.User{
 		ID:           "user-456",
 		Email:        "store@example.com",
 		PasswordHash: string(hash),
@@ -148,7 +147,7 @@ func TestLogin_EmailNormalization(t *testing.T) {
 	hash, err := bcrypt.GenerateFromPassword([]byte("MyStr0ng!Pass99"), 4)
 	assert.NilError(t, err)
 
-	existingUser := &models.User{
+	existingUser := &domain.User{
 		ID:           "user-789",
 		Email:        "user@example.com",
 		PasswordHash: string(hash),

@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/vbncursed/vkr/auth/internal/services/authService"
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
 // Key prefix constants for Redis session storage.
@@ -20,7 +20,7 @@ const (
 
 // StoreRefreshToken stores a refresh token with its metadata in Redis using a pipeline.
 func (rs *RedisStorage) StoreRefreshToken(ctx context.Context, jti, userID, tokenFamily string, ttl time.Duration) error {
-	data := &authService.RefreshTokenData{
+	data := &domain.RefreshTokenData{
 		UserID:      userID,
 		TokenFamily: tokenFamily,
 		IssuedAt:    time.Now().UTC().Format(time.RFC3339),
@@ -52,7 +52,7 @@ func (rs *RedisStorage) StoreRefreshToken(ctx context.Context, jti, userID, toke
 }
 
 // GetRefreshToken retrieves refresh token data by JTI.
-func (rs *RedisStorage) GetRefreshToken(ctx context.Context, jti string) (*authService.RefreshTokenData, error) {
+func (rs *RedisStorage) GetRefreshToken(ctx context.Context, jti string) (*domain.RefreshTokenData, error) {
 	val, err := rs.client.Get(ctx, prefixRefreshToken+jti).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -61,7 +61,7 @@ func (rs *RedisStorage) GetRefreshToken(ctx context.Context, jti string) (*authS
 		return nil, fmt.Errorf("get refresh token: %w", err)
 	}
 
-	var data authService.RefreshTokenData
+	var data domain.RefreshTokenData
 	if err := json.Unmarshal([]byte(val), &data); err != nil {
 		return nil, fmt.Errorf("unmarshal refresh token data: %w", err)
 	}

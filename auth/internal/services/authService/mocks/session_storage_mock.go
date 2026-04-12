@@ -12,7 +12,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	mm_authService "github.com/vbncursed/vkr/auth/internal/services/authService"
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
 // SessionStorageMock implements mm_authService.SessionStorage
@@ -41,7 +41,7 @@ type SessionStorageMock struct {
 	beforeDeleteTokenFamilyCounter uint64
 	DeleteTokenFamilyMock          mSessionStorageMockDeleteTokenFamily
 
-	funcGetRefreshToken          func(ctx context.Context, jti string) (rp1 *mm_authService.RefreshTokenData, err error)
+	funcGetRefreshToken          func(ctx context.Context, jti string) (rp1 *domain.RefreshTokenData, err error)
 	funcGetRefreshTokenOrigin    string
 	inspectFuncGetRefreshToken   func(ctx context.Context, jti string)
 	afterGetRefreshTokenCounter  uint64
@@ -1148,7 +1148,7 @@ type SessionStorageMockGetRefreshTokenParamPtrs struct {
 
 // SessionStorageMockGetRefreshTokenResults contains results of the SessionStorage.GetRefreshToken
 type SessionStorageMockGetRefreshTokenResults struct {
-	rp1 *mm_authService.RefreshTokenData
+	rp1 *domain.RefreshTokenData
 	err error
 }
 
@@ -1252,7 +1252,7 @@ func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) Inspect(f func(ctx 
 }
 
 // Return sets up results that will be returned by SessionStorage.GetRefreshToken
-func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) Return(rp1 *mm_authService.RefreshTokenData, err error) *SessionStorageMock {
+func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) Return(rp1 *domain.RefreshTokenData, err error) *SessionStorageMock {
 	if mmGetRefreshToken.mock.funcGetRefreshToken != nil {
 		mmGetRefreshToken.mock.t.Fatalf("SessionStorageMock.GetRefreshToken mock is already set by Set")
 	}
@@ -1266,7 +1266,7 @@ func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) Return(rp1 *mm_auth
 }
 
 // Set uses given function f to mock the SessionStorage.GetRefreshToken method
-func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) Set(f func(ctx context.Context, jti string) (rp1 *mm_authService.RefreshTokenData, err error)) *SessionStorageMock {
+func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) Set(f func(ctx context.Context, jti string) (rp1 *domain.RefreshTokenData, err error)) *SessionStorageMock {
 	if mmGetRefreshToken.defaultExpectation != nil {
 		mmGetRefreshToken.mock.t.Fatalf("Default expectation is already set for the SessionStorage.GetRefreshToken method")
 	}
@@ -1297,7 +1297,7 @@ func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) When(ctx context.Co
 }
 
 // Then sets up SessionStorage.GetRefreshToken return parameters for the expectation previously defined by the When method
-func (e *SessionStorageMockGetRefreshTokenExpectation) Then(rp1 *mm_authService.RefreshTokenData, err error) *SessionStorageMock {
+func (e *SessionStorageMockGetRefreshTokenExpectation) Then(rp1 *domain.RefreshTokenData, err error) *SessionStorageMock {
 	e.results = &SessionStorageMockGetRefreshTokenResults{rp1, err}
 	return e.mock
 }
@@ -1324,7 +1324,7 @@ func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) invocationsDone() b
 }
 
 // GetRefreshToken implements mm_authService.SessionStorage
-func (mmGetRefreshToken *SessionStorageMock) GetRefreshToken(ctx context.Context, jti string) (rp1 *mm_authService.RefreshTokenData, err error) {
+func (mmGetRefreshToken *SessionStorageMock) GetRefreshToken(ctx context.Context, jti string) (rp1 *domain.RefreshTokenData, err error) {
 	mm_atomic.AddUint64(&mmGetRefreshToken.beforeGetRefreshTokenCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetRefreshToken.afterGetRefreshTokenCounter, 1)
 

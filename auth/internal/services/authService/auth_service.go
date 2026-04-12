@@ -5,7 +5,7 @@ import (
 	"crypto/rsa"
 	"time"
 
-	"github.com/vbncursed/vkr/auth/internal/models"
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
 //go:generate minimock -i Storage -o ./mocks/ -s _mock.go
@@ -13,24 +13,17 @@ import (
 
 // Storage defines the interface for persistent data access.
 type Storage interface {
-	CreateUser(ctx context.Context, user *models.User) error
-	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	CreateUser(ctx context.Context, user *domain.User) error
+	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 }
 
 // SessionStorage defines the interface for session/cache operations.
 type SessionStorage interface {
 	StoreRefreshToken(ctx context.Context, jti, userID, tokenFamily string, ttl time.Duration) error
-	GetRefreshToken(ctx context.Context, jti string) (*RefreshTokenData, error)
+	GetRefreshToken(ctx context.Context, jti string) (*domain.RefreshTokenData, error)
 	DeleteRefreshToken(ctx context.Context, jti string) error
 	DeleteTokenFamily(ctx context.Context, family, userID string) error
 	DeleteAllUserTokens(ctx context.Context, userID string) error
-}
-
-// RefreshTokenData holds the data associated with a stored refresh token.
-type RefreshTokenData struct {
-	UserID      string `json:"user_id"`
-	TokenFamily string `json:"token_family"`
-	IssuedAt    string `json:"issued_at"`
 }
 
 // AuthService implements authentication business logic.

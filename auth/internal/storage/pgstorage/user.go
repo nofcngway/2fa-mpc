@@ -8,11 +8,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/models"
 )
 
 // CreateUser inserts a new user into the database.
-func (ps *PGStorage) CreateUser(ctx context.Context, user *models.User) error {
+func (ps *PGStorage) CreateUser(ctx context.Context, user *domain.User) error {
 	_, err := ps.pool.Exec(ctx, `
 		INSERT INTO users (id, email, password_hash, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
@@ -28,8 +27,8 @@ func (ps *PGStorage) CreateUser(ctx context.Context, user *models.User) error {
 }
 
 // GetUserByEmail retrieves a user by email address. Returns (nil, nil) if not found.
-func (ps *PGStorage) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	var user models.User
+func (ps *PGStorage) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	var user domain.User
 	err := ps.pool.QueryRow(ctx, `
 		SELECT id, email, password_hash, created_at, updated_at
 		FROM users WHERE email = $1

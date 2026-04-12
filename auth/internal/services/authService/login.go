@@ -9,11 +9,10 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/models"
 )
 
 // Login authenticates a user by email and password, returning JWT tokens on success.
-func (s *AuthService) Login(ctx context.Context, email, password string) (*models.User, string, string, error) {
+func (s *AuthService) Login(ctx context.Context, email, password string) (*domain.User, string, string, error) {
 	// 1. Normalize email
 	email = strings.ToLower(strings.TrimSpace(email))
 
