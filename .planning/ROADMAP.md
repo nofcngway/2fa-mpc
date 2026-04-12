@@ -119,8 +119,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Storage CRUD + AES-256-GCM encryption + service methods + unit tests
-- [ ] 06-02-PLAN.md — Auth interceptor + gRPC handlers + bootstrap key validation + ChainUnaryInterceptor
+- [x] 06-01-PLAN.md — Storage CRUD + AES-256-GCM encryption + service methods + unit tests
+- [x] 06-02-PLAN.md — Auth interceptor + gRPC handlers + bootstrap key validation + ChainUnaryInterceptor
 
 ### Phase 7: TwoFA Setup Flow
 **Goal**: Users can enable 2FA with their TOTP secret securely split and distributed across MPC nodes
