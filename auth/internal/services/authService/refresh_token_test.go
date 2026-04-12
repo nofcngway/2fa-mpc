@@ -94,7 +94,7 @@ func TestRefreshToken_TheftDetection(t *testing.T) {
 
 	// Mock: DeleteTokenFamily should be called for theft detection
 	familyDeleted := false
-	s.sessionStorage.DeleteTokenFamilyMock.Set(func(_ context.Context, family string) error {
+	s.sessionStorage.DeleteTokenFamilyMock.Set(func(_ context.Context, family, userID string) error {
 		familyDeleted = true
 		assert.Equal(t, family, "family-abc", "should delete the correct token family")
 		return nil

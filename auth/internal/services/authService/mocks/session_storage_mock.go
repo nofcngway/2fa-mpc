@@ -34,9 +34,9 @@ type SessionStorageMock struct {
 	beforeDeleteRefreshTokenCounter uint64
 	DeleteRefreshTokenMock          mSessionStorageMockDeleteRefreshToken
 
-	funcDeleteTokenFamily          func(ctx context.Context, family string) (err error)
+	funcDeleteTokenFamily          func(ctx context.Context, family string, userID string) (err error)
 	funcDeleteTokenFamilyOrigin    string
-	inspectFuncDeleteTokenFamily   func(ctx context.Context, family string)
+	inspectFuncDeleteTokenFamily   func(ctx context.Context, family string, userID string)
 	afterDeleteTokenFamilyCounter  uint64
 	beforeDeleteTokenFamilyCounter uint64
 	DeleteTokenFamilyMock          mSessionStorageMockDeleteTokenFamily
@@ -796,12 +796,14 @@ type SessionStorageMockDeleteTokenFamilyExpectation struct {
 type SessionStorageMockDeleteTokenFamilyParams struct {
 	ctx    context.Context
 	family string
+	userID string
 }
 
 // SessionStorageMockDeleteTokenFamilyParamPtrs contains pointers to parameters of the SessionStorage.DeleteTokenFamily
 type SessionStorageMockDeleteTokenFamilyParamPtrs struct {
 	ctx    *context.Context
 	family *string
+	userID *string
 }
 
 // SessionStorageMockDeleteTokenFamilyResults contains results of the SessionStorage.DeleteTokenFamily
@@ -814,6 +816,7 @@ type SessionStorageMockDeleteTokenFamilyExpectationOrigins struct {
 	origin       string
 	originCtx    string
 	originFamily string
+	originUserID string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -827,7 +830,7 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Optional() *mSe
 }
 
 // Expect sets up expected params for SessionStorage.DeleteTokenFamily
-func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Expect(ctx context.Context, family string) *mSessionStorageMockDeleteTokenFamily {
+func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Expect(ctx context.Context, family string, userID string) *mSessionStorageMockDeleteTokenFamily {
 	if mmDeleteTokenFamily.mock.funcDeleteTokenFamily != nil {
 		mmDeleteTokenFamily.mock.t.Fatalf("SessionStorageMock.DeleteTokenFamily mock is already set by Set")
 	}
@@ -840,7 +843,7 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Expect(ctx cont
 		mmDeleteTokenFamily.mock.t.Fatalf("SessionStorageMock.DeleteTokenFamily mock is already set by ExpectParams functions")
 	}
 
-	mmDeleteTokenFamily.defaultExpectation.params = &SessionStorageMockDeleteTokenFamilyParams{ctx, family}
+	mmDeleteTokenFamily.defaultExpectation.params = &SessionStorageMockDeleteTokenFamilyParams{ctx, family, userID}
 	mmDeleteTokenFamily.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmDeleteTokenFamily.expectations {
 		if minimock.Equal(e.params, mmDeleteTokenFamily.defaultExpectation.params) {
@@ -897,8 +900,31 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) ExpectFamilyPar
 	return mmDeleteTokenFamily
 }
 
+// ExpectUserIDParam3 sets up expected param userID for SessionStorage.DeleteTokenFamily
+func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) ExpectUserIDParam3(userID string) *mSessionStorageMockDeleteTokenFamily {
+	if mmDeleteTokenFamily.mock.funcDeleteTokenFamily != nil {
+		mmDeleteTokenFamily.mock.t.Fatalf("SessionStorageMock.DeleteTokenFamily mock is already set by Set")
+	}
+
+	if mmDeleteTokenFamily.defaultExpectation == nil {
+		mmDeleteTokenFamily.defaultExpectation = &SessionStorageMockDeleteTokenFamilyExpectation{}
+	}
+
+	if mmDeleteTokenFamily.defaultExpectation.params != nil {
+		mmDeleteTokenFamily.mock.t.Fatalf("SessionStorageMock.DeleteTokenFamily mock is already set by Expect")
+	}
+
+	if mmDeleteTokenFamily.defaultExpectation.paramPtrs == nil {
+		mmDeleteTokenFamily.defaultExpectation.paramPtrs = &SessionStorageMockDeleteTokenFamilyParamPtrs{}
+	}
+	mmDeleteTokenFamily.defaultExpectation.paramPtrs.userID = &userID
+	mmDeleteTokenFamily.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
+
+	return mmDeleteTokenFamily
+}
+
 // Inspect accepts an inspector function that has same arguments as the SessionStorage.DeleteTokenFamily
-func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Inspect(f func(ctx context.Context, family string)) *mSessionStorageMockDeleteTokenFamily {
+func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Inspect(f func(ctx context.Context, family string, userID string)) *mSessionStorageMockDeleteTokenFamily {
 	if mmDeleteTokenFamily.mock.inspectFuncDeleteTokenFamily != nil {
 		mmDeleteTokenFamily.mock.t.Fatalf("Inspect function is already set for SessionStorageMock.DeleteTokenFamily")
 	}
@@ -923,7 +949,7 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Return(err erro
 }
 
 // Set uses given function f to mock the SessionStorage.DeleteTokenFamily method
-func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Set(f func(ctx context.Context, family string) (err error)) *SessionStorageMock {
+func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Set(f func(ctx context.Context, family string, userID string) (err error)) *SessionStorageMock {
 	if mmDeleteTokenFamily.defaultExpectation != nil {
 		mmDeleteTokenFamily.mock.t.Fatalf("Default expectation is already set for the SessionStorage.DeleteTokenFamily method")
 	}
@@ -939,14 +965,14 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) Set(f func(ctx 
 
 // When sets expectation for the SessionStorage.DeleteTokenFamily which will trigger the result defined by the following
 // Then helper
-func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) When(ctx context.Context, family string) *SessionStorageMockDeleteTokenFamilyExpectation {
+func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) When(ctx context.Context, family string, userID string) *SessionStorageMockDeleteTokenFamilyExpectation {
 	if mmDeleteTokenFamily.mock.funcDeleteTokenFamily != nil {
 		mmDeleteTokenFamily.mock.t.Fatalf("SessionStorageMock.DeleteTokenFamily mock is already set by Set")
 	}
 
 	expectation := &SessionStorageMockDeleteTokenFamilyExpectation{
 		mock:               mmDeleteTokenFamily.mock,
-		params:             &SessionStorageMockDeleteTokenFamilyParams{ctx, family},
+		params:             &SessionStorageMockDeleteTokenFamilyParams{ctx, family, userID},
 		expectationOrigins: SessionStorageMockDeleteTokenFamilyExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmDeleteTokenFamily.expectations = append(mmDeleteTokenFamily.expectations, expectation)
@@ -981,17 +1007,17 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) invocationsDone
 }
 
 // DeleteTokenFamily implements mm_authService.SessionStorage
-func (mmDeleteTokenFamily *SessionStorageMock) DeleteTokenFamily(ctx context.Context, family string) (err error) {
+func (mmDeleteTokenFamily *SessionStorageMock) DeleteTokenFamily(ctx context.Context, family string, userID string) (err error) {
 	mm_atomic.AddUint64(&mmDeleteTokenFamily.beforeDeleteTokenFamilyCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteTokenFamily.afterDeleteTokenFamilyCounter, 1)
 
 	mmDeleteTokenFamily.t.Helper()
 
 	if mmDeleteTokenFamily.inspectFuncDeleteTokenFamily != nil {
-		mmDeleteTokenFamily.inspectFuncDeleteTokenFamily(ctx, family)
+		mmDeleteTokenFamily.inspectFuncDeleteTokenFamily(ctx, family, userID)
 	}
 
-	mm_params := SessionStorageMockDeleteTokenFamilyParams{ctx, family}
+	mm_params := SessionStorageMockDeleteTokenFamilyParams{ctx, family, userID}
 
 	// Record call args
 	mmDeleteTokenFamily.DeleteTokenFamilyMock.mutex.Lock()
@@ -1010,7 +1036,7 @@ func (mmDeleteTokenFamily *SessionStorageMock) DeleteTokenFamily(ctx context.Con
 		mm_want := mmDeleteTokenFamily.DeleteTokenFamilyMock.defaultExpectation.params
 		mm_want_ptrs := mmDeleteTokenFamily.DeleteTokenFamilyMock.defaultExpectation.paramPtrs
 
-		mm_got := SessionStorageMockDeleteTokenFamilyParams{ctx, family}
+		mm_got := SessionStorageMockDeleteTokenFamilyParams{ctx, family, userID}
 
 		if mm_want_ptrs != nil {
 
@@ -1022,6 +1048,11 @@ func (mmDeleteTokenFamily *SessionStorageMock) DeleteTokenFamily(ctx context.Con
 			if mm_want_ptrs.family != nil && !minimock.Equal(*mm_want_ptrs.family, mm_got.family) {
 				mmDeleteTokenFamily.t.Errorf("SessionStorageMock.DeleteTokenFamily got unexpected parameter family, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
 					mmDeleteTokenFamily.DeleteTokenFamilyMock.defaultExpectation.expectationOrigins.originFamily, *mm_want_ptrs.family, mm_got.family, minimock.Diff(*mm_want_ptrs.family, mm_got.family))
+			}
+
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmDeleteTokenFamily.t.Errorf("SessionStorageMock.DeleteTokenFamily got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmDeleteTokenFamily.DeleteTokenFamilyMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
 			}
 
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
@@ -1036,9 +1067,9 @@ func (mmDeleteTokenFamily *SessionStorageMock) DeleteTokenFamily(ctx context.Con
 		return (*mm_results).err
 	}
 	if mmDeleteTokenFamily.funcDeleteTokenFamily != nil {
-		return mmDeleteTokenFamily.funcDeleteTokenFamily(ctx, family)
+		return mmDeleteTokenFamily.funcDeleteTokenFamily(ctx, family, userID)
 	}
-	mmDeleteTokenFamily.t.Fatalf("Unexpected call to SessionStorageMock.DeleteTokenFamily. %v %v", ctx, family)
+	mmDeleteTokenFamily.t.Fatalf("Unexpected call to SessionStorageMock.DeleteTokenFamily. %v %v %v", ctx, family, userID)
 	return
 }
 

@@ -54,7 +54,7 @@ func NewAuthService(cfg *config.Config, storage authService.Storage, sessionStor
 }
 
 // NewAuthServiceAPI creates a new gRPC AuthServiceAPI handler.
-func NewAuthServiceAPI(service *authService.AuthService) *auth_service_api.AuthServiceAPI {
+func NewAuthServiceAPI(service auth_service_api.Service) *auth_service_api.AuthServiceAPI {
 	return auth_service_api.NewAuthServiceAPI(service)
 }
 
