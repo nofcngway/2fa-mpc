@@ -131,11 +131,12 @@ Plans:
   2. The TOTP secret is split into 3 shares and all 3 are stored across MPC nodes; if any node is unreachable, setup fails completely
   3. The TOTP secret is zeroized from memory after share distribution — never persisted whole
   4. Backup codes are bcrypt-hashed before storage in PostgreSQL
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Proto update, zeroize utility, storage interfaces, MPC client wiring, bootstrap
-- [ ] 07-02-PLAN.md — Setup2FA orchestration: parallel MPC distribution, backup codes, zeroization, handler, tests
+- [x] 07-01-PLAN.md — Proto update, zeroize utility, storage interfaces, MPC client wiring, bootstrap
+- [x] 07-02-PLAN.md — Setup2FA orchestration: parallel MPC distribution, backup codes, zeroization, handler, tests
+- [ ] 07-03-PLAN.md — Gap closure: TestSetup_SecretZeroized test + session_storage_mock.go generation
 
 ### Phase 8: TwoFA Verification & Management
 **Goal**: Users can verify OTP codes, manage their 2FA status, and the system enforces security constraints
