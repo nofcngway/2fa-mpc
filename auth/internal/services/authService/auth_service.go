@@ -22,7 +22,7 @@ type SessionStorage interface {
 	StoreRefreshToken(ctx context.Context, jti, userID, tokenFamily string, ttl time.Duration) error
 	GetRefreshToken(ctx context.Context, jti string) (*RefreshTokenData, error)
 	DeleteRefreshToken(ctx context.Context, jti string) error
-	DeleteTokenFamily(ctx context.Context, family string) error
+	DeleteTokenFamily(ctx context.Context, family, userID string) error
 	DeleteAllUserTokens(ctx context.Context, userID string) error
 }
 

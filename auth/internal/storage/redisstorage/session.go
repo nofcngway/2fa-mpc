@@ -113,8 +113,8 @@ func (rs *RedisStorage) DeleteRefreshToken(ctx context.Context, jti string) erro
 	return nil
 }
 
-// DeleteTokenFamily removes all tokens in a token family.
-func (rs *RedisStorage) DeleteTokenFamily(ctx context.Context, family string) error {
+// DeleteTokenFamily removes all tokens in a token family and cleans up the user-tokens set.
+func (rs *RedisStorage) DeleteTokenFamily(ctx context.Context, family, userID string) error {
 	// Get all JTIs in the family
 	jtis, err := rs.client.SMembers(ctx, prefixTokenFamily+family).Result()
 	if err != nil {
@@ -124,21 +124,25 @@ func (rs *RedisStorage) DeleteTokenFamily(ctx context.Context, family string) er
 		return fmt.Errorf("get family members: %w", err)
 	}
 
-	if len(jtis) == 0 {
-		// Idempotent: family already empty, just delete the key
-		rs.client.Del(ctx, prefixTokenFamily+family)
-		return nil
-	}
-
 	pipe := rs.client.Pipeline()
 
-	// Delete each refresh token
-	for _, jti := range jtis {
-		pipe.Del(ctx, prefixRefreshToken+jti)
+	if len(jtis) == 0 {
+		// Idempotent: family already empty, just delete the key
+		pipe.Del(ctx, prefixTokenFamily+family)
+	} else {
+		// Delete each refresh token
+		for _, jti := range jtis {
+			pipe.Del(ctx, prefixRefreshToken+jti)
+		}
+
+		// Delete the family set itself
+		pipe.Del(ctx, prefixTokenFamily+family)
 	}
 
-	// Delete the family set itself
-	pipe.Del(ctx, prefixTokenFamily+family)
+	// Remove the family from the user-tokens set to prevent stale references
+	if userID != "" {
+		pipe.SRem(ctx, prefixUserTokens+userID, family)
+	}
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {

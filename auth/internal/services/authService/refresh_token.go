@@ -25,7 +25,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	// 3. Theft detection: valid JWT but JTI not in Redis
 	if tokenData == nil {
 		// Token was already rotated -- this is a reuse attempt (stolen token)
-		_ = s.sessionStorage.DeleteTokenFamily(ctx, claims.TokenFamily)
+		_ = s.sessionStorage.DeleteTokenFamily(ctx, claims.TokenFamily, claims.Subject)
 		return "", "", domain.ErrTokenRevoked
 	}
 
