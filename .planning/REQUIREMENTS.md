@@ -36,7 +36,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CRYPTO-02**: GF(256) arithmetic — addition via XOR, multiplication via log/exp tables, polynomial evaluation
 - [ ] **CRYPTO-03**: Shamir unit tests — split→combine roundtrip, any 2-of-3 recovers, 1-of-3 does NOT recover
 - [x] **CRYPTO-04**: TOTP implementation per RFC 6238 — SHA-1, 6 digits, 30s period, base32 secret (20 bytes)
-- [ ] **CRYPTO-05**: TOTP generates valid provisioning URI (otpauth://totp/...)
+- [x] **CRYPTO-05**: TOTP generates valid provisioning URI (otpauth://totp/...)
 - [x] **CRYPTO-06**: TOTP validation allows +-1 time window
 - [x] **CRYPTO-07**: TOTP unit tests — generation, validation, time window edge cases
 
@@ -136,7 +136,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CRYPTO-02 | Phase 4 | Pending |
 | CRYPTO-03 | Phase 4 | Pending |
 | CRYPTO-04 | Phase 5 | Complete |
-| CRYPTO-05 | Phase 5 | Pending |
+| CRYPTO-05 | Phase 5 | Complete |
 | CRYPTO-06 | Phase 5 | Complete |
 | CRYPTO-07 | Phase 5 | Complete |
 | MPC-01 | Phase 6 | Pending |
