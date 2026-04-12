@@ -40,8 +40,10 @@ func (rs *RedisStorage) StoreRefreshToken(ctx context.Context, jti, userID, toke
 	pipe.SAdd(ctx, prefixTokenFamily+tokenFamily, jti)
 	pipe.Expire(ctx, prefixTokenFamily+tokenFamily, ttl)
 
-	// Add family to user tokens set (no TTL per D-05)
+	// Add family to user tokens set and refresh TTL to cap stale entry growth (WR-02).
+	// The TTL matches the refresh token TTL so orphaned families expire naturally.
 	pipe.SAdd(ctx, prefixUserTokens+userID, tokenFamily)
+	pipe.Expire(ctx, prefixUserTokens+userID, ttl)
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
