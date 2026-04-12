@@ -29,27 +29,27 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 		return "", "", domain.ErrTokenRevoked
 	}
 
-	// 4. Normal rotation: delete old JTI
-	if err := s.sessionStorage.DeleteRefreshToken(ctx, claims.ID); err != nil {
-		return "", "", err
-	}
-
-	// 5. Generate new access token
+	// 4. Generate new access token
 	newAccess, _, err := s.GenerateAccessToken(tokenData.UserID, claims.Email)
 	if err != nil {
 		return "", "", err
 	}
 
-	// 6. Generate new refresh token with same family
+	// 5. Generate new refresh token with same family
 	newRefresh, newJTI, err := s.GenerateRefreshToken(tokenData.UserID, claims.Email, tokenData.TokenFamily)
 	if err != nil {
 		return "", "", err
 	}
 
-	// 7. Store new refresh token
+	// 6. Store new token BEFORE deleting old — safer failure mode:
+	// if store fails, old token remains valid and user can retry;
+	// if delete fails after store, old token expires naturally at TTL.
 	if err := s.sessionStorage.StoreRefreshToken(ctx, newJTI, tokenData.UserID, tokenData.TokenFamily, s.refreshTokenTTL); err != nil {
 		return "", "", err
 	}
+
+	// 7. Delete old JTI (best-effort — it will expire naturally on TTL if this fails)
+	_ = s.sessionStorage.DeleteRefreshToken(ctx, claims.ID)
 
 	return newAccess, newRefresh, nil
 }
