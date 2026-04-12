@@ -49,10 +49,19 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 	}
 	defer crypto.Zeroize(secret)
 
-	valid, _ := totp.ValidateOTPWithCounter(secret, otpCode)
+	valid, matchedCounter := totp.ValidateOTPWithCounter(secret, otpCode)
 	if !valid {
 		return fmt.Errorf("disable 2fa: invalid OTP code")
 	}
+
+	// Check OTP reuse (same pattern as Verify, per D-10)
+	lastCounter, err := s.sessionStorage.GetUsedOTPCounter(ctx, userID)
+	if err == nil && lastCounter == matchedCounter && matchedCounter != 0 {
+		return ErrOTPReused
+	}
+
+	// Store the used counter to prevent replay
+	_ = s.sessionStorage.SetUsedOTPCounter(ctx, userID, matchedCounter, otpCounterTTL)
 
 	// 3. Delete shares from ALL 3 MPC nodes in parallel (per D-12, D-13)
 	if err := s.deleteSharesAll(ctx, userID); err != nil {
