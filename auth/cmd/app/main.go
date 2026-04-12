@@ -38,7 +38,11 @@ func main() {
 		defer redisStorage.Close()
 	}
 
-	authSvc := bootstrap.NewAuthService(pgStorage, redisStorage)
+	authSvc, err := bootstrap.NewAuthService(cfg, pgStorage, redisStorage)
+	if err != nil {
+		slog.Error("failed to create auth service", "error", err)
+		os.Exit(1)
+	}
 	authAPI := bootstrap.NewAuthServiceAPI(authSvc)
 	grpcServer := bootstrap.NewGRPCServer(authAPI)
 

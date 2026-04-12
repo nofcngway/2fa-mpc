@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"google.golang.org/grpc"
@@ -38,9 +39,18 @@ func NewRedisStorage(ctx context.Context, cfg *config.Config) (*redisstorage.Red
 	return rs, nil
 }
 
-// NewAuthService creates a new AuthService with the provided storage dependencies.
-func NewAuthService(storage authService.Storage, sessionStorage authService.SessionStorage) *authService.AuthService {
-	return authService.NewAuthService(storage, sessionStorage)
+// NewAuthService creates a new AuthService with the provided storage dependencies and RSA keys.
+func NewAuthService(cfg *config.Config, storage authService.Storage, sessionStorage authService.SessionStorage) (*authService.AuthService, error) {
+	privateKey, publicKey, err := authService.LoadRSAKeys(cfg.JWT.PrivateKeyPath, cfg.JWT.PublicKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("load RSA keys: %w", err)
+	}
+
+	return authService.NewAuthService(
+		storage, sessionStorage,
+		privateKey, publicKey,
+		cfg.JWT.AccessTokenTTL, cfg.JWT.RefreshTokenTTL,
+	), nil
 }
 
 // NewAuthServiceAPI creates a new gRPC AuthServiceAPI handler.

@@ -5,6 +5,7 @@ generate:
 
 generate-mocks:
 	minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.Storage -o internal/services/authService/mocks/ -s "_mock.go"
+	minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.SessionStorage -o internal/services/authService/mocks/ -s "_mock.go"
 
 build: generate
 	go build -o bin/auth ./cmd/app
