@@ -78,8 +78,13 @@ func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		// Algorithm check is delegated to jwt.WithValidMethods below (SEC-01).
 		return s.publicKey, nil
-	}, jwt.WithValidMethods([]string{"RS256"}))
+	},
+		jwt.WithValidMethods([]string{"RS256"}),
+		jwt.WithIssuers("mpc-2fa-auth"),
+		jwt.WithExpirationRequired(),
+	)
 	if err != nil {
 		// Check for expiration specifically
 		if s.isExpiredError(err) {
