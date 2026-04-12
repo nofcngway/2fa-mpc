@@ -199,6 +199,67 @@ func TestHOTP_EmptySecretPanics(t *testing.T) {
 
 // --- URI Tests ---
 
+// --- ValidateOTPWithCounter Tests ---
+
+// TestValidateOTPWithCounter_CurrentWindow verifies that validateOTPWithCounterAt
+// returns (true, counter) for a code generated at the exact time counter.
+func TestValidateOTPWithCounter_CurrentWindow(t *testing.T) {
+	s := newTOTPSuite()
+	code := hotp(s.secret, s.baseCount)
+	valid, counter := validateOTPWithCounterAt(s.secret, code, s.baseTime)
+	assert.Assert(t, valid, "should accept code %q at exact time %d", code, s.baseTime)
+	assert.Equal(t, counter, int64(s.baseCount))
+}
+
+// TestValidateOTPWithCounter_PrevWindow verifies that validateOTPWithCounterAt
+// returns (true, counter-1) for a code generated at T-1 window.
+func TestValidateOTPWithCounter_PrevWindow(t *testing.T) {
+	s := newTOTPSuite()
+	prevCounter := s.baseCount - 1
+	code := hotp(s.secret, prevCounter)
+	valid, counter := validateOTPWithCounterAt(s.secret, code, s.baseTime)
+	assert.Assert(t, valid, "should accept code %q from T-1 window", code)
+	assert.Equal(t, counter, int64(prevCounter))
+}
+
+// TestValidateOTPWithCounter_NextWindow verifies that validateOTPWithCounterAt
+// returns (true, counter+1) for a code generated at T+1 window.
+func TestValidateOTPWithCounter_NextWindow(t *testing.T) {
+	s := newTOTPSuite()
+	nextCounter := s.baseCount + 1
+	code := hotp(s.secret, nextCounter)
+	valid, counter := validateOTPWithCounterAt(s.secret, code, s.baseTime)
+	assert.Assert(t, valid, "should accept code %q from T+1 window", code)
+	assert.Equal(t, counter, int64(nextCounter))
+}
+
+// TestValidateOTPWithCounter_WrongCode verifies that validateOTPWithCounterAt
+// returns (false, 0) for an incorrect code.
+func TestValidateOTPWithCounter_WrongCode(t *testing.T) {
+	s := newTOTPSuite()
+	valid, counter := validateOTPWithCounterAt(s.secret, "000000", s.baseTime)
+	assert.Assert(t, !valid, "should reject wrong code")
+	assert.Equal(t, counter, int64(0))
+}
+
+// TestValidateOTPWithCounter_NonSixDigit verifies that validateOTPWithCounterAt
+// returns (false, 0) for non-6-digit input.
+func TestValidateOTPWithCounter_NonSixDigit(t *testing.T) {
+	s := newTOTPSuite()
+
+	valid, counter := validateOTPWithCounterAt(s.secret, "12345", s.baseTime)
+	assert.Assert(t, !valid, "should reject 5-digit code")
+	assert.Equal(t, counter, int64(0))
+
+	valid, counter = validateOTPWithCounterAt(s.secret, "1234567", s.baseTime)
+	assert.Assert(t, !valid, "should reject 7-digit code")
+	assert.Equal(t, counter, int64(0))
+
+	valid, counter = validateOTPWithCounterAt(s.secret, "12345a", s.baseTime)
+	assert.Assert(t, !valid, "should reject non-numeric code")
+	assert.Equal(t, counter, int64(0))
+}
+
 // TestGenerateProvisioningURI_BasicFormat verifies the URI structure with a standard email.
 func TestGenerateProvisioningURI_BasicFormat(t *testing.T) {
 	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "user@example.com")

@@ -67,6 +67,38 @@ func validateOTPAt(secret []byte, code string, unixTime int64) bool {
 	return false
 }
 
+// ValidateOTPWithCounter checks if code is valid for the current time +-1 window
+// and returns the matched counter value for reuse prevention.
+// Returns (false, 0) if no window matches.
+func ValidateOTPWithCounter(secret []byte, code string) (bool, int64) {
+	return validateOTPWithCounterAt(secret, code, time.Now().Unix())
+}
+
+// validateOTPWithCounterAt is the testable core for ValidateOTPWithCounter.
+func validateOTPWithCounterAt(secret []byte, code string, unixTime int64) (bool, int64) {
+	if len(code) != 6 {
+		return false, 0
+	}
+	for _, c := range code {
+		if c < '0' || c > '9' {
+			return false, 0
+		}
+	}
+	counter := int64(unixTime) / 30
+	if subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter))), []byte(code)) == 1 {
+		return true, counter
+	}
+	if subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter+1))), []byte(code)) == 1 {
+		return true, counter + 1
+	}
+	if counter > 0 {
+		if subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter-1))), []byte(code)) == 1 {
+			return true, counter - 1
+		}
+	}
+	return false, 0
+}
+
 // hotp computes a 6-digit HMAC-based OTP for the given counter.
 // Implements dynamic truncation per RFC 4226 Section 5.4.
 // Panics if secret is empty — indicates a bug in the caller.

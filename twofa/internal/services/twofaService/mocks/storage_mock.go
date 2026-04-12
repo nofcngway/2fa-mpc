@@ -26,6 +26,27 @@ type StorageMock struct {
 	beforeCreateTwoFARecordCounter uint64
 	CreateTwoFARecordMock          mStorageMockCreateTwoFARecord
 
+	funcDeleteBackupCodes          func(ctx context.Context, userID string) (err error)
+	funcDeleteBackupCodesOrigin    string
+	inspectFuncDeleteBackupCodes   func(ctx context.Context, userID string)
+	afterDeleteBackupCodesCounter  uint64
+	beforeDeleteBackupCodesCounter uint64
+	DeleteBackupCodesMock          mStorageMockDeleteBackupCodes
+
+	funcDeleteTwoFARecord          func(ctx context.Context, userID string) (err error)
+	funcDeleteTwoFARecordOrigin    string
+	inspectFuncDeleteTwoFARecord   func(ctx context.Context, userID string)
+	afterDeleteTwoFARecordCounter  uint64
+	beforeDeleteTwoFARecordCounter uint64
+	DeleteTwoFARecordMock          mStorageMockDeleteTwoFARecord
+
+	funcEnableTwoFA          func(ctx context.Context, userID string) (err error)
+	funcEnableTwoFAOrigin    string
+	inspectFuncEnableTwoFA   func(ctx context.Context, userID string)
+	afterEnableTwoFACounter  uint64
+	beforeEnableTwoFACounter uint64
+	EnableTwoFAMock          mStorageMockEnableTwoFA
+
 	funcGetTwoFARecord          func(ctx context.Context, userID string) (tp1 *models.TwoFARecord, err error)
 	funcGetTwoFARecordOrigin    string
 	inspectFuncGetTwoFARecord   func(ctx context.Context, userID string)
@@ -51,6 +72,15 @@ func NewStorageMock(t minimock.Tester) *StorageMock {
 
 	m.CreateTwoFARecordMock = mStorageMockCreateTwoFARecord{mock: m}
 	m.CreateTwoFARecordMock.callArgs = []*StorageMockCreateTwoFARecordParams{}
+
+	m.DeleteBackupCodesMock = mStorageMockDeleteBackupCodes{mock: m}
+	m.DeleteBackupCodesMock.callArgs = []*StorageMockDeleteBackupCodesParams{}
+
+	m.DeleteTwoFARecordMock = mStorageMockDeleteTwoFARecord{mock: m}
+	m.DeleteTwoFARecordMock.callArgs = []*StorageMockDeleteTwoFARecordParams{}
+
+	m.EnableTwoFAMock = mStorageMockEnableTwoFA{mock: m}
+	m.EnableTwoFAMock.callArgs = []*StorageMockEnableTwoFAParams{}
 
 	m.GetTwoFARecordMock = mStorageMockGetTwoFARecord{mock: m}
 	m.GetTwoFARecordMock.callArgs = []*StorageMockGetTwoFARecordParams{}
@@ -402,6 +432,1032 @@ func (m *StorageMock) MinimockCreateTwoFARecordInspect() {
 	if !m.CreateTwoFARecordMock.invocationsDone() && afterCreateTwoFARecordCounter > 0 {
 		m.t.Errorf("Expected %d calls to StorageMock.CreateTwoFARecord at\n%s but found %d calls",
 			mm_atomic.LoadUint64(&m.CreateTwoFARecordMock.expectedInvocations), m.CreateTwoFARecordMock.expectedInvocationsOrigin, afterCreateTwoFARecordCounter)
+	}
+}
+
+type mStorageMockDeleteBackupCodes struct {
+	optional           bool
+	mock               *StorageMock
+	defaultExpectation *StorageMockDeleteBackupCodesExpectation
+	expectations       []*StorageMockDeleteBackupCodesExpectation
+
+	callArgs []*StorageMockDeleteBackupCodesParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// StorageMockDeleteBackupCodesExpectation specifies expectation struct of the Storage.DeleteBackupCodes
+type StorageMockDeleteBackupCodesExpectation struct {
+	mock               *StorageMock
+	params             *StorageMockDeleteBackupCodesParams
+	paramPtrs          *StorageMockDeleteBackupCodesParamPtrs
+	expectationOrigins StorageMockDeleteBackupCodesExpectationOrigins
+	results            *StorageMockDeleteBackupCodesResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// StorageMockDeleteBackupCodesParams contains parameters of the Storage.DeleteBackupCodes
+type StorageMockDeleteBackupCodesParams struct {
+	ctx    context.Context
+	userID string
+}
+
+// StorageMockDeleteBackupCodesParamPtrs contains pointers to parameters of the Storage.DeleteBackupCodes
+type StorageMockDeleteBackupCodesParamPtrs struct {
+	ctx    *context.Context
+	userID *string
+}
+
+// StorageMockDeleteBackupCodesResults contains results of the Storage.DeleteBackupCodes
+type StorageMockDeleteBackupCodesResults struct {
+	err error
+}
+
+// StorageMockDeleteBackupCodesOrigins contains origins of expectations of the Storage.DeleteBackupCodes
+type StorageMockDeleteBackupCodesExpectationOrigins struct {
+	origin       string
+	originCtx    string
+	originUserID string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Optional() *mStorageMockDeleteBackupCodes {
+	mmDeleteBackupCodes.optional = true
+	return mmDeleteBackupCodes
+}
+
+// Expect sets up expected params for Storage.DeleteBackupCodes
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Expect(ctx context.Context, userID string) *mStorageMockDeleteBackupCodes {
+	if mmDeleteBackupCodes.mock.funcDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Set")
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation == nil {
+		mmDeleteBackupCodes.defaultExpectation = &StorageMockDeleteBackupCodesExpectation{}
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation.paramPtrs != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by ExpectParams functions")
+	}
+
+	mmDeleteBackupCodes.defaultExpectation.params = &StorageMockDeleteBackupCodesParams{ctx, userID}
+	mmDeleteBackupCodes.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmDeleteBackupCodes.expectations {
+		if minimock.Equal(e.params, mmDeleteBackupCodes.defaultExpectation.params) {
+			mmDeleteBackupCodes.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDeleteBackupCodes.defaultExpectation.params)
+		}
+	}
+
+	return mmDeleteBackupCodes
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Storage.DeleteBackupCodes
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) ExpectCtxParam1(ctx context.Context) *mStorageMockDeleteBackupCodes {
+	if mmDeleteBackupCodes.mock.funcDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Set")
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation == nil {
+		mmDeleteBackupCodes.defaultExpectation = &StorageMockDeleteBackupCodesExpectation{}
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation.params != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Expect")
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation.paramPtrs == nil {
+		mmDeleteBackupCodes.defaultExpectation.paramPtrs = &StorageMockDeleteBackupCodesParamPtrs{}
+	}
+	mmDeleteBackupCodes.defaultExpectation.paramPtrs.ctx = &ctx
+	mmDeleteBackupCodes.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmDeleteBackupCodes
+}
+
+// ExpectUserIDParam2 sets up expected param userID for Storage.DeleteBackupCodes
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) ExpectUserIDParam2(userID string) *mStorageMockDeleteBackupCodes {
+	if mmDeleteBackupCodes.mock.funcDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Set")
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation == nil {
+		mmDeleteBackupCodes.defaultExpectation = &StorageMockDeleteBackupCodesExpectation{}
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation.params != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Expect")
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation.paramPtrs == nil {
+		mmDeleteBackupCodes.defaultExpectation.paramPtrs = &StorageMockDeleteBackupCodesParamPtrs{}
+	}
+	mmDeleteBackupCodes.defaultExpectation.paramPtrs.userID = &userID
+	mmDeleteBackupCodes.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
+
+	return mmDeleteBackupCodes
+}
+
+// Inspect accepts an inspector function that has same arguments as the Storage.DeleteBackupCodes
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Inspect(f func(ctx context.Context, userID string)) *mStorageMockDeleteBackupCodes {
+	if mmDeleteBackupCodes.mock.inspectFuncDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("Inspect function is already set for StorageMock.DeleteBackupCodes")
+	}
+
+	mmDeleteBackupCodes.mock.inspectFuncDeleteBackupCodes = f
+
+	return mmDeleteBackupCodes
+}
+
+// Return sets up results that will be returned by Storage.DeleteBackupCodes
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Return(err error) *StorageMock {
+	if mmDeleteBackupCodes.mock.funcDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Set")
+	}
+
+	if mmDeleteBackupCodes.defaultExpectation == nil {
+		mmDeleteBackupCodes.defaultExpectation = &StorageMockDeleteBackupCodesExpectation{mock: mmDeleteBackupCodes.mock}
+	}
+	mmDeleteBackupCodes.defaultExpectation.results = &StorageMockDeleteBackupCodesResults{err}
+	mmDeleteBackupCodes.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmDeleteBackupCodes.mock
+}
+
+// Set uses given function f to mock the Storage.DeleteBackupCodes method
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Set(f func(ctx context.Context, userID string) (err error)) *StorageMock {
+	if mmDeleteBackupCodes.defaultExpectation != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("Default expectation is already set for the Storage.DeleteBackupCodes method")
+	}
+
+	if len(mmDeleteBackupCodes.expectations) > 0 {
+		mmDeleteBackupCodes.mock.t.Fatalf("Some expectations are already set for the Storage.DeleteBackupCodes method")
+	}
+
+	mmDeleteBackupCodes.mock.funcDeleteBackupCodes = f
+	mmDeleteBackupCodes.mock.funcDeleteBackupCodesOrigin = minimock.CallerInfo(1)
+	return mmDeleteBackupCodes.mock
+}
+
+// When sets expectation for the Storage.DeleteBackupCodes which will trigger the result defined by the following
+// Then helper
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) When(ctx context.Context, userID string) *StorageMockDeleteBackupCodesExpectation {
+	if mmDeleteBackupCodes.mock.funcDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.mock.t.Fatalf("StorageMock.DeleteBackupCodes mock is already set by Set")
+	}
+
+	expectation := &StorageMockDeleteBackupCodesExpectation{
+		mock:               mmDeleteBackupCodes.mock,
+		params:             &StorageMockDeleteBackupCodesParams{ctx, userID},
+		expectationOrigins: StorageMockDeleteBackupCodesExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmDeleteBackupCodes.expectations = append(mmDeleteBackupCodes.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Storage.DeleteBackupCodes return parameters for the expectation previously defined by the When method
+func (e *StorageMockDeleteBackupCodesExpectation) Then(err error) *StorageMock {
+	e.results = &StorageMockDeleteBackupCodesResults{err}
+	return e.mock
+}
+
+// Times sets number of times Storage.DeleteBackupCodes should be invoked
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Times(n uint64) *mStorageMockDeleteBackupCodes {
+	if n == 0 {
+		mmDeleteBackupCodes.mock.t.Fatalf("Times of StorageMock.DeleteBackupCodes mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmDeleteBackupCodes.expectedInvocations, n)
+	mmDeleteBackupCodes.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmDeleteBackupCodes
+}
+
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) invocationsDone() bool {
+	if len(mmDeleteBackupCodes.expectations) == 0 && mmDeleteBackupCodes.defaultExpectation == nil && mmDeleteBackupCodes.mock.funcDeleteBackupCodes == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmDeleteBackupCodes.mock.afterDeleteBackupCodesCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmDeleteBackupCodes.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// DeleteBackupCodes implements mm_twofaService.Storage
+func (mmDeleteBackupCodes *StorageMock) DeleteBackupCodes(ctx context.Context, userID string) (err error) {
+	mm_atomic.AddUint64(&mmDeleteBackupCodes.beforeDeleteBackupCodesCounter, 1)
+	defer mm_atomic.AddUint64(&mmDeleteBackupCodes.afterDeleteBackupCodesCounter, 1)
+
+	mmDeleteBackupCodes.t.Helper()
+
+	if mmDeleteBackupCodes.inspectFuncDeleteBackupCodes != nil {
+		mmDeleteBackupCodes.inspectFuncDeleteBackupCodes(ctx, userID)
+	}
+
+	mm_params := StorageMockDeleteBackupCodesParams{ctx, userID}
+
+	// Record call args
+	mmDeleteBackupCodes.DeleteBackupCodesMock.mutex.Lock()
+	mmDeleteBackupCodes.DeleteBackupCodesMock.callArgs = append(mmDeleteBackupCodes.DeleteBackupCodesMock.callArgs, &mm_params)
+	mmDeleteBackupCodes.DeleteBackupCodesMock.mutex.Unlock()
+
+	for _, e := range mmDeleteBackupCodes.DeleteBackupCodesMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.Counter, 1)
+		mm_want := mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.params
+		mm_want_ptrs := mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.paramPtrs
+
+		mm_got := StorageMockDeleteBackupCodesParams{ctx, userID}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmDeleteBackupCodes.t.Errorf("StorageMock.DeleteBackupCodes got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmDeleteBackupCodes.t.Errorf("StorageMock.DeleteBackupCodes got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDeleteBackupCodes.t.Errorf("StorageMock.DeleteBackupCodes got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmDeleteBackupCodes.DeleteBackupCodesMock.defaultExpectation.results
+		if mm_results == nil {
+			mmDeleteBackupCodes.t.Fatal("No results are set for the StorageMock.DeleteBackupCodes")
+		}
+		return (*mm_results).err
+	}
+	if mmDeleteBackupCodes.funcDeleteBackupCodes != nil {
+		return mmDeleteBackupCodes.funcDeleteBackupCodes(ctx, userID)
+	}
+	mmDeleteBackupCodes.t.Fatalf("Unexpected call to StorageMock.DeleteBackupCodes. %v %v", ctx, userID)
+	return
+}
+
+// DeleteBackupCodesAfterCounter returns a count of finished StorageMock.DeleteBackupCodes invocations
+func (mmDeleteBackupCodes *StorageMock) DeleteBackupCodesAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDeleteBackupCodes.afterDeleteBackupCodesCounter)
+}
+
+// DeleteBackupCodesBeforeCounter returns a count of StorageMock.DeleteBackupCodes invocations
+func (mmDeleteBackupCodes *StorageMock) DeleteBackupCodesBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDeleteBackupCodes.beforeDeleteBackupCodesCounter)
+}
+
+// Calls returns a list of arguments used in each call to StorageMock.DeleteBackupCodes.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmDeleteBackupCodes *mStorageMockDeleteBackupCodes) Calls() []*StorageMockDeleteBackupCodesParams {
+	mmDeleteBackupCodes.mutex.RLock()
+
+	argCopy := make([]*StorageMockDeleteBackupCodesParams, len(mmDeleteBackupCodes.callArgs))
+	copy(argCopy, mmDeleteBackupCodes.callArgs)
+
+	mmDeleteBackupCodes.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockDeleteBackupCodesDone returns true if the count of the DeleteBackupCodes invocations corresponds
+// the number of defined expectations
+func (m *StorageMock) MinimockDeleteBackupCodesDone() bool {
+	if m.DeleteBackupCodesMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.DeleteBackupCodesMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.DeleteBackupCodesMock.invocationsDone()
+}
+
+// MinimockDeleteBackupCodesInspect logs each unmet expectation
+func (m *StorageMock) MinimockDeleteBackupCodesInspect() {
+	for _, e := range m.DeleteBackupCodesMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to StorageMock.DeleteBackupCodes at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterDeleteBackupCodesCounter := mm_atomic.LoadUint64(&m.afterDeleteBackupCodesCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.DeleteBackupCodesMock.defaultExpectation != nil && afterDeleteBackupCodesCounter < 1 {
+		if m.DeleteBackupCodesMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to StorageMock.DeleteBackupCodes at\n%s", m.DeleteBackupCodesMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to StorageMock.DeleteBackupCodes at\n%s with params: %#v", m.DeleteBackupCodesMock.defaultExpectation.expectationOrigins.origin, *m.DeleteBackupCodesMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcDeleteBackupCodes != nil && afterDeleteBackupCodesCounter < 1 {
+		m.t.Errorf("Expected call to StorageMock.DeleteBackupCodes at\n%s", m.funcDeleteBackupCodesOrigin)
+	}
+
+	if !m.DeleteBackupCodesMock.invocationsDone() && afterDeleteBackupCodesCounter > 0 {
+		m.t.Errorf("Expected %d calls to StorageMock.DeleteBackupCodes at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.DeleteBackupCodesMock.expectedInvocations), m.DeleteBackupCodesMock.expectedInvocationsOrigin, afterDeleteBackupCodesCounter)
+	}
+}
+
+type mStorageMockDeleteTwoFARecord struct {
+	optional           bool
+	mock               *StorageMock
+	defaultExpectation *StorageMockDeleteTwoFARecordExpectation
+	expectations       []*StorageMockDeleteTwoFARecordExpectation
+
+	callArgs []*StorageMockDeleteTwoFARecordParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// StorageMockDeleteTwoFARecordExpectation specifies expectation struct of the Storage.DeleteTwoFARecord
+type StorageMockDeleteTwoFARecordExpectation struct {
+	mock               *StorageMock
+	params             *StorageMockDeleteTwoFARecordParams
+	paramPtrs          *StorageMockDeleteTwoFARecordParamPtrs
+	expectationOrigins StorageMockDeleteTwoFARecordExpectationOrigins
+	results            *StorageMockDeleteTwoFARecordResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// StorageMockDeleteTwoFARecordParams contains parameters of the Storage.DeleteTwoFARecord
+type StorageMockDeleteTwoFARecordParams struct {
+	ctx    context.Context
+	userID string
+}
+
+// StorageMockDeleteTwoFARecordParamPtrs contains pointers to parameters of the Storage.DeleteTwoFARecord
+type StorageMockDeleteTwoFARecordParamPtrs struct {
+	ctx    *context.Context
+	userID *string
+}
+
+// StorageMockDeleteTwoFARecordResults contains results of the Storage.DeleteTwoFARecord
+type StorageMockDeleteTwoFARecordResults struct {
+	err error
+}
+
+// StorageMockDeleteTwoFARecordOrigins contains origins of expectations of the Storage.DeleteTwoFARecord
+type StorageMockDeleteTwoFARecordExpectationOrigins struct {
+	origin       string
+	originCtx    string
+	originUserID string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Optional() *mStorageMockDeleteTwoFARecord {
+	mmDeleteTwoFARecord.optional = true
+	return mmDeleteTwoFARecord
+}
+
+// Expect sets up expected params for Storage.DeleteTwoFARecord
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Expect(ctx context.Context, userID string) *mStorageMockDeleteTwoFARecord {
+	if mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Set")
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation == nil {
+		mmDeleteTwoFARecord.defaultExpectation = &StorageMockDeleteTwoFARecordExpectation{}
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation.paramPtrs != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by ExpectParams functions")
+	}
+
+	mmDeleteTwoFARecord.defaultExpectation.params = &StorageMockDeleteTwoFARecordParams{ctx, userID}
+	mmDeleteTwoFARecord.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmDeleteTwoFARecord.expectations {
+		if minimock.Equal(e.params, mmDeleteTwoFARecord.defaultExpectation.params) {
+			mmDeleteTwoFARecord.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDeleteTwoFARecord.defaultExpectation.params)
+		}
+	}
+
+	return mmDeleteTwoFARecord
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Storage.DeleteTwoFARecord
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) ExpectCtxParam1(ctx context.Context) *mStorageMockDeleteTwoFARecord {
+	if mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Set")
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation == nil {
+		mmDeleteTwoFARecord.defaultExpectation = &StorageMockDeleteTwoFARecordExpectation{}
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation.params != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Expect")
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation.paramPtrs == nil {
+		mmDeleteTwoFARecord.defaultExpectation.paramPtrs = &StorageMockDeleteTwoFARecordParamPtrs{}
+	}
+	mmDeleteTwoFARecord.defaultExpectation.paramPtrs.ctx = &ctx
+	mmDeleteTwoFARecord.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmDeleteTwoFARecord
+}
+
+// ExpectUserIDParam2 sets up expected param userID for Storage.DeleteTwoFARecord
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) ExpectUserIDParam2(userID string) *mStorageMockDeleteTwoFARecord {
+	if mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Set")
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation == nil {
+		mmDeleteTwoFARecord.defaultExpectation = &StorageMockDeleteTwoFARecordExpectation{}
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation.params != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Expect")
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation.paramPtrs == nil {
+		mmDeleteTwoFARecord.defaultExpectation.paramPtrs = &StorageMockDeleteTwoFARecordParamPtrs{}
+	}
+	mmDeleteTwoFARecord.defaultExpectation.paramPtrs.userID = &userID
+	mmDeleteTwoFARecord.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
+
+	return mmDeleteTwoFARecord
+}
+
+// Inspect accepts an inspector function that has same arguments as the Storage.DeleteTwoFARecord
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Inspect(f func(ctx context.Context, userID string)) *mStorageMockDeleteTwoFARecord {
+	if mmDeleteTwoFARecord.mock.inspectFuncDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("Inspect function is already set for StorageMock.DeleteTwoFARecord")
+	}
+
+	mmDeleteTwoFARecord.mock.inspectFuncDeleteTwoFARecord = f
+
+	return mmDeleteTwoFARecord
+}
+
+// Return sets up results that will be returned by Storage.DeleteTwoFARecord
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Return(err error) *StorageMock {
+	if mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Set")
+	}
+
+	if mmDeleteTwoFARecord.defaultExpectation == nil {
+		mmDeleteTwoFARecord.defaultExpectation = &StorageMockDeleteTwoFARecordExpectation{mock: mmDeleteTwoFARecord.mock}
+	}
+	mmDeleteTwoFARecord.defaultExpectation.results = &StorageMockDeleteTwoFARecordResults{err}
+	mmDeleteTwoFARecord.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmDeleteTwoFARecord.mock
+}
+
+// Set uses given function f to mock the Storage.DeleteTwoFARecord method
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Set(f func(ctx context.Context, userID string) (err error)) *StorageMock {
+	if mmDeleteTwoFARecord.defaultExpectation != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("Default expectation is already set for the Storage.DeleteTwoFARecord method")
+	}
+
+	if len(mmDeleteTwoFARecord.expectations) > 0 {
+		mmDeleteTwoFARecord.mock.t.Fatalf("Some expectations are already set for the Storage.DeleteTwoFARecord method")
+	}
+
+	mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord = f
+	mmDeleteTwoFARecord.mock.funcDeleteTwoFARecordOrigin = minimock.CallerInfo(1)
+	return mmDeleteTwoFARecord.mock
+}
+
+// When sets expectation for the Storage.DeleteTwoFARecord which will trigger the result defined by the following
+// Then helper
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) When(ctx context.Context, userID string) *StorageMockDeleteTwoFARecordExpectation {
+	if mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.mock.t.Fatalf("StorageMock.DeleteTwoFARecord mock is already set by Set")
+	}
+
+	expectation := &StorageMockDeleteTwoFARecordExpectation{
+		mock:               mmDeleteTwoFARecord.mock,
+		params:             &StorageMockDeleteTwoFARecordParams{ctx, userID},
+		expectationOrigins: StorageMockDeleteTwoFARecordExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmDeleteTwoFARecord.expectations = append(mmDeleteTwoFARecord.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Storage.DeleteTwoFARecord return parameters for the expectation previously defined by the When method
+func (e *StorageMockDeleteTwoFARecordExpectation) Then(err error) *StorageMock {
+	e.results = &StorageMockDeleteTwoFARecordResults{err}
+	return e.mock
+}
+
+// Times sets number of times Storage.DeleteTwoFARecord should be invoked
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Times(n uint64) *mStorageMockDeleteTwoFARecord {
+	if n == 0 {
+		mmDeleteTwoFARecord.mock.t.Fatalf("Times of StorageMock.DeleteTwoFARecord mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmDeleteTwoFARecord.expectedInvocations, n)
+	mmDeleteTwoFARecord.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmDeleteTwoFARecord
+}
+
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) invocationsDone() bool {
+	if len(mmDeleteTwoFARecord.expectations) == 0 && mmDeleteTwoFARecord.defaultExpectation == nil && mmDeleteTwoFARecord.mock.funcDeleteTwoFARecord == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmDeleteTwoFARecord.mock.afterDeleteTwoFARecordCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmDeleteTwoFARecord.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// DeleteTwoFARecord implements mm_twofaService.Storage
+func (mmDeleteTwoFARecord *StorageMock) DeleteTwoFARecord(ctx context.Context, userID string) (err error) {
+	mm_atomic.AddUint64(&mmDeleteTwoFARecord.beforeDeleteTwoFARecordCounter, 1)
+	defer mm_atomic.AddUint64(&mmDeleteTwoFARecord.afterDeleteTwoFARecordCounter, 1)
+
+	mmDeleteTwoFARecord.t.Helper()
+
+	if mmDeleteTwoFARecord.inspectFuncDeleteTwoFARecord != nil {
+		mmDeleteTwoFARecord.inspectFuncDeleteTwoFARecord(ctx, userID)
+	}
+
+	mm_params := StorageMockDeleteTwoFARecordParams{ctx, userID}
+
+	// Record call args
+	mmDeleteTwoFARecord.DeleteTwoFARecordMock.mutex.Lock()
+	mmDeleteTwoFARecord.DeleteTwoFARecordMock.callArgs = append(mmDeleteTwoFARecord.DeleteTwoFARecordMock.callArgs, &mm_params)
+	mmDeleteTwoFARecord.DeleteTwoFARecordMock.mutex.Unlock()
+
+	for _, e := range mmDeleteTwoFARecord.DeleteTwoFARecordMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.Counter, 1)
+		mm_want := mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.params
+		mm_want_ptrs := mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.paramPtrs
+
+		mm_got := StorageMockDeleteTwoFARecordParams{ctx, userID}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmDeleteTwoFARecord.t.Errorf("StorageMock.DeleteTwoFARecord got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmDeleteTwoFARecord.t.Errorf("StorageMock.DeleteTwoFARecord got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDeleteTwoFARecord.t.Errorf("StorageMock.DeleteTwoFARecord got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmDeleteTwoFARecord.DeleteTwoFARecordMock.defaultExpectation.results
+		if mm_results == nil {
+			mmDeleteTwoFARecord.t.Fatal("No results are set for the StorageMock.DeleteTwoFARecord")
+		}
+		return (*mm_results).err
+	}
+	if mmDeleteTwoFARecord.funcDeleteTwoFARecord != nil {
+		return mmDeleteTwoFARecord.funcDeleteTwoFARecord(ctx, userID)
+	}
+	mmDeleteTwoFARecord.t.Fatalf("Unexpected call to StorageMock.DeleteTwoFARecord. %v %v", ctx, userID)
+	return
+}
+
+// DeleteTwoFARecordAfterCounter returns a count of finished StorageMock.DeleteTwoFARecord invocations
+func (mmDeleteTwoFARecord *StorageMock) DeleteTwoFARecordAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDeleteTwoFARecord.afterDeleteTwoFARecordCounter)
+}
+
+// DeleteTwoFARecordBeforeCounter returns a count of StorageMock.DeleteTwoFARecord invocations
+func (mmDeleteTwoFARecord *StorageMock) DeleteTwoFARecordBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDeleteTwoFARecord.beforeDeleteTwoFARecordCounter)
+}
+
+// Calls returns a list of arguments used in each call to StorageMock.DeleteTwoFARecord.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmDeleteTwoFARecord *mStorageMockDeleteTwoFARecord) Calls() []*StorageMockDeleteTwoFARecordParams {
+	mmDeleteTwoFARecord.mutex.RLock()
+
+	argCopy := make([]*StorageMockDeleteTwoFARecordParams, len(mmDeleteTwoFARecord.callArgs))
+	copy(argCopy, mmDeleteTwoFARecord.callArgs)
+
+	mmDeleteTwoFARecord.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockDeleteTwoFARecordDone returns true if the count of the DeleteTwoFARecord invocations corresponds
+// the number of defined expectations
+func (m *StorageMock) MinimockDeleteTwoFARecordDone() bool {
+	if m.DeleteTwoFARecordMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.DeleteTwoFARecordMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.DeleteTwoFARecordMock.invocationsDone()
+}
+
+// MinimockDeleteTwoFARecordInspect logs each unmet expectation
+func (m *StorageMock) MinimockDeleteTwoFARecordInspect() {
+	for _, e := range m.DeleteTwoFARecordMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to StorageMock.DeleteTwoFARecord at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterDeleteTwoFARecordCounter := mm_atomic.LoadUint64(&m.afterDeleteTwoFARecordCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.DeleteTwoFARecordMock.defaultExpectation != nil && afterDeleteTwoFARecordCounter < 1 {
+		if m.DeleteTwoFARecordMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to StorageMock.DeleteTwoFARecord at\n%s", m.DeleteTwoFARecordMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to StorageMock.DeleteTwoFARecord at\n%s with params: %#v", m.DeleteTwoFARecordMock.defaultExpectation.expectationOrigins.origin, *m.DeleteTwoFARecordMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcDeleteTwoFARecord != nil && afterDeleteTwoFARecordCounter < 1 {
+		m.t.Errorf("Expected call to StorageMock.DeleteTwoFARecord at\n%s", m.funcDeleteTwoFARecordOrigin)
+	}
+
+	if !m.DeleteTwoFARecordMock.invocationsDone() && afterDeleteTwoFARecordCounter > 0 {
+		m.t.Errorf("Expected %d calls to StorageMock.DeleteTwoFARecord at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.DeleteTwoFARecordMock.expectedInvocations), m.DeleteTwoFARecordMock.expectedInvocationsOrigin, afterDeleteTwoFARecordCounter)
+	}
+}
+
+type mStorageMockEnableTwoFA struct {
+	optional           bool
+	mock               *StorageMock
+	defaultExpectation *StorageMockEnableTwoFAExpectation
+	expectations       []*StorageMockEnableTwoFAExpectation
+
+	callArgs []*StorageMockEnableTwoFAParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// StorageMockEnableTwoFAExpectation specifies expectation struct of the Storage.EnableTwoFA
+type StorageMockEnableTwoFAExpectation struct {
+	mock               *StorageMock
+	params             *StorageMockEnableTwoFAParams
+	paramPtrs          *StorageMockEnableTwoFAParamPtrs
+	expectationOrigins StorageMockEnableTwoFAExpectationOrigins
+	results            *StorageMockEnableTwoFAResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// StorageMockEnableTwoFAParams contains parameters of the Storage.EnableTwoFA
+type StorageMockEnableTwoFAParams struct {
+	ctx    context.Context
+	userID string
+}
+
+// StorageMockEnableTwoFAParamPtrs contains pointers to parameters of the Storage.EnableTwoFA
+type StorageMockEnableTwoFAParamPtrs struct {
+	ctx    *context.Context
+	userID *string
+}
+
+// StorageMockEnableTwoFAResults contains results of the Storage.EnableTwoFA
+type StorageMockEnableTwoFAResults struct {
+	err error
+}
+
+// StorageMockEnableTwoFAOrigins contains origins of expectations of the Storage.EnableTwoFA
+type StorageMockEnableTwoFAExpectationOrigins struct {
+	origin       string
+	originCtx    string
+	originUserID string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Optional() *mStorageMockEnableTwoFA {
+	mmEnableTwoFA.optional = true
+	return mmEnableTwoFA
+}
+
+// Expect sets up expected params for Storage.EnableTwoFA
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Expect(ctx context.Context, userID string) *mStorageMockEnableTwoFA {
+	if mmEnableTwoFA.mock.funcEnableTwoFA != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Set")
+	}
+
+	if mmEnableTwoFA.defaultExpectation == nil {
+		mmEnableTwoFA.defaultExpectation = &StorageMockEnableTwoFAExpectation{}
+	}
+
+	if mmEnableTwoFA.defaultExpectation.paramPtrs != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by ExpectParams functions")
+	}
+
+	mmEnableTwoFA.defaultExpectation.params = &StorageMockEnableTwoFAParams{ctx, userID}
+	mmEnableTwoFA.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmEnableTwoFA.expectations {
+		if minimock.Equal(e.params, mmEnableTwoFA.defaultExpectation.params) {
+			mmEnableTwoFA.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmEnableTwoFA.defaultExpectation.params)
+		}
+	}
+
+	return mmEnableTwoFA
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Storage.EnableTwoFA
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) ExpectCtxParam1(ctx context.Context) *mStorageMockEnableTwoFA {
+	if mmEnableTwoFA.mock.funcEnableTwoFA != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Set")
+	}
+
+	if mmEnableTwoFA.defaultExpectation == nil {
+		mmEnableTwoFA.defaultExpectation = &StorageMockEnableTwoFAExpectation{}
+	}
+
+	if mmEnableTwoFA.defaultExpectation.params != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Expect")
+	}
+
+	if mmEnableTwoFA.defaultExpectation.paramPtrs == nil {
+		mmEnableTwoFA.defaultExpectation.paramPtrs = &StorageMockEnableTwoFAParamPtrs{}
+	}
+	mmEnableTwoFA.defaultExpectation.paramPtrs.ctx = &ctx
+	mmEnableTwoFA.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmEnableTwoFA
+}
+
+// ExpectUserIDParam2 sets up expected param userID for Storage.EnableTwoFA
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) ExpectUserIDParam2(userID string) *mStorageMockEnableTwoFA {
+	if mmEnableTwoFA.mock.funcEnableTwoFA != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Set")
+	}
+
+	if mmEnableTwoFA.defaultExpectation == nil {
+		mmEnableTwoFA.defaultExpectation = &StorageMockEnableTwoFAExpectation{}
+	}
+
+	if mmEnableTwoFA.defaultExpectation.params != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Expect")
+	}
+
+	if mmEnableTwoFA.defaultExpectation.paramPtrs == nil {
+		mmEnableTwoFA.defaultExpectation.paramPtrs = &StorageMockEnableTwoFAParamPtrs{}
+	}
+	mmEnableTwoFA.defaultExpectation.paramPtrs.userID = &userID
+	mmEnableTwoFA.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
+
+	return mmEnableTwoFA
+}
+
+// Inspect accepts an inspector function that has same arguments as the Storage.EnableTwoFA
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Inspect(f func(ctx context.Context, userID string)) *mStorageMockEnableTwoFA {
+	if mmEnableTwoFA.mock.inspectFuncEnableTwoFA != nil {
+		mmEnableTwoFA.mock.t.Fatalf("Inspect function is already set for StorageMock.EnableTwoFA")
+	}
+
+	mmEnableTwoFA.mock.inspectFuncEnableTwoFA = f
+
+	return mmEnableTwoFA
+}
+
+// Return sets up results that will be returned by Storage.EnableTwoFA
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Return(err error) *StorageMock {
+	if mmEnableTwoFA.mock.funcEnableTwoFA != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Set")
+	}
+
+	if mmEnableTwoFA.defaultExpectation == nil {
+		mmEnableTwoFA.defaultExpectation = &StorageMockEnableTwoFAExpectation{mock: mmEnableTwoFA.mock}
+	}
+	mmEnableTwoFA.defaultExpectation.results = &StorageMockEnableTwoFAResults{err}
+	mmEnableTwoFA.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmEnableTwoFA.mock
+}
+
+// Set uses given function f to mock the Storage.EnableTwoFA method
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Set(f func(ctx context.Context, userID string) (err error)) *StorageMock {
+	if mmEnableTwoFA.defaultExpectation != nil {
+		mmEnableTwoFA.mock.t.Fatalf("Default expectation is already set for the Storage.EnableTwoFA method")
+	}
+
+	if len(mmEnableTwoFA.expectations) > 0 {
+		mmEnableTwoFA.mock.t.Fatalf("Some expectations are already set for the Storage.EnableTwoFA method")
+	}
+
+	mmEnableTwoFA.mock.funcEnableTwoFA = f
+	mmEnableTwoFA.mock.funcEnableTwoFAOrigin = minimock.CallerInfo(1)
+	return mmEnableTwoFA.mock
+}
+
+// When sets expectation for the Storage.EnableTwoFA which will trigger the result defined by the following
+// Then helper
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) When(ctx context.Context, userID string) *StorageMockEnableTwoFAExpectation {
+	if mmEnableTwoFA.mock.funcEnableTwoFA != nil {
+		mmEnableTwoFA.mock.t.Fatalf("StorageMock.EnableTwoFA mock is already set by Set")
+	}
+
+	expectation := &StorageMockEnableTwoFAExpectation{
+		mock:               mmEnableTwoFA.mock,
+		params:             &StorageMockEnableTwoFAParams{ctx, userID},
+		expectationOrigins: StorageMockEnableTwoFAExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmEnableTwoFA.expectations = append(mmEnableTwoFA.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Storage.EnableTwoFA return parameters for the expectation previously defined by the When method
+func (e *StorageMockEnableTwoFAExpectation) Then(err error) *StorageMock {
+	e.results = &StorageMockEnableTwoFAResults{err}
+	return e.mock
+}
+
+// Times sets number of times Storage.EnableTwoFA should be invoked
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Times(n uint64) *mStorageMockEnableTwoFA {
+	if n == 0 {
+		mmEnableTwoFA.mock.t.Fatalf("Times of StorageMock.EnableTwoFA mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmEnableTwoFA.expectedInvocations, n)
+	mmEnableTwoFA.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmEnableTwoFA
+}
+
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) invocationsDone() bool {
+	if len(mmEnableTwoFA.expectations) == 0 && mmEnableTwoFA.defaultExpectation == nil && mmEnableTwoFA.mock.funcEnableTwoFA == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmEnableTwoFA.mock.afterEnableTwoFACounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmEnableTwoFA.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// EnableTwoFA implements mm_twofaService.Storage
+func (mmEnableTwoFA *StorageMock) EnableTwoFA(ctx context.Context, userID string) (err error) {
+	mm_atomic.AddUint64(&mmEnableTwoFA.beforeEnableTwoFACounter, 1)
+	defer mm_atomic.AddUint64(&mmEnableTwoFA.afterEnableTwoFACounter, 1)
+
+	mmEnableTwoFA.t.Helper()
+
+	if mmEnableTwoFA.inspectFuncEnableTwoFA != nil {
+		mmEnableTwoFA.inspectFuncEnableTwoFA(ctx, userID)
+	}
+
+	mm_params := StorageMockEnableTwoFAParams{ctx, userID}
+
+	// Record call args
+	mmEnableTwoFA.EnableTwoFAMock.mutex.Lock()
+	mmEnableTwoFA.EnableTwoFAMock.callArgs = append(mmEnableTwoFA.EnableTwoFAMock.callArgs, &mm_params)
+	mmEnableTwoFA.EnableTwoFAMock.mutex.Unlock()
+
+	for _, e := range mmEnableTwoFA.EnableTwoFAMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmEnableTwoFA.EnableTwoFAMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.Counter, 1)
+		mm_want := mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.params
+		mm_want_ptrs := mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.paramPtrs
+
+		mm_got := StorageMockEnableTwoFAParams{ctx, userID}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmEnableTwoFA.t.Errorf("StorageMock.EnableTwoFA got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmEnableTwoFA.t.Errorf("StorageMock.EnableTwoFA got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEnableTwoFA.t.Errorf("StorageMock.EnableTwoFA got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmEnableTwoFA.EnableTwoFAMock.defaultExpectation.results
+		if mm_results == nil {
+			mmEnableTwoFA.t.Fatal("No results are set for the StorageMock.EnableTwoFA")
+		}
+		return (*mm_results).err
+	}
+	if mmEnableTwoFA.funcEnableTwoFA != nil {
+		return mmEnableTwoFA.funcEnableTwoFA(ctx, userID)
+	}
+	mmEnableTwoFA.t.Fatalf("Unexpected call to StorageMock.EnableTwoFA. %v %v", ctx, userID)
+	return
+}
+
+// EnableTwoFAAfterCounter returns a count of finished StorageMock.EnableTwoFA invocations
+func (mmEnableTwoFA *StorageMock) EnableTwoFAAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmEnableTwoFA.afterEnableTwoFACounter)
+}
+
+// EnableTwoFABeforeCounter returns a count of StorageMock.EnableTwoFA invocations
+func (mmEnableTwoFA *StorageMock) EnableTwoFABeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmEnableTwoFA.beforeEnableTwoFACounter)
+}
+
+// Calls returns a list of arguments used in each call to StorageMock.EnableTwoFA.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmEnableTwoFA *mStorageMockEnableTwoFA) Calls() []*StorageMockEnableTwoFAParams {
+	mmEnableTwoFA.mutex.RLock()
+
+	argCopy := make([]*StorageMockEnableTwoFAParams, len(mmEnableTwoFA.callArgs))
+	copy(argCopy, mmEnableTwoFA.callArgs)
+
+	mmEnableTwoFA.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockEnableTwoFADone returns true if the count of the EnableTwoFA invocations corresponds
+// the number of defined expectations
+func (m *StorageMock) MinimockEnableTwoFADone() bool {
+	if m.EnableTwoFAMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.EnableTwoFAMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.EnableTwoFAMock.invocationsDone()
+}
+
+// MinimockEnableTwoFAInspect logs each unmet expectation
+func (m *StorageMock) MinimockEnableTwoFAInspect() {
+	for _, e := range m.EnableTwoFAMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to StorageMock.EnableTwoFA at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterEnableTwoFACounter := mm_atomic.LoadUint64(&m.afterEnableTwoFACounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.EnableTwoFAMock.defaultExpectation != nil && afterEnableTwoFACounter < 1 {
+		if m.EnableTwoFAMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to StorageMock.EnableTwoFA at\n%s", m.EnableTwoFAMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to StorageMock.EnableTwoFA at\n%s with params: %#v", m.EnableTwoFAMock.defaultExpectation.expectationOrigins.origin, *m.EnableTwoFAMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcEnableTwoFA != nil && afterEnableTwoFACounter < 1 {
+		m.t.Errorf("Expected call to StorageMock.EnableTwoFA at\n%s", m.funcEnableTwoFAOrigin)
+	}
+
+	if !m.EnableTwoFAMock.invocationsDone() && afterEnableTwoFACounter > 0 {
+		m.t.Errorf("Expected %d calls to StorageMock.EnableTwoFA at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.EnableTwoFAMock.expectedInvocations), m.EnableTwoFAMock.expectedInvocationsOrigin, afterEnableTwoFACounter)
 	}
 }
 
@@ -1127,6 +2183,12 @@ func (m *StorageMock) MinimockFinish() {
 		if !m.minimockDone() {
 			m.MinimockCreateTwoFARecordInspect()
 
+			m.MinimockDeleteBackupCodesInspect()
+
+			m.MinimockDeleteTwoFARecordInspect()
+
+			m.MinimockEnableTwoFAInspect()
+
 			m.MinimockGetTwoFARecordInspect()
 
 			m.MinimockStoreBatchBackupCodesInspect()
@@ -1154,6 +2216,9 @@ func (m *StorageMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockCreateTwoFARecordDone() &&
+		m.MinimockDeleteBackupCodesDone() &&
+		m.MinimockDeleteTwoFARecordDone() &&
+		m.MinimockEnableTwoFADone() &&
 		m.MinimockGetTwoFARecordDone() &&
 		m.MinimockStoreBatchBackupCodesDone()
 }

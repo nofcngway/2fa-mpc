@@ -34,3 +34,33 @@ func (ps *PGStorage) GetTwoFARecord(ctx context.Context, userID string) (*models
 	}
 	return &record, nil
 }
+
+// EnableTwoFA sets is_enabled=true for the user's 2FA record.
+func (ps *PGStorage) EnableTwoFA(ctx context.Context, userID string) error {
+	query := `UPDATE twofa_records SET is_enabled = TRUE WHERE user_id = $1`
+	_, err := ps.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("enable twofa: %w", err)
+	}
+	return nil
+}
+
+// DeleteTwoFARecord removes the 2FA record for a user.
+func (ps *PGStorage) DeleteTwoFARecord(ctx context.Context, userID string) error {
+	query := `DELETE FROM twofa_records WHERE user_id = $1`
+	_, err := ps.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("delete twofa record: %w", err)
+	}
+	return nil
+}
+
+// DeleteBackupCodes removes all backup codes for a user.
+func (ps *PGStorage) DeleteBackupCodes(ctx context.Context, userID string) error {
+	query := `DELETE FROM backup_codes WHERE user_id = $1`
+	_, err := ps.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("delete backup codes: %w", err)
+	}
+	return nil
+}

@@ -19,11 +19,18 @@ type Storage interface {
 	CreateTwoFARecord(ctx context.Context, userID string) error
 	GetTwoFARecord(ctx context.Context, userID string) (*models.TwoFARecord, error)
 	StoreBatchBackupCodes(ctx context.Context, userID string, codeHashes []string) error
+	EnableTwoFA(ctx context.Context, userID string) error
+	DeleteTwoFARecord(ctx context.Context, userID string) error
+	DeleteBackupCodes(ctx context.Context, userID string) error
 }
 
 // SessionStorage defines the interface for session/cache operations.
 type SessionStorage interface {
-	// Methods added in Phase 8 (rate limiting)
+	IncrementRateLimit(ctx context.Context, key string, ttl time.Duration) (int64, error)
+	GetRateLimit(ctx context.Context, key string) (int64, error)
+	SetUsedOTPCounter(ctx context.Context, userID string, counter int64, ttl time.Duration) error
+	GetUsedOTPCounter(ctx context.Context, userID string) (int64, error)
+	DeleteKeys(ctx context.Context, keys ...string) error
 }
 
 // MPCClient defines the interface for MPC node gRPC operations.
