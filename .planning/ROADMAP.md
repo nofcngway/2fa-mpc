@@ -72,9 +72,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — JWT infrastructure: RS256 token helper, SessionStorage interface, Redis three-key implementation, domain errors, mock generation
-- [ ] 03-02-PLAN.md — Session service methods: Login, RefreshToken with theft detection, ValidateToken, Logout, LogoutAll, Register auto-login, all with unit tests
-- [ ] 03-03-PLAN.md — gRPC handlers: Login, RefreshToken, Logout, LogoutAll, ValidateToken, Register update with token population
+- [x] 03-01-PLAN.md — JWT infrastructure: RS256 token helper, SessionStorage interface, Redis three-key implementation, domain errors, mock generation
+- [x] 03-02-PLAN.md — Session service methods: Login, RefreshToken with theft detection, ValidateToken, Logout, LogoutAll, Register auto-login, all with unit tests
+- [x] 03-03-PLAN.md — gRPC handlers: Login, RefreshToken, Logout, LogoutAll, ValidateToken, Register update with token population
 
 ### Phase 4: Shamir Secret Sharing
 **Goal**: A tested, from-scratch Shamir Secret Sharing library operates correctly in GF(256)
