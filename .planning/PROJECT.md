@@ -12,7 +12,12 @@ TOTP-секрет никогда не существует в персистен
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] MPC-01: StoreShare — encrypt + persist (Phase 6)
+- [x] MPC-02: RetrieveShare — read + decrypt (Phase 6)
+- [x] MPC-03: DeleteShare — idempotent delete (Phase 6)
+- [x] MPC-04: Unique constraint (user_id, share_index) (Phase 6)
+- [x] MPC-05: gRPC auth interceptor with shared secret (Phase 6)
+- [x] MPC-06: AES-256-GCM encryption key from config (Phase 6)
 
 ### Active
 
@@ -104,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after initialization*
+*Last updated: 2026-04-12 after Phase 6 completion*
