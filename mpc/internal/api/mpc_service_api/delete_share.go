@@ -10,5 +10,14 @@ import (
 
 // DeleteShare handles the DeleteShare RPC call.
 func (api *MPCServiceAPI) DeleteShare(ctx context.Context, req *pb.DeleteShareRequest) (*pb.DeleteShareResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	count, err := api.service.DeleteShare(ctx, req.GetUserId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete shares")
+	}
+
+	return &pb.DeleteShareResponse{DeletedCount: int32(count)}, nil
 }

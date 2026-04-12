@@ -3,6 +3,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/vbncursed/vkr/mpc/config"
@@ -27,12 +28,17 @@ func NewPGStorage(ctx context.Context, cfg *config.Config) (*pgstorage.PGStorage
 }
 
 // NewMPCService creates a new MPC business logic service.
-func NewMPCService(storage *pgstorage.PGStorage, cfg *config.Config) *mpcService.MPCService {
+// Returns error if encryption key is not exactly 32 bytes.
+func NewMPCService(storage *pgstorage.PGStorage, cfg *config.Config) (*mpcService.MPCService, error) {
+	key := []byte(cfg.Node.EncryptionKey)
+	if len(key) != 32 {
+		return nil, fmt.Errorf("encryption key must be exactly 32 bytes, got %d", len(key))
+	}
 	return mpcService.NewMPCService(
 		storage,
-		[]byte(cfg.Node.EncryptionKey),
+		key,
 		cfg.Node.ID,
-	)
+	), nil
 }
 
 // NewMPCServiceAPI creates a new gRPC handler for the MPC service.
@@ -40,10 +46,13 @@ func NewMPCServiceAPI(service *mpcService.MPCService) *mpc_service_api.MPCServic
 	return mpc_service_api.NewMPCServiceAPI(service)
 }
 
-// NewGRPCServer creates and configures a new gRPC server with interceptors and health check.
-func NewGRPCServer(api *mpc_service_api.MPCServiceAPI) *grpc.Server {
+// NewGRPCServer creates and configures a new gRPC server with auth + logging interceptors and health check.
+func NewGRPCServer(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) *grpc.Server {
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.LoggingInterceptor),
+		grpc.ChainUnaryInterceptor(
+			middleware.AuthInterceptor(cfg.SharedSecret),
+			middleware.LoggingInterceptor,
+		),
 	)
 
 	pb.RegisterMPCNodeServiceServer(server, api)

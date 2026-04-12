@@ -33,9 +33,13 @@ func main() {
 	}
 	defer storage.Close()
 
-	service := bootstrap.NewMPCService(storage, cfg)
+	service, err := bootstrap.NewMPCService(storage, cfg)
+	if err != nil {
+		slog.Error("failed to create MPC service", "error", err)
+		os.Exit(1)
+	}
 	api := bootstrap.NewMPCServiceAPI(service)
-	grpcServer := bootstrap.NewGRPCServer(api)
+	grpcServer := bootstrap.NewGRPCServer(api, cfg)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
