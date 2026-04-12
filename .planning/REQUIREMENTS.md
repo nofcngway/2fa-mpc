@@ -35,10 +35,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CRYPTO-01**: Shamir Secret Sharing implemented from scratch — Split(secret, n=3, threshold=2) and Combine(shares) in GF(256)
 - [ ] **CRYPTO-02**: GF(256) arithmetic — addition via XOR, multiplication via log/exp tables, polynomial evaluation
 - [ ] **CRYPTO-03**: Shamir unit tests — split→combine roundtrip, any 2-of-3 recovers, 1-of-3 does NOT recover
-- [ ] **CRYPTO-04**: TOTP implementation per RFC 6238 — SHA-1, 6 digits, 30s period, base32 secret (20 bytes)
+- [x] **CRYPTO-04**: TOTP implementation per RFC 6238 — SHA-1, 6 digits, 30s period, base32 secret (20 bytes)
 - [ ] **CRYPTO-05**: TOTP generates valid provisioning URI (otpauth://totp/...)
-- [ ] **CRYPTO-06**: TOTP validation allows +-1 time window
-- [ ] **CRYPTO-07**: TOTP unit tests — generation, validation, time window edge cases
+- [x] **CRYPTO-06**: TOTP validation allows +-1 time window
+- [x] **CRYPTO-07**: TOTP unit tests — generation, validation, time window edge cases
 
 ### MPC Node
 
@@ -135,10 +135,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CRYPTO-01 | Phase 4 | Pending |
 | CRYPTO-02 | Phase 4 | Pending |
 | CRYPTO-03 | Phase 4 | Pending |
-| CRYPTO-04 | Phase 5 | Pending |
+| CRYPTO-04 | Phase 5 | Complete |
 | CRYPTO-05 | Phase 5 | Pending |
-| CRYPTO-06 | Phase 5 | Pending |
-| CRYPTO-07 | Phase 5 | Pending |
+| CRYPTO-06 | Phase 5 | Complete |
+| CRYPTO-07 | Phase 5 | Complete |
 | MPC-01 | Phase 6 | Pending |
 | MPC-02 | Phase 6 | Pending |
 | MPC-03 | Phase 6 | Pending |
