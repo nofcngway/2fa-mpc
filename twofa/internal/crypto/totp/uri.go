@@ -13,7 +13,7 @@ func GenerateProvisioningURI(secret string, email string) string {
 	return fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s&algorithm=SHA1&digits=6&period=30",
 		url.PathEscape(issuer),
 		url.PathEscape(email),
-		secret,
+		url.QueryEscape(secret),
 		url.QueryEscape(issuer),
 	)
 }

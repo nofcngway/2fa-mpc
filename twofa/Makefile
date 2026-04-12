@@ -1,7 +1,9 @@
-.PHONY: generate build run test clean tidy
+.PHONY: generate mock build run test clean tidy
 
 generate:
 	bash scripts/generate.sh
+
+mock:
 
 build: generate
 	go build -o bin/twofa ./cmd/app

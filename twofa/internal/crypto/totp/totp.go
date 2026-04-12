@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/subtle"
 	"encoding/base32"
 	"encoding/binary"
 	"errors"
@@ -43,10 +44,23 @@ func validateOTPAt(secret []byte, code string, unixTime int64) bool {
 	if len(code) != 6 {
 		return false
 	}
+	for _, c := range code {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
 
 	counter := uint64(unixTime) / 30
-	for _, c := range []uint64{counter - 1, counter, counter + 1} {
-		if hotp(secret, c) == code {
+
+	// Check current and next window always; check previous only if counter > 0.
+	if subtle.ConstantTimeCompare([]byte(hotp(secret, counter)), []byte(code)) == 1 {
+		return true
+	}
+	if subtle.ConstantTimeCompare([]byte(hotp(secret, counter+1)), []byte(code)) == 1 {
+		return true
+	}
+	if counter > 0 {
+		if subtle.ConstantTimeCompare([]byte(hotp(secret, counter-1)), []byte(code)) == 1 {
 			return true
 		}
 	}
@@ -55,7 +69,12 @@ func validateOTPAt(secret []byte, code string, unixTime int64) bool {
 
 // hotp computes a 6-digit HMAC-based OTP for the given counter.
 // Implements dynamic truncation per RFC 4226 Section 5.4.
+// Panics if secret is empty — indicates a bug in the caller.
 func hotp(secret []byte, counter uint64) string {
+	if len(secret) == 0 {
+		panic("totp: hotp called with empty secret")
+	}
+
 	// Encode counter as 8-byte big-endian.
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, counter)
