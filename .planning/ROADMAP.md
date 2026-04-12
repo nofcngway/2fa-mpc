@@ -134,8 +134,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md — Proto update, zeroize utility, storage interfaces, MPC client wiring, bootstrap
+- [ ] 07-02-PLAN.md — Setup2FA orchestration: parallel MPC distribution, backup codes, zeroization, handler, tests
 
 ### Phase 8: TwoFA Verification & Management
 **Goal**: Users can verify OTP codes, manage their 2FA status, and the system enforces security constraints
