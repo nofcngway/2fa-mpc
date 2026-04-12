@@ -475,17 +475,17 @@ func newStoreSuite(t *testing.T) *storeSuite {
 | A2 | `grpc.ChainUnaryInterceptor` is available in grpc v1.80.0 | Architecture Patterns | Would need manual chaining -- LOW risk, feature available since grpc-go v1.28 |
 | A3 | Health check service is not affected by `ChainUnaryInterceptor` by default -- interceptor must explicitly skip health check methods | Common Pitfalls | Health check would fail if not excluded -- MEDIUM risk, documented in Pitfall 6 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Encryption key encoding in config.yaml**
    - What we know: Config loads `encryption_key` as a Go string, converted to `[]byte`.
    - What's unclear: Should the key be stored as raw 32-char ASCII, hex-encoded (64 chars), or base64-encoded?
-   - Recommendation: Use raw ASCII for simplicity (32 printable ASCII chars = 32 bytes). Validate length at bootstrap. This matches the existing `[]byte(cfg.Node.EncryptionKey)` pattern in bootstrap.
+   - RESOLVED: Use raw ASCII for simplicity (32 printable ASCII chars = 32 bytes). Validate length at bootstrap. This matches the existing `[]byte(cfg.Node.EncryptionKey)` pattern in bootstrap.
 
 2. **Share ID generation: UUID in Go vs PostgreSQL DEFAULT**
    - What we know: Table has `id UUID PRIMARY KEY`, model has `ID string`.
    - What's unclear: Whether to generate UUID in Go code or use PostgreSQL's `gen_random_uuid()`.
-   - Recommendation: Generate in Go with `uuid.New().String()` -- keeps storage layer pure SQL, matches auth service pattern, allows ID to be known before INSERT.
+   - RESOLVED: Generate in Go with `uuid.New().String()` -- keeps storage layer pure SQL, matches auth service pattern, allows ID to be known before INSERT.
 
 ## Environment Availability
 
