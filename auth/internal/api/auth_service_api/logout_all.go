@@ -13,7 +13,9 @@ import (
 // NOTE: This is an internal operation — the caller (Gateway) must authenticate
 // the user via access token and extract user_id before forwarding the request.
 // Direct calls to this RPC without prior authentication bypass authorization.
-// TODO: Add gRPC interceptor to enforce caller identity (e.g., mTLS or service token).
+// SECURITY(WR-03): Caller authentication is deferred to Phase 9 (Gateway interceptors).
+// Phase 9 will add a gRPC interceptor that validates a service-to-service token
+// or mTLS certificate, ensuring only the Gateway can invoke internal RPCs.
 func (api *AuthServiceAPI) LogoutAll(ctx context.Context, req *pb.LogoutAllRequest) (*pb.LogoutAllResponse, error) {
 	if req.UserId == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
