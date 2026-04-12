@@ -103,7 +103,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md — TOTP core with TDD: hotp, GenerateSecret, GenerateOTP, ValidateOTP, RFC 6238 test vectors
+- [ ] 05-02-PLAN.md — GenerateProvisioningURI (otpauth:// URI) and URI format tests
 
 ### Phase 6: MPC Node Service
 **Goal**: Each MPC node can securely store, retrieve, and delete encrypted secret shares with access control
