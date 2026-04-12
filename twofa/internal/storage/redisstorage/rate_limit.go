@@ -15,7 +15,11 @@ func (rs *RedisStorage) IncrementRateLimit(ctx context.Context, key string, ttl 
 		return 0, fmt.Errorf("incr rate limit: %w", err)
 	}
 	if count == 1 {
-		rs.client.Expire(ctx, key, ttl)
+		if err := rs.client.Expire(ctx, key, ttl).Err(); err != nil {
+			// Best-effort: delete the key so it does not persist without TTL.
+			_ = rs.client.Del(ctx, key).Err()
+			return 0, fmt.Errorf("set rate limit ttl: %w", err)
+		}
 	}
 	return count, nil
 }
