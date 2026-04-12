@@ -38,9 +38,12 @@ func (ps *PGStorage) GetTwoFARecord(ctx context.Context, userID string) (*models
 // EnableTwoFA sets is_enabled=true for the user's 2FA record.
 func (ps *PGStorage) EnableTwoFA(ctx context.Context, userID string) error {
 	query := `UPDATE twofa_records SET is_enabled = TRUE WHERE user_id = $1`
-	_, err := ps.pool.Exec(ctx, query, userID)
+	tag, err := ps.pool.Exec(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("enable twofa: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("enable twofa: record not found for user %s", userID)
 	}
 	return nil
 }
