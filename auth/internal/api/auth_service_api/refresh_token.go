@@ -24,6 +24,9 @@ func (api *AuthServiceAPI) RefreshToken(ctx context.Context, req *pb.RefreshToke
 		if errors.Is(err, domain.ErrInvalidToken) {
 			return nil, status.Error(codes.Unauthenticated, "invalid token")
 		}
+		if errors.Is(err, domain.ErrTokenExpired) {
+			return nil, status.Error(codes.Unauthenticated, "token expired")
+		}
 		if errors.Is(err, domain.ErrTokenRevoked) {
 			return nil, status.Error(codes.Unauthenticated, "token revoked")
 		}
