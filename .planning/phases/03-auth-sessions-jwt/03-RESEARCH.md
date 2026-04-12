@@ -447,17 +447,17 @@ func generateTestKeyPair() (*rsa.PrivateKey, *rsa.PublicKey) {
 | A1 | `rsa.GenerateKey` with 2048 bits is sufficient for test key generation | Code Examples (test helper) | LOW -- standard practice, only affects tests |
 | A2 | `json.Marshal` for Redis value encoding is adequate (vs msgpack or protobuf) | Architecture Patterns (Redis) | LOW -- simple struct, json is readable for debugging |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **RSA key generation for CI/tests**
    - What we know: Dev keys can be generated via `openssl genrsa`. Tests use in-memory generated keys.
    - What's unclear: Whether CI pipeline needs pre-generated keys or can generate at test time.
-   - Recommendation: Generate in-memory keys in test helpers; add Makefile target `generate-keys` for local dev.
+   - RESOLVED: Generate in-memory keys in test helpers via `rsa.GenerateKey(rand.Reader, 2048)`; add Makefile target `generate-keys` for local dev. No CI-specific key management needed.
 
 2. **user_tokens set cleanup**
    - What we know: D-05 says `user_tokens:{user_id}` has no TTL, cleaned on last logout.
    - What's unclear: If user never logs out, this set grows indefinitely.
-   - Recommendation: Acceptable for academic project scope. Could add periodic cleanup later if needed.
+   - RESOLVED: Acceptable for academic project scope. The set grows only by one entry per login session, and LogoutAll cleans it entirely. Could add periodic cleanup later if needed.
 
 ## Environment Availability
 

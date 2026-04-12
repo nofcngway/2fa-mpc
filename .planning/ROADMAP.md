@@ -69,11 +69,12 @@ Plans:
   3. Reusing a previously rotated refresh token revokes ALL tokens for that user (theft detection)
   4. User can logout and their refresh token is deleted from Redis
   5. Another service can validate an access token and receive user_id and claims; algorithm confusion (non-RS256) is rejected
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [ ] 03-01-PLAN.md — JWT infrastructure: RS256 token helper, SessionStorage interface, Redis three-key implementation, domain errors, mock generation
-- [ ] 03-02-PLAN.md — Session business logic: Login, RefreshToken with theft detection, Logout, LogoutAll, ValidateToken, Register auto-login, all gRPC handlers
+- [ ] 03-02-PLAN.md — Session service methods: Login, RefreshToken with theft detection, ValidateToken, Logout, LogoutAll, Register auto-login, all with unit tests
+- [ ] 03-03-PLAN.md — gRPC handlers: Login, RefreshToken, Logout, LogoutAll, ValidateToken, Register update with token population
 
 ### Phase 4: Shamir Secret Sharing
 **Goal**: A tested, from-scratch Shamir Secret Sharing library operates correctly in GF(256)
@@ -176,7 +177,7 @@ Note: Phases 4, 5, 6 can execute in parallel after Phase 1 (no mutual dependenci
 |-------|----------------|--------|-----------|
 | 1. Project Scaffolding | 0/2 | Not started | - |
 | 2. Auth Registration | 0/2 | Not started | - |
-| 3. Auth Sessions & JWT | 0/2 | Not started | - |
+| 3. Auth Sessions & JWT | 0/3 | Not started | - |
 | 4. Shamir Secret Sharing | 0/1 | Not started | - |
 | 5. TOTP Implementation | 0/1 | Not started | - |
 | 6. MPC Node Service | 0/2 | Not started | - |
