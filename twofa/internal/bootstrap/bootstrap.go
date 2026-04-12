@@ -37,7 +37,7 @@ func NewTwoFAService(storage *pgstorage.PGStorage, sessionStorage *redisstorage.
 }
 
 // NewTwoFAServiceAPI creates a new gRPC handler for TwoFA operations.
-func NewTwoFAServiceAPI(service *twofaService.TwoFAService) *twofa_service_api.TwoFAServiceAPI {
+func NewTwoFAServiceAPI(service twofa_service_api.Service) *twofa_service_api.TwoFAServiceAPI {
 	return twofa_service_api.NewTwoFAServiceAPI(service)
 }
 

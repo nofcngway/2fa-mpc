@@ -11,7 +11,6 @@ import (
 	"github.com/vbncursed/vkr/mpc/internal/models"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService/mocks"
-	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
 )
 
 type storeSuite struct {
@@ -49,11 +48,11 @@ func TestStoreShareHappyPath(t *testing.T) {
 func TestStoreShareDuplicate(t *testing.T) {
 	s := newStoreSuite(t)
 
-	s.storage.CreateShareMock.Return(pgstorage.ErrDuplicateShare)
+	s.storage.CreateShareMock.Return(models.ErrDuplicateShare)
 
 	_, err := s.service.StoreShare(context.Background(), "user-123", 0, []byte("share-data"))
 	assert.Assert(t, err != nil, "expected error for duplicate share")
-	assert.Assert(t, errors.Is(err, pgstorage.ErrDuplicateShare),
+	assert.Assert(t, errors.Is(err, models.ErrDuplicateShare),
 		"expected ErrDuplicateShare, got: %v", err)
 }
 
@@ -64,7 +63,7 @@ func TestStoreShareStorageError(t *testing.T) {
 
 	_, err := s.service.StoreShare(context.Background(), "user-123", 0, []byte("share-data"))
 	assert.Assert(t, err != nil, "expected error for storage failure")
-	assert.Assert(t, !errors.Is(err, pgstorage.ErrDuplicateShare),
+	assert.Assert(t, !errors.Is(err, models.ErrDuplicateShare),
 		"generic error should not be ErrDuplicateShare")
 }
 

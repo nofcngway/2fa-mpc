@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vbncursed/vkr/mpc/internal/models"
-	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
 )
 
 // StoreShare encrypts share data and persists it.
@@ -30,8 +29,8 @@ func (s *MPCService) StoreShare(ctx context.Context, userID string, shareIndex i
 	}
 
 	if err := s.storage.CreateShare(ctx, share); err != nil {
-		if errors.Is(err, pgstorage.ErrDuplicateShare) {
-			return "", pgstorage.ErrDuplicateShare
+		if errors.Is(err, models.ErrDuplicateShare) {
+			return "", models.ErrDuplicateShare
 		}
 		return "", fmt.Errorf("store share: %w", err)
 	}

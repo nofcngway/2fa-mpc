@@ -11,12 +11,6 @@ import (
 	"github.com/vbncursed/vkr/mpc/internal/models"
 )
 
-// ErrDuplicateShare is returned when a share with the same (user_id, share_index) already exists.
-var ErrDuplicateShare = errors.New("duplicate share")
-
-// ErrShareNotFound is returned when no share matches the query.
-var ErrShareNotFound = errors.New("share not found")
-
 // CreateShare inserts a new encrypted share into PostgreSQL.
 func (ps *PGStorage) CreateShare(ctx context.Context, share *models.Share) error {
 	_, err := ps.pool.Exec(ctx,
@@ -28,7 +22,7 @@ func (ps *PGStorage) CreateShare(ctx context.Context, share *models.Share) error
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return ErrDuplicateShare
+			return models.ErrDuplicateShare
 		}
 		return fmt.Errorf("create share: %w", err)
 	}
@@ -46,7 +40,7 @@ func (ps *PGStorage) GetShare(ctx context.Context, userID string, shareIndex int
 	err := row.Scan(&s.ID, &s.UserID, &s.ShareIndex, &s.EncryptedData, &s.Nonce, &s.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrShareNotFound
+			return nil, models.ErrShareNotFound
 		}
 		return nil, fmt.Errorf("get share: %w", err)
 	}

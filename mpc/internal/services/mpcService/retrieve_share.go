@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
+	"github.com/vbncursed/vkr/mpc/internal/models"
 )
 
 // RetrieveShare retrieves and decrypts a share by user_id and share_index.
 func (s *MPCService) RetrieveShare(ctx context.Context, userID string, shareIndex int) ([]byte, error) {
 	share, err := s.storage.GetShare(ctx, userID, shareIndex)
 	if err != nil {
-		if errors.Is(err, pgstorage.ErrShareNotFound) {
-			return nil, pgstorage.ErrShareNotFound
+		if errors.Is(err, models.ErrShareNotFound) {
+			return nil, models.ErrShareNotFound
 		}
 		return nil, fmt.Errorf("get share: %w", err)
 	}

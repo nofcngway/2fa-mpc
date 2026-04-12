@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/vbncursed/vkr/mpc/internal/models"
 	pb "github.com/vbncursed/vkr/mpc/internal/pb/mpc_api"
-	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -24,7 +24,7 @@ func (api *MPCServiceAPI) StoreShare(ctx context.Context, req *pb.StoreShareRequ
 
 	shareID, err := api.service.StoreShare(ctx, req.GetUserId(), int(req.GetShareIndex()), req.GetShareData())
 	if err != nil {
-		if errors.Is(err, pgstorage.ErrDuplicateShare) {
+		if errors.Is(err, models.ErrDuplicateShare) {
 			return nil, status.Error(codes.AlreadyExists, "share already exists for this user and index")
 		}
 		return nil, status.Error(codes.Internal, "failed to store share")

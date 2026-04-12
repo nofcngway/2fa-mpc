@@ -15,7 +15,6 @@ import (
 	"github.com/vbncursed/vkr/mpc/internal/models"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService/mocks"
-	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
 )
 
 type retrieveSuite struct {
@@ -71,11 +70,11 @@ func TestRetrieveShareHappyPath(t *testing.T) {
 func TestRetrieveShareNotFound(t *testing.T) {
 	s := newRetrieveSuite(t)
 
-	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(nil, pgstorage.ErrShareNotFound)
+	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(nil, models.ErrShareNotFound)
 
 	_, err := s.service.RetrieveShare(context.Background(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for not found share")
-	assert.Assert(t, errors.Is(err, pgstorage.ErrShareNotFound),
+	assert.Assert(t, errors.Is(err, models.ErrShareNotFound),
 		"expected ErrShareNotFound, got: %v", err)
 }
 
@@ -103,6 +102,6 @@ func TestRetrieveShareStorageError(t *testing.T) {
 
 	_, err := s.service.RetrieveShare(context.Background(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for storage failure")
-	assert.Assert(t, !errors.Is(err, pgstorage.ErrShareNotFound),
+	assert.Assert(t, !errors.Is(err, models.ErrShareNotFound),
 		"generic error should not be ErrShareNotFound")
 }
