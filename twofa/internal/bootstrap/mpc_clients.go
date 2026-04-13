@@ -22,6 +22,7 @@ func NewMPCClients(cfg *config.Config) ([]twofaService.MPCClient, []io.Closer, e
 
 	for i, node := range cfg.MPCNodes {
 		conn, err := grpc.NewClient(node.Addr,
+			// TODO: replace insecure credentials with TLS/mTLS before production deployment
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 			grpc.WithUnaryInterceptor(authMetadataInterceptor(cfg.SharedSecret)),
 		)

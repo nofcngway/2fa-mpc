@@ -28,7 +28,8 @@ func main() {
 
 	slog.SetDefault(bootstrap.NewLogger(cfg))
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	pgStorage, err := bootstrap.NewPGStorage(ctx, cfg)
 	if err != nil {
@@ -53,8 +54,10 @@ func main() {
 	// Metrics HTTP server on separate port
 	metricsPort := cmp.Or(cfg.Server.MetricsPort, 9101)
 	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", metricsPort),
-		Handler: promhttp.Handler(),
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      promhttp.Handler(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	go func() {
 		slog.Info("metrics server started", "port", metricsPort)
@@ -115,14 +118,17 @@ func main() {
 	}
 
 	// 4. Close MPC connections
-	for _, conn := range mpcConns {
-		conn.Close()
+	for i, conn := range mpcConns {
+		if err := conn.Close(); err != nil {
+			slog.Error("failed to close MPC connection", "index", i, "error", err)
+		}
 	}
 	slog.Info("MPC connections closed")
 
 	// 5. Close PostgreSQL
 	pgStorage.Close()
 	slog.Info("PostgreSQL connection closed")
+
 
 	// 6. Shutdown metrics HTTP server
 	if err := metricsServer.Shutdown(shutdownCtx); err != nil {

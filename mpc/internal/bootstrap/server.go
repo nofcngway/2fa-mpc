@@ -1,8 +1,6 @@
 package bootstrap
 
 import (
-	"log/slog"
-
 	"github.com/vbncursed/vkr/mpc/config"
 	"github.com/vbncursed/vkr/mpc/internal/api/mpc_service_api"
 	"github.com/vbncursed/vkr/mpc/internal/middleware"
@@ -28,6 +26,5 @@ func NewGRPCServer(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) *grpc
 	healthpb.RegisterHealthServer(server, healthServer)
 	healthServer.SetServingStatus("mpc", healthpb.HealthCheckResponse_SERVING)
 
-	slog.Info("gRPC server created with health check")
 	return server
 }

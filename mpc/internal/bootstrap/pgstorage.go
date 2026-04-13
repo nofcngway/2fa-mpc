@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 
 	"github.com/vbncursed/vkr/mpc/config"
 	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
@@ -12,8 +12,7 @@ import (
 func NewPGStorage(ctx context.Context, cfg *config.Config) (*pgstorage.PGStorage, error) {
 	storage, err := pgstorage.New(ctx, cfg.Database.DSN)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bootstrap pgstorage: %w", err)
 	}
-	slog.Info("PostgreSQL connected")
 	return storage, nil
 }

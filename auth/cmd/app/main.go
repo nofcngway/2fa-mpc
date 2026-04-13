@@ -56,8 +56,10 @@ func main() {
 	// Metrics HTTP server on separate port
 	metricsPort := cmp.Or(cfg.Server.MetricsPort, 9100)
 	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", metricsPort),
-		Handler: promhttp.Handler(),
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      promhttp.Handler(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	go func() {
 		slog.Info("metrics server started", "port", metricsPort)
@@ -109,12 +111,10 @@ func main() {
 	slog.Info("Kafka producer closed")
 
 	// 3. Close Redis
-	if redisStorage != nil {
-		if err := redisStorage.Close(); err != nil {
-			slog.Error("failed to close Redis", "error", err)
-		}
-		slog.Info("Redis connection closed")
+	if err := redisStorage.Close(); err != nil {
+		slog.Error("failed to close Redis", "error", err)
 	}
+	slog.Info("Redis connection closed")
 
 	// 4. Close PostgreSQL
 	pgStorage.Close()
@@ -126,6 +126,5 @@ func main() {
 	}
 	slog.Info("metrics server stopped")
 
-	cancel()
 	slog.Info("auth service shutdown complete")
 }

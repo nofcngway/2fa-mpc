@@ -2,6 +2,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -50,13 +51,12 @@ func main() {
 	grpcServer := bootstrap.NewGRPCServer(api, cfg)
 
 	// Metrics HTTP server on separate port
-	metricsPort := cfg.Server.MetricsPort
-	if metricsPort == 0 {
-		metricsPort = 9102
-	}
+	metricsPort := cmp.Or(cfg.Server.MetricsPort, 9102)
 	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", metricsPort),
-		Handler: promhttp.Handler(),
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      promhttp.Handler(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	go func() {
 		slog.Info("metrics server started", "port", metricsPort)
@@ -118,6 +118,5 @@ func main() {
 	}
 	slog.Info("metrics server stopped")
 
-	cancel()
 	slog.Info("MPC Node shutdown complete")
 }

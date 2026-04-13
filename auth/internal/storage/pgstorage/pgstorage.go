@@ -2,6 +2,8 @@ package pgstorage
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -13,20 +15,29 @@ type PGStorage struct {
 
 // New creates a new PGStorage, connects to the database, and initializes tables.
 func New(ctx context.Context, dsn string) (*PGStorage, error) {
-	pool, err := pgxpool.New(ctx, dsn)
+	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse dsn: %w", err)
+	}
+	poolCfg.MaxConns = 25
+	poolCfg.MinConns = 2
+	poolCfg.MaxConnLifetime = 5 * time.Minute
+	poolCfg.MaxConnIdleTime = 1 * time.Minute
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		return nil, err
+		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 
 	storage := &PGStorage{pool: pool}
 	if err := storage.initTables(ctx); err != nil {
 		pool.Close()
-		return nil, err
+		return nil, fmt.Errorf("init tables: %w", err)
 	}
 
 	return storage, nil
