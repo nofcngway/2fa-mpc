@@ -35,11 +35,11 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*do
 	}
 
 	// 4. Check if email already exists
-	existing, err := s.storage.GetUserByEmail(ctx, email)
-	if err != nil {
+	_, err := s.storage.GetUserByEmail(ctx, email)
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
 		return nil, "", "", fmt.Errorf("check existing user: %w", err)
 	}
-	if existing != nil {
+	if err == nil {
 		return nil, "", "", domain.ErrDuplicateEmail
 	}
 

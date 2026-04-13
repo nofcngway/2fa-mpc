@@ -2,6 +2,7 @@ package authService
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -216,20 +217,16 @@ func TestValidatePassword(t *testing.T) {
 
 			assert.Assert(t, err != nil, "expected error but got nil")
 
-			var validationErr *domain.PasswordValidationError
-			assert.Assert(t, errors.As(err, &validationErr), "expected *domain.PasswordValidationError, got %T", err)
+			validationErr, ok := errors.AsType[*domain.PasswordValidationError](err)
+			assert.Assert(t, ok, "expected *domain.PasswordValidationError, got %T", err)
 
 			assert.Equal(t, len(validationErr.Violations), len(tt.wantRules),
 				"expected %d violations, got %d: %v", len(tt.wantRules), len(validationErr.Violations), validationErr.Violations)
 
 			for _, wantRule := range tt.wantRules {
-				found := false
-				for _, violation := range validationErr.Violations {
-					if errors.Is(violation, wantRule) {
-						found = true
-						break
-					}
-				}
+				found := slices.ContainsFunc(validationErr.Violations, func(v error) bool {
+					return errors.Is(v, wantRule)
+				})
 				assert.Assert(t, found, "expected violation %v not found in %v", wantRule, validationErr.Violations)
 			}
 		})

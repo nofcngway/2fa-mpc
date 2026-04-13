@@ -2,6 +2,7 @@ package redisstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,7 +28,7 @@ func (rs *RedisStorage) IncrementRateLimit(ctx context.Context, key string, ttl 
 // GetRateLimit returns the current rate limit counter value. Returns 0 if key does not exist.
 func (rs *RedisStorage) GetRateLimit(ctx context.Context, key string) (int64, error) {
 	count, err := rs.client.Get(ctx, key).Int64()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return 0, nil
 	}
 	if err != nil {

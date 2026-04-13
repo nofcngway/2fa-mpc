@@ -17,8 +17,8 @@ kafka:
   topic: "twofa-events"
 
 mpc_nodes:
-  - addr: "localhost:9100"
-  - addr: "localhost:9101"
-  - addr: "localhost:9102"
+  - addr: "localhost:9200"
+  - addr: "localhost:9201"
+  - addr: "localhost:9202"
 
 shared_secret: "dev-shared-secret-change-in-production"

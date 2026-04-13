@@ -16,6 +16,9 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	if err != nil {
 		return "", "", domain.ErrInvalidToken
 	}
+	if claims.TokenType != "refresh" {
+		return "", "", domain.ErrInvalidToken
+	}
 
 	// 2. Look up JTI in Redis
 	tokenData, err := s.sessionStorage.GetRefreshToken(ctx, claims.ID)
@@ -26,7 +29,9 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	// 3. Theft detection: valid JWT but JTI not in Redis
 	if tokenData == nil {
 		// Token was already rotated -- this is a reuse attempt (stolen token)
-		_ = s.sessionStorage.DeleteTokenFamily(ctx, claims.TokenFamily, claims.Subject)
+		if err := s.sessionStorage.DeleteTokenFamily(ctx, claims.TokenFamily, claims.Subject); err != nil {
+			slog.Error("failed to revoke token family after theft detection", "family", claims.TokenFamily, "user_id", claims.Subject, "error", err)
+		}
 
 		// Fire-and-forget audit event for reuse detection
 		if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(claims.Subject, "token.refresh_reuse_detected", "alert")); err != nil {

@@ -4,9 +4,6 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc"
-
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 	"github.com/vbncursed/vkr/twofa/internal/models"
 )
 
@@ -22,6 +19,8 @@ type Storage interface {
 	EnableTwoFA(ctx context.Context, userID string) error
 	DeleteTwoFARecord(ctx context.Context, userID string) error
 	DeleteBackupCodes(ctx context.Context, userID string) error
+	GetUnusedBackupCodeHashes(ctx context.Context, userID string) ([]models.BackupCodeRow, error)
+	MarkBackupCodeUsed(ctx context.Context, codeID string) error
 }
 
 // SessionStorage defines the interface for session/cache operations.
@@ -33,12 +32,12 @@ type SessionStorage interface {
 	DeleteKeys(ctx context.Context, keys ...string) error
 }
 
-// MPCClient defines the interface for MPC node gRPC operations.
-// Mirrors mpc_api.MPCNodeServiceClient for testability via minimock.
+// MPCClient defines the domain-level interface for MPC node operations.
+// Transport-agnostic — the bootstrap layer provides a gRPC adapter.
 type MPCClient interface {
-	StoreShare(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption) (*mpc_api.StoreShareResponse, error)
-	RetrieveShare(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error)
-	DeleteShare(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error)
+	StoreShare(ctx context.Context, userID string, shareIndex int, shareData []byte) error
+	RetrieveShare(ctx context.Context, userID string, shareIndex int) ([]byte, error)
+	DeleteShare(ctx context.Context, userID string) error
 }
 
 // TwoFAService implements 2FA orchestration business logic.

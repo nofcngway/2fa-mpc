@@ -11,7 +11,6 @@ import (
 	"github.com/vbncursed/vkr/twofa/internal/crypto"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/totp"
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 )
 
 // GenerateSecretFunc is the function used to generate TOTP secrets.
@@ -50,6 +49,7 @@ func (s *TwoFAService) Setup(ctx context.Context, userID, email string) (string,
 		return "", nil, fmt.Errorf("generate totp secret: %w", err)
 	}
 	defer crypto.Zeroize(raw)
+	defer crypto.Zeroize(base32Secret)
 
 	// 3. Shamir split (2-of-3)
 	shares, err := shamir.Split(raw, 3, 2)
@@ -105,18 +105,12 @@ func (s *TwoFAService) distributeShares(ctx context.Context, userID string, shar
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, share := range shares {
-		i, share := i, share // capture loop variables
 		g.Go(func() error {
 			// D-04: per-call timeout
 			callCtx, cancel := context.WithTimeout(gCtx, s.mpcTimeout)
 			defer cancel()
 
-			_, err := s.mpcClients[i].StoreShare(callCtx, &mpc_api.StoreShareRequest{
-				UserId:     userID,
-				ShareIndex: int32(share.Index),
-				ShareData:  share.Data,
-			})
-			if err != nil {
+			if err := s.mpcClients[i].StoreShare(callCtx, userID, int(share.Index), share.Data); err != nil {
 				return fmt.Errorf("store share on node %d: %w", i, err)
 			}
 			return nil
@@ -138,9 +132,7 @@ func (s *TwoFAService) distributeShares(ctx context.Context, userID string, shar
 func (s *TwoFAService) deleteSharesFromAllNodes(userID string) {
 	for i, client := range s.mpcClients {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), s.mpcTimeout)
-		_, err := client.DeleteShare(cleanupCtx, &mpc_api.DeleteShareRequest{
-			UserId: userID,
-		})
+		err := client.DeleteShare(cleanupCtx, userID)
 		cancel()
 		if err != nil {
 			slog.Error("compensating delete failed", "node", i, "user_id", userID, "error", err)

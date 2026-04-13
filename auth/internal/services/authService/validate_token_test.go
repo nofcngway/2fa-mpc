@@ -1,7 +1,6 @@
 package authService_test
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
@@ -38,11 +37,12 @@ func newValidateSuite(t *testing.T) *validateSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service := authService.NewAuthService(
+	service, err := authService.NewAuthService(
 		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 	return &validateSuite{
 		mc:             mc,
 		storage:        storage,
@@ -58,7 +58,7 @@ func TestValidateToken_Success(t *testing.T) {
 	accessToken, _, err := s.service.GenerateAccessToken("user-123", "test@example.com")
 	assert.NilError(t, err)
 
-	userID, email, err := s.service.ValidateToken(context.Background(), accessToken)
+	userID, email, err := s.service.ValidateToken(t.Context(), accessToken)
 
 	assert.NilError(t, err)
 	assert.Equal(t, userID, "user-123")
@@ -72,18 +72,19 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 	shortEventProducer := mocks.NewEventProducerMock(s.mc)
 	shortEventProducer.PublishEventMock.Optional().Return(nil)
 	shortEventProducer.CloseMock.Optional().Return(nil)
-	shortService := authService.NewAuthService(
+	shortService, err := authService.NewAuthService(
 		s.storage, s.sessionStorage, shortEventProducer,
 		s.privateKey, &s.privateKey.PublicKey,
 		1*time.Nanosecond, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 
 	accessToken, _, err := shortService.GenerateAccessToken("user-123", "test@example.com")
 	assert.NilError(t, err)
 
 	time.Sleep(2 * time.Millisecond)
 
-	_, _, err = s.service.ValidateToken(context.Background(), accessToken)
+	_, _, err = s.service.ValidateToken(t.Context(), accessToken)
 
 	assert.Assert(t, err != nil, "expected error for expired token")
 	assert.Assert(t, errors.Is(err, domain.ErrTokenExpired),
@@ -93,7 +94,7 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 func TestValidateToken_InvalidToken(t *testing.T) {
 	s := newValidateSuite(t)
 
-	_, _, err := s.service.ValidateToken(context.Background(), "not-a-valid-token")
+	_, _, err := s.service.ValidateToken(t.Context(), "not-a-valid-token")
 
 	assert.Assert(t, err != nil, "expected error for invalid token")
 	assert.Assert(t, errors.Is(err, domain.ErrInvalidToken),

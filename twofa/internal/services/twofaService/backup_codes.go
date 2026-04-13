@@ -36,7 +36,7 @@ func generateBackupCodes() ([]string, []string, error) {
 	plaintextCodes := make([]string, 0, BACKUP_CODE_COUNT)
 	hashedCodes := make([]string, 0, BACKUP_CODE_COUNT)
 
-	for i := 0; i < BACKUP_CODE_COUNT; i++ {
+	for i := range BACKUP_CODE_COUNT {
 		code, err := generateBackupCode()
 		if err != nil {
 			return nil, nil, fmt.Errorf("generate backup code %d: %w", i, err)

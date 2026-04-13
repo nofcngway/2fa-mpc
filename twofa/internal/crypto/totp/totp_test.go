@@ -1,6 +1,7 @@
 package totp
 
 import (
+	"bytes"
 	"encoding/base32"
 	"strings"
 	"testing"
@@ -76,10 +77,10 @@ func TestGenerateSecret(t *testing.T) {
 	assert.Equal(t, len(encoded), 32)
 
 	// No padding characters.
-	assert.Assert(t, !strings.Contains(encoded, "="), "encoded string contains padding character '='")
+	assert.Assert(t, !bytes.Contains(encoded, []byte("=")), "encoded bytes contain padding character '='")
 
 	// Decoding must yield the original bytes.
-	decoded, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(encoded)
+	decoded, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(string(encoded))
 	assert.NilError(t, err)
 	assert.DeepEqual(t, raw, decoded)
 }
@@ -91,14 +92,7 @@ func TestGenerateSecret_Uniqueness(t *testing.T) {
 	raw2, _, err := GenerateSecret()
 	assert.NilError(t, err)
 
-	allSame := true
-	for i := range raw1 {
-		if i < len(raw2) && raw1[i] != raw2[i] {
-			allSame = false
-			break
-		}
-	}
-	assert.Assert(t, !allSame, "two GenerateSecret calls produced identical secrets")
+	assert.Assert(t, !bytes.Equal(raw1, raw2), "two GenerateSecret calls produced identical secrets")
 }
 
 // --- ValidateOTP Tests ---
@@ -262,7 +256,7 @@ func TestValidateOTPWithCounter_NonSixDigit(t *testing.T) {
 
 // TestGenerateProvisioningURI_BasicFormat verifies the URI structure with a standard email.
 func TestGenerateProvisioningURI_BasicFormat(t *testing.T) {
-	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "user@example.com")
+	uri := GenerateProvisioningURI([]byte("JBSWY3DPEHPK3PXP"), "user@example.com")
 
 	assert.Assert(t, strings.HasPrefix(uri, "otpauth://totp/"), "URI prefix")
 	assert.Assert(t, strings.Contains(uri, "MPC-2FA:"), "issuer in label")
@@ -279,7 +273,7 @@ func TestGenerateProvisioningURI_BasicFormat(t *testing.T) {
 
 // TestGenerateProvisioningURI_SpecialCharsEmail verifies URL encoding of special characters in email.
 func TestGenerateProvisioningURI_SpecialCharsEmail(t *testing.T) {
-	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "user+tag@exam ple.com")
+	uri := GenerateProvisioningURI([]byte("JBSWY3DPEHPK3PXP"), "user+tag@exam ple.com")
 
 	assert.Assert(t, strings.HasPrefix(uri, "otpauth://totp/"), "URI prefix")
 	assert.Assert(t, strings.Contains(uri, "%20"), "space encoded as %%20")
@@ -296,13 +290,13 @@ func TestGenerateProvisioningURI_FullRoundtrip(t *testing.T) {
 
 	uri := GenerateProvisioningURI(encoded, "roundtrip@test.com")
 
-	assert.Assert(t, strings.Contains(uri, "secret="+encoded), "generated secret in URI")
+	assert.Assert(t, strings.Contains(uri, "secret="+string(encoded)), "generated secret in URI")
 	assert.Assert(t, strings.HasPrefix(uri, "otpauth://totp/MPC-2FA:"), "URI prefix with issuer")
 }
 
 // TestGenerateProvisioningURI_EmptyEmail verifies that an empty email produces a valid URI.
 func TestGenerateProvisioningURI_EmptyEmail(t *testing.T) {
-	uri := GenerateProvisioningURI("JBSWY3DPEHPK3PXP", "")
+	uri := GenerateProvisioningURI([]byte("JBSWY3DPEHPK3PXP"), "")
 
 	assert.Assert(t, strings.HasPrefix(uri, "otpauth://totp/MPC-2FA:"), "URI prefix")
 	assert.Assert(t, strings.Contains(uri, "secret=JBSWY3DPEHPK3PXP"), "secret param")

@@ -9,9 +9,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/vbncursed/vkr/twofa/internal/crypto"
+	"github.com/vbncursed/vkr/twofa/internal/models"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/totp"
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 )
 
 // ErrNotEnabled is returned when trying to disable 2FA that is not enabled.
@@ -54,9 +54,12 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 		return fmt.Errorf("disable 2fa: invalid OTP code")
 	}
 
-	// Check OTP reuse (same pattern as Verify, per D-10)
-	lastCounter, err := s.sessionStorage.GetUsedOTPCounter(ctx, userID)
-	if err == nil && lastCounter == matchedCounter && matchedCounter != 0 {
+	// Check OTP reuse (unified pattern with Verify, per D-10, M-13)
+	lastCounter, counterErr := s.sessionStorage.GetUsedOTPCounter(ctx, userID)
+	if counterErr != nil && !errors.Is(counterErr, models.ErrCounterNotFound) {
+		slog.Warn("get used OTP counter failed, proceeding", "user_id", userID, "error", counterErr)
+	}
+	if counterErr == nil && lastCounter == matchedCounter {
 		return ErrOTPReused
 	}
 
@@ -101,15 +104,11 @@ func (s *TwoFAService) deleteSharesAll(ctx context.Context, userID string) error
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, client := range s.mpcClients {
-		i, client := i, client
 		g.Go(func() error {
 			callCtx, cancel := context.WithTimeout(gCtx, s.mpcTimeout)
 			defer cancel()
 
-			_, err := client.DeleteShare(callCtx, &mpc_api.DeleteShareRequest{
-				UserId: userID,
-			})
-			if err != nil {
+			if err := client.DeleteShare(callCtx, userID); err != nil {
 				return fmt.Errorf("delete share on node %d: %w", i, err)
 			}
 			return nil

@@ -13,7 +13,7 @@ func (s *AuthService) ValidateToken(_ context.Context, accessTokenStr string) (s
 		return "", "", err
 	}
 
-	if claims.Subject == "" {
+	if claims.Subject == "" || claims.TokenType != "access" {
 		return "", "", domain.ErrInvalidToken
 	}
 

@@ -39,11 +39,12 @@ func newRegisterSuite(t *testing.T) *registerSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service := authService.NewAuthService(
+	service, err := authService.NewAuthService(
 		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 	return &registerSuite{
 		mc:             mc,
 		storage:        storage,
@@ -55,7 +56,7 @@ func newRegisterSuite(t *testing.T) *registerSuite {
 func TestRegister_Success(t *testing.T) {
 	s := newRegisterSuite(t)
 
-	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, nil)
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, domain.ErrUserNotFound)
 	s.storage.CreateUserMock.Set(func(_ context.Context, user *domain.User) error {
 		assert.Assert(t, user.ID != "", "user ID should not be empty")
 		assert.Equal(t, user.Email, "test@example.com")
@@ -70,7 +71,7 @@ func TestRegister_Success(t *testing.T) {
 		return nil
 	})
 
-	user, accessToken, refreshToken, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+	user, accessToken, refreshToken, err := s.service.Register(t.Context(), "test@example.com", "MyStr0ng!Pass99")
 
 	assert.NilError(t, err)
 	assert.Assert(t, user != nil, "expected user, got nil")
@@ -98,7 +99,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newRegisterSuite(t)
 
-			_, _, _, err := s.service.Register(context.Background(), tt.email, "MyStr0ng!Pass99")
+			_, _, _, err := s.service.Register(t.Context(), tt.email, "MyStr0ng!Pass99")
 
 			assert.Assert(t, err != nil, "expected error for email %q", tt.email)
 			assert.Assert(t, errors.Is(err, domain.ErrInvalidEmail),
@@ -110,12 +111,12 @@ func TestRegister_InvalidEmail(t *testing.T) {
 func TestRegister_WeakPassword(t *testing.T) {
 	s := newRegisterSuite(t)
 
-	_, _, _, err := s.service.Register(context.Background(), "test@example.com", "short")
+	_, _, _, err := s.service.Register(t.Context(), "test@example.com", "short")
 
 	assert.Assert(t, err != nil, "expected error for weak password")
 
-	var valErr *domain.PasswordValidationError
-	assert.Assert(t, errors.As(err, &valErr),
+	_, ok := errors.AsType[*domain.PasswordValidationError](err)
+	assert.Assert(t, ok,
 		"expected PasswordValidationError, got %T: %v", err, err)
 }
 
@@ -125,7 +126,7 @@ func TestRegister_DuplicateEmail_PreCheck(t *testing.T) {
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "existing@example.com").
 		Return(&domain.User{Email: "existing@example.com"}, nil)
 
-	_, _, _, err := s.service.Register(context.Background(), "existing@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(t.Context(), "existing@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for duplicate email")
 	assert.Assert(t, errors.Is(err, domain.ErrDuplicateEmail),
@@ -136,10 +137,10 @@ func TestRegister_DuplicateEmail_RaceCondition(t *testing.T) {
 	s := newRegisterSuite(t)
 
 	// Pre-check passes (user not found), but CreateUser hits unique constraint
-	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "race@example.com").Return(nil, nil)
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "race@example.com").Return(nil, domain.ErrUserNotFound)
 	s.storage.CreateUserMock.Return(domain.ErrDuplicateEmail)
 
-	_, _, _, err := s.service.Register(context.Background(), "race@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(t.Context(), "race@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for race condition duplicate")
 	assert.Assert(t, errors.Is(err, domain.ErrDuplicateEmail),
@@ -149,10 +150,10 @@ func TestRegister_DuplicateEmail_RaceCondition(t *testing.T) {
 func TestRegister_StorageError(t *testing.T) {
 	s := newRegisterSuite(t)
 
-	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, nil)
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(nil, domain.ErrUserNotFound)
 	s.storage.CreateUserMock.Return(errors.New("connection refused"))
 
-	_, _, _, err := s.service.Register(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(t.Context(), "test@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for storage failure")
 	assert.Assert(t, !errors.Is(err, domain.ErrDuplicateEmail),
@@ -164,14 +165,14 @@ func TestRegister_StorageError(t *testing.T) {
 func TestRegister_EmailNormalization(t *testing.T) {
 	s := newRegisterSuite(t)
 
-	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "user@example.com").Return(nil, nil)
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "user@example.com").Return(nil, domain.ErrUserNotFound)
 	s.storage.CreateUserMock.Set(func(_ context.Context, user *domain.User) error {
 		assert.Equal(t, user.Email, "user@example.com", "email should be lowercased and trimmed")
 		return nil
 	})
 	s.sessionStorage.StoreRefreshTokenMock.Return(nil)
 
-	user, accessToken, refreshToken, err := s.service.Register(context.Background(), "  User@Example.COM  ", "MyStr0ng!Pass99")
+	user, accessToken, refreshToken, err := s.service.Register(t.Context(), "  User@Example.COM  ", "MyStr0ng!Pass99")
 
 	assert.NilError(t, err)
 	assert.Equal(t, user.Email, "user@example.com")
@@ -182,7 +183,7 @@ func TestRegister_EmailNormalization(t *testing.T) {
 func TestRegister_StoresRefreshToken(t *testing.T) {
 	s := newRegisterSuite(t)
 
-	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "store@example.com").Return(nil, nil)
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "store@example.com").Return(nil, domain.ErrUserNotFound)
 	s.storage.CreateUserMock.Return(nil)
 
 	storeCalled := false
@@ -195,7 +196,7 @@ func TestRegister_StoresRefreshToken(t *testing.T) {
 		return nil
 	})
 
-	_, _, _, err := s.service.Register(context.Background(), "store@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Register(t.Context(), "store@example.com", "MyStr0ng!Pass99")
 	assert.NilError(t, err)
 	assert.Assert(t, storeCalled, "StoreRefreshToken should have been called after registration")
 }

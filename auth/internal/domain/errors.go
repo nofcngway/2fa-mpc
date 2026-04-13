@@ -9,6 +9,7 @@ import (
 var (
 	ErrDuplicateEmail = errors.New("user with this email already exists")
 	ErrInvalidEmail   = errors.New("invalid email format")
+	ErrUserNotFound   = errors.New("user not found")
 )
 
 // JWT and session errors.
@@ -22,6 +23,7 @@ var (
 // Password validation errors.
 var (
 	ErrPasswordTooShort   = errors.New("password must be at least 12 characters")
+	ErrPasswordTooLong    = errors.New("password must not exceed 128 characters")
 	ErrMissingUppercase   = errors.New("password must contain at least one uppercase letter")
 	ErrMissingLowercase   = errors.New("password must contain at least one lowercase letter")
 	ErrMissingDigit       = errors.New("password must contain at least one digit")
@@ -42,4 +44,9 @@ func (e *PasswordValidationError) Error() string {
 		msgs[i] = v.Error()
 	}
 	return strings.Join(msgs, "; ")
+}
+
+// Unwrap returns all wrapped violations for use with errors.Is and errors.As.
+func (e *PasswordValidationError) Unwrap() []error {
+	return e.Violations
 }

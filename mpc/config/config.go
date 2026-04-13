@@ -2,9 +2,10 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Config represents the full MPC service configuration.
@@ -44,12 +45,12 @@ type NodeConfig struct {
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read config file: %w", err)
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
+	if err := yaml.Load(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parse config file: %w", err)
 	}
 
 	return &cfg, nil

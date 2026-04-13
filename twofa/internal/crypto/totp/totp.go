@@ -17,14 +17,16 @@ import (
 var ErrSecretGeneration = errors.New("totp: failed to generate random secret")
 
 // GenerateSecret creates a new 20-byte cryptographically random TOTP secret.
-// Returns raw bytes, base32-encoded string (no padding), and error.
-func GenerateSecret() ([]byte, string, error) {
+// Returns raw bytes and base32-encoded bytes (no padding).
+// The caller MUST zeroize both slices after use — base32 is returned as []byte
+// (not string) so it can be securely cleared from memory.
+func GenerateSecret() ([]byte, []byte, error) {
 	secret := make([]byte, 20)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		return nil, "", fmt.Errorf("%w: %v", ErrSecretGeneration, err)
+		return nil, nil, fmt.Errorf("%w: %v", ErrSecretGeneration, err)
 	}
 
-	encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret)
+	encoded := []byte(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret))
 	return secret, encoded, nil
 }
 
@@ -40,6 +42,7 @@ func ValidateOTP(secret []byte, code string) bool {
 }
 
 // validateOTPAt is the testable core -- checks code against T-1, T, T+1.
+// All three windows are always compared to avoid timing leaks (M-05).
 func validateOTPAt(secret []byte, code string, unixTime int64) bool {
 	if len(code) != 6 {
 		return false
@@ -51,20 +54,14 @@ func validateOTPAt(secret []byte, code string, unixTime int64) bool {
 	}
 
 	counter := uint64(unixTime) / 30
+	codeBytes := []byte(code)
 
-	// Check current and next window always; check previous only if counter > 0.
-	if subtle.ConstantTimeCompare([]byte(hotp(secret, counter)), []byte(code)) == 1 {
-		return true
-	}
-	if subtle.ConstantTimeCompare([]byte(hotp(secret, counter+1)), []byte(code)) == 1 {
-		return true
-	}
+	match := subtle.ConstantTimeCompare([]byte(hotp(secret, counter)), codeBytes)
+	match |= subtle.ConstantTimeCompare([]byte(hotp(secret, counter+1)), codeBytes)
 	if counter > 0 {
-		if subtle.ConstantTimeCompare([]byte(hotp(secret, counter-1)), []byte(code)) == 1 {
-			return true
-		}
+		match |= subtle.ConstantTimeCompare([]byte(hotp(secret, counter-1)), codeBytes)
 	}
-	return false
+	return match == 1
 }
 
 // ValidateOTPWithCounter checks if code is valid for the current time +-1 window
@@ -75,6 +72,8 @@ func ValidateOTPWithCounter(secret []byte, code string) (bool, int64) {
 }
 
 // validateOTPWithCounterAt is the testable core for ValidateOTPWithCounter.
+// All three windows are always compared to avoid timing leaks (M-05).
+// When multiple windows match (shouldn't happen in practice), current window wins.
 func validateOTPWithCounterAt(secret []byte, code string, unixTime int64) (bool, int64) {
 	if len(code) != 6 {
 		return false, 0
@@ -85,18 +84,26 @@ func validateOTPWithCounterAt(secret []byte, code string, unixTime int64) (bool,
 		}
 	}
 	counter := int64(unixTime) / 30
-	if subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter))), []byte(code)) == 1 {
-		return true, counter
-	}
-	if subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter+1))), []byte(code)) == 1 {
-		return true, counter + 1
-	}
+	codeBytes := []byte(code)
+
+	matchCurr := subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter))), codeBytes)
+	matchNext := subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter+1))), codeBytes)
+	var matchPrev int
 	if counter > 0 {
-		if subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter-1))), []byte(code)) == 1 {
-			return true, counter - 1
-		}
+		matchPrev = subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter-1))), codeBytes)
 	}
-	return false, 0
+
+	// Priority: current > previous > next (closest windows first)
+	switch {
+	case matchCurr == 1:
+		return true, counter
+	case matchPrev == 1:
+		return true, counter - 1
+	case matchNext == 1:
+		return true, counter + 1
+	default:
+		return false, 0
+	}
 }
 
 // hotp computes a 6-digit HMAC-based OTP for the given counter.

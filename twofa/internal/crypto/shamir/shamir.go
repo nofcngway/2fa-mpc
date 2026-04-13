@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"io"
+
+	"github.com/vbncursed/vkr/twofa/internal/crypto"
 )
 
 // Share represents a single share from Shamir Secret Sharing.
@@ -24,6 +26,7 @@ var (
 	ErrTooFewShares      = errors.New("shamir: need at least 2 shares to combine")
 	ErrEmptyShareData    = errors.New("shamir: share data must not be empty")
 	ErrShareDataMismatch = errors.New("shamir: all shares must have equal data length")
+	ErrZeroIndex         = errors.New("shamir: share index must not be 0 (reserved for secret)")
 )
 
 // evalPolynomial evaluates a polynomial at point x in GF(256) using Horner's method.
@@ -87,6 +90,8 @@ func Split(secret []byte, n, threshold int) ([]Share, error) {
 	// For each byte of the secret, create a random polynomial of degree (threshold-1)
 	// where the constant term is the secret byte, then evaluate at each share index.
 	coeffs := make([]byte, threshold)
+	defer crypto.Zeroize(coeffs)
+
 	for byteIdx, secretByte := range secret {
 		coeffs[0] = secretByte
 
@@ -128,9 +133,12 @@ func Combine(shares []Share) ([]byte, error) {
 		}
 	}
 
-	// Check for duplicate indices.
+	// Check for zero and duplicate indices.
 	seen := make(map[byte]bool, len(shares))
 	for _, s := range shares {
+		if s.Index == 0 {
+			return nil, ErrZeroIndex
+		}
 		if seen[s.Index] {
 			return nil, ErrDuplicateIndex
 		}
@@ -146,7 +154,7 @@ func Combine(shares []Share) ([]byte, error) {
 	// Reconstruct each byte of the secret via Lagrange interpolation at x=0.
 	secret := make([]byte, dataLen)
 	ys := make([]byte, len(shares))
-	for byteIdx := 0; byteIdx < dataLen; byteIdx++ {
+	for byteIdx := range dataLen {
 		for i, s := range shares {
 			ys[i] = s.Data[byteIdx]
 		}

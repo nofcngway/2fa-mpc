@@ -18,5 +18,5 @@ func NewAuthService(cfg *config.Config, storage authService.Storage, sessionStor
 		storage, sessionStorage, eventProducer,
 		privateKey, publicKey,
 		cfg.JWT.AccessTokenTTL, cfg.JWT.RefreshTokenTTL,
-	), nil
+	)
 }

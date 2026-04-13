@@ -1,7 +1,6 @@
 package twofaService_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -21,7 +20,7 @@ func TestGetStatus_Found(t *testing.T) {
 	sessionStorage := mocks.NewSessionStorageMock(mc)
 
 	mpcClients := make([]twofaService.MPCClient, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		m := mocks.NewMPCClientMock(mc)
 		m.RetrieveShareMock.Optional()
 		m.StoreShareMock.Optional()
@@ -58,7 +57,7 @@ func TestGetStatus_Found(t *testing.T) {
 
 	storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(expected, nil)
 
-	record, err := service.GetStatus(context.Background(), "test-user")
+	record, err := service.GetStatus(t.Context(), "test-user")
 	assert.NilError(t, err)
 	assert.Assert(t, record != nil)
 	assert.Equal(t, record.UserID, "test-user")
@@ -72,7 +71,7 @@ func TestGetStatus_NotFound(t *testing.T) {
 	sessionStorage := mocks.NewSessionStorageMock(mc)
 
 	mpcClients := make([]twofaService.MPCClient, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		m := mocks.NewMPCClientMock(mc)
 		m.RetrieveShareMock.Optional()
 		m.StoreShareMock.Optional()
@@ -101,7 +100,7 @@ func TestGetStatus_NotFound(t *testing.T) {
 
 	storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(nil, nil)
 
-	record, err := service.GetStatus(context.Background(), "test-user")
+	record, err := service.GetStatus(t.Context(), "test-user")
 	assert.NilError(t, err)
 	assert.Assert(t, record == nil)
 }
@@ -112,7 +111,7 @@ func TestGetStatus_Error(t *testing.T) {
 	sessionStorage := mocks.NewSessionStorageMock(mc)
 
 	mpcClients := make([]twofaService.MPCClient, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		m := mocks.NewMPCClientMock(mc)
 		m.RetrieveShareMock.Optional()
 		m.StoreShareMock.Optional()
@@ -142,7 +141,7 @@ func TestGetStatus_Error(t *testing.T) {
 	dbErr := errors.New("database connection failed")
 	storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(nil, dbErr)
 
-	record, err := service.GetStatus(context.Background(), "test-user")
+	record, err := service.GetStatus(t.Context(), "test-user")
 	assert.Assert(t, err != nil)
 	assert.Assert(t, record == nil)
 	assert.Assert(t, errors.Is(err, dbErr), "expected wrapped dbErr, got: %v", err)

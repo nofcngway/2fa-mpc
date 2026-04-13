@@ -38,11 +38,12 @@ func newRefreshSuite(t *testing.T) *refreshSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service := authService.NewAuthService(
+	service, err := authService.NewAuthService(
 		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 	return &refreshSuite{
 		mc:             mc,
 		storage:        storage,
@@ -77,7 +78,7 @@ func TestRefreshToken_Success(t *testing.T) {
 		return nil
 	})
 
-	newAccess, newRefresh, err := s.service.RefreshToken(context.Background(), refreshToken)
+	newAccess, newRefresh, err := s.service.RefreshToken(t.Context(), refreshToken)
 
 	assert.NilError(t, err)
 	assert.Assert(t, newAccess != "", "new access token should not be empty")
@@ -103,7 +104,7 @@ func TestRefreshToken_TheftDetection(t *testing.T) {
 		return nil
 	})
 
-	_, _, err = s.service.RefreshToken(context.Background(), refreshToken)
+	_, _, err = s.service.RefreshToken(t.Context(), refreshToken)
 
 	assert.Assert(t, err != nil, "expected error for theft detection")
 	assert.Assert(t, errors.Is(err, domain.ErrTokenRevoked),
@@ -114,7 +115,7 @@ func TestRefreshToken_TheftDetection(t *testing.T) {
 func TestRefreshToken_InvalidJWT(t *testing.T) {
 	s := newRefreshSuite(t)
 
-	_, _, err := s.service.RefreshToken(context.Background(), "invalid-token-string")
+	_, _, err := s.service.RefreshToken(t.Context(), "invalid-token-string")
 
 	assert.Assert(t, err != nil, "expected error for invalid JWT")
 	assert.Assert(t, errors.Is(err, domain.ErrInvalidToken),
@@ -128,11 +129,12 @@ func TestRefreshToken_ExpiredJWT(t *testing.T) {
 	shortEventProducer := mocks.NewEventProducerMock(s.mc)
 	shortEventProducer.PublishEventMock.Optional().Return(nil)
 	shortEventProducer.CloseMock.Optional().Return(nil)
-	shortService := authService.NewAuthService(
+	shortService, err := authService.NewAuthService(
 		s.storage, s.sessionStorage, shortEventProducer,
 		s.privateKey, &s.privateKey.PublicKey,
 		15*time.Minute, 1*time.Nanosecond,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 
 	refreshToken, _, err := shortService.GenerateRefreshToken("user-123", "test@example.com", "family-abc")
 	assert.NilError(t, err)
@@ -140,7 +142,7 @@ func TestRefreshToken_ExpiredJWT(t *testing.T) {
 	// Wait for token to expire
 	time.Sleep(2 * time.Millisecond)
 
-	_, _, err = s.service.RefreshToken(context.Background(), refreshToken)
+	_, _, err = s.service.RefreshToken(t.Context(), refreshToken)
 
 	assert.Assert(t, err != nil, "expected error for expired JWT")
 }
@@ -170,7 +172,7 @@ func TestRefreshToken_DeletesOldAndStoresNew(t *testing.T) {
 		return nil
 	})
 
-	_, _, err = s.service.RefreshToken(context.Background(), refreshToken)
+	_, _, err = s.service.RefreshToken(t.Context(), refreshToken)
 	assert.NilError(t, err)
 	assert.Assert(t, deleteOldCalled, "DeleteRefreshToken should have been called for old JTI")
 	assert.Assert(t, storeNewCalled, "StoreRefreshToken should have been called for new token")

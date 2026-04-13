@@ -11,10 +11,8 @@ import (
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/vbncursed/vkr/twofa/internal/models"
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
-	"google.golang.org/grpc"
 )
 
 // disableSuite holds shared setup for Disable tests.
@@ -34,7 +32,7 @@ func newDisableSuite(t *testing.T) *disableSuite {
 
 	mpcClients := make([]*mocks.MPCClientMock, 3)
 	mpcInterfaces := make([]twofaService.MPCClient, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		mpcClients[i] = mocks.NewMPCClientMock(mc)
 		mpcInterfaces[i] = mpcClients[i]
 	}
@@ -64,6 +62,8 @@ func (ds *disableSuite) makeAllMocksOptional() {
 	ds.storage.StoreBatchBackupCodesMock.Optional()
 	ds.storage.DeleteTwoFARecordMock.Optional()
 	ds.storage.DeleteBackupCodesMock.Optional()
+	ds.storage.GetUnusedBackupCodeHashesMock.Optional()
+	ds.storage.MarkBackupCodeUsedMock.Optional()
 	ds.sessionStorage.IncrementRateLimitMock.Optional()
 	ds.sessionStorage.GetRateLimitMock.Optional()
 	ds.sessionStorage.GetUsedOTPCounterMock.Optional()
@@ -86,18 +86,18 @@ func TestDisable_Success(t *testing.T) {
 	)
 
 	// MPC RetrieveShare returns valid shares
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		data := shamirPkg[i]
-		ds.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, req *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
-			return &mpc_api.RetrieveShareResponse{ShareData: data}, nil
+		ds.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, _ string, _ int) ([]byte, error) {
+			return data, nil
 		})
 	}
 
 	// All 3 DeleteShare succeed
-	for i := 0; i < 3; i++ {
-		ds.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, req *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-			assert.Equal(t, req.UserId, "test-user")
-			return &mpc_api.DeleteShareResponse{}, nil
+	for i := range 3 {
+		ds.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, userID string) error {
+			assert.Equal(t, userID, "test-user")
+			return nil
 		})
 	}
 
@@ -107,7 +107,7 @@ func TestDisable_Success(t *testing.T) {
 
 	// OTP reuse check: no prior counter stored
 	ds.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
-		return 0, nil
+		return 0, models.ErrCounterNotFound
 	})
 	ds.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
@@ -118,7 +118,7 @@ func TestDisable_Success(t *testing.T) {
 		return nil
 	})
 
-	err := ds.service.Disable(context.Background(), "test-user", code)
+	err := ds.service.Disable(t.Context(), "test-user", code)
 	assert.NilError(t, err)
 }
 
@@ -132,25 +132,26 @@ func TestDisable_InvalidOTP(t *testing.T) {
 		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		data := shamirPkg[i]
-		ds.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, req *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
-			return &mpc_api.RetrieveShareResponse{ShareData: data}, nil
+		// Optional because first-2-wins may skip the 3rd client.
+		ds.mpcClients[i].RetrieveShareMock.Optional().Set(func(_ context.Context, _ string, _ int) ([]byte, error) {
+			return data, nil
 		})
 	}
 
 	// Should NOT reach DeleteShare
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		ds.mpcClients[i].DeleteShareMock.Optional()
 	}
 
-	err := ds.service.Disable(context.Background(), "test-user", "000000")
+	err := ds.service.Disable(t.Context(), "test-user", "000000")
 	assert.Assert(t, err != nil, "expected error for invalid OTP")
 	assert.Assert(t, !errors.Is(err, twofaService.ErrNotSetUp))
 	assert.Assert(t, !errors.Is(err, twofaService.ErrNotEnabled))
 
 	// Verify NO DeleteShare calls were made
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Equal(t, ds.mpcClients[i].DeleteShareAfterCounter(), uint64(0),
 			"no DeleteShare calls expected for invalid OTP")
 	}
@@ -168,33 +169,33 @@ func TestDisable_ShareDeletionFails(t *testing.T) {
 		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		data := shamirPkg[i]
-		ds.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, req *mpc_api.RetrieveShareRequest, _ ...grpc.CallOption) (*mpc_api.RetrieveShareResponse, error) {
-			return &mpc_api.RetrieveShareResponse{ShareData: data}, nil
+		ds.mpcClients[i].RetrieveShareMock.Set(func(_ context.Context, _ string, _ int) ([]byte, error) {
+			return data, nil
 		})
 	}
 
 	// OTP reuse check: no prior counter stored
 	ds.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
-		return 0, nil
+		return 0, models.ErrCounterNotFound
 	})
 	ds.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
 	})
 
 	// First 2 succeed, third fails
-	ds.mpcClients[0].DeleteShareMock.Set(func(_ context.Context, req *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-		return &mpc_api.DeleteShareResponse{}, nil
+	ds.mpcClients[0].DeleteShareMock.Set(func(_ context.Context, _ string) error {
+		return nil
 	})
-	ds.mpcClients[1].DeleteShareMock.Set(func(_ context.Context, req *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-		return &mpc_api.DeleteShareResponse{}, nil
+	ds.mpcClients[1].DeleteShareMock.Set(func(_ context.Context, _ string) error {
+		return nil
 	})
-	ds.mpcClients[2].DeleteShareMock.Set(func(_ context.Context, req *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-		return nil, errors.New("node 2 unreachable")
+	ds.mpcClients[2].DeleteShareMock.Set(func(_ context.Context, _ string) error {
+		return errors.New("node 2 unreachable")
 	})
 
-	err := ds.service.Disable(context.Background(), "test-user", code)
+	err := ds.service.Disable(t.Context(), "test-user", code)
 	assert.Assert(t, err != nil, "expected error when share deletion fails")
 
 	// Assert DeleteTwoFARecord NOT called (twofa_record stays enabled per D-13)
@@ -211,18 +212,18 @@ func TestDisable_NotSetUp(t *testing.T) {
 	ds.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(nil, nil)
 
 	// Make MPC optional
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		ds.mpcClients[i].RetrieveShareMock.Optional()
 		ds.mpcClients[i].DeleteShareMock.Optional()
 		ds.mpcClients[i].StoreShareMock.Optional()
 	}
 
-	err := ds.service.Disable(context.Background(), "test-user", "123456")
+	err := ds.service.Disable(t.Context(), "test-user", "123456")
 	assert.Assert(t, errors.Is(err, twofaService.ErrNotSetUp),
 		"expected ErrNotSetUp, got: %v", err)
 
 	// No MPC calls
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Equal(t, ds.mpcClients[i].RetrieveShareAfterCounter(), uint64(0))
 		assert.Equal(t, ds.mpcClients[i].DeleteShareAfterCounter(), uint64(0))
 	}
@@ -237,18 +238,18 @@ func TestDisable_NotEnabled(t *testing.T) {
 	)
 
 	// Make MPC optional
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		ds.mpcClients[i].RetrieveShareMock.Optional()
 		ds.mpcClients[i].DeleteShareMock.Optional()
 		ds.mpcClients[i].StoreShareMock.Optional()
 	}
 
-	err := ds.service.Disable(context.Background(), "test-user", "123456")
+	err := ds.service.Disable(t.Context(), "test-user", "123456")
 	assert.Assert(t, errors.Is(err, twofaService.ErrNotEnabled),
 		"expected ErrNotEnabled, got: %v", err)
 
 	// No MPC calls
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Equal(t, ds.mpcClients[i].RetrieveShareAfterCounter(), uint64(0))
 		assert.Equal(t, ds.mpcClients[i].DeleteShareAfterCounter(), uint64(0))
 	}

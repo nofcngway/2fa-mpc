@@ -1,8 +1,20 @@
 package authService
 
-import "context"
+import (
+	"context"
+	"log/slog"
+)
 
 // LogoutAll revokes all sessions for a user by deleting all their tokens from Redis.
 func (s *AuthService) LogoutAll(ctx context.Context, userID string) error {
-	return s.sessionStorage.DeleteAllUserTokens(ctx, userID)
+	if err := s.sessionStorage.DeleteAllUserTokens(ctx, userID); err != nil {
+		return err
+	}
+
+	// Fire-and-forget audit event
+	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(userID, "user.logged_out_all", "success")); err != nil {
+		slog.Warn("failed to publish audit event", "operation", "user.logged_out_all", "error", err)
+	}
+
+	return nil
 }

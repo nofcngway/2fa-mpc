@@ -1,11 +1,13 @@
 package config
 
 import (
+	"cmp"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // DefaultMPCTimeout is the default timeout for MPC node gRPC calls.
@@ -24,10 +26,30 @@ type Config struct {
 
 // GetMPCTimeout returns the configured MPC timeout or the default (5s).
 func (c *Config) GetMPCTimeout() time.Duration {
-	if c.MPCTimeout == 0 {
-		return DefaultMPCTimeout
+	return cmp.Or(c.MPCTimeout, DefaultMPCTimeout)
+}
+
+// Validate checks all required configuration fields.
+func (c *Config) Validate() error {
+	var errs []error
+	if c.Server.Port == 0 {
+		errs = append(errs, fmt.Errorf("server.port is required"))
 	}
-	return c.MPCTimeout
+	if c.Database.DSN == "" {
+		errs = append(errs, fmt.Errorf("database.dsn is required"))
+	}
+	if c.SharedSecret == "" {
+		errs = append(errs, fmt.Errorf("shared_secret is required"))
+	}
+	if len(c.MPCNodes) != 3 {
+		errs = append(errs, fmt.Errorf("exactly 3 mpc_nodes required for Shamir 2-of-3, got %d", len(c.MPCNodes)))
+	}
+	for i, node := range c.MPCNodes {
+		if node.Addr == "" {
+			errs = append(errs, fmt.Errorf("mpc_nodes[%d].addr is required", i))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // ServerConfig holds gRPC server settings.
@@ -61,6 +83,7 @@ type MPCNodeConfig struct {
 }
 
 // Load reads and parses the configuration file at the given path.
+// Environment variable overrides: TWOFA_SHARED_SECRET, TWOFA_DATABASE_DSN.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -68,8 +91,20 @@ func Load(path string) (*Config, error) {
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Load(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse config file: %w", err)
+	}
+
+	// Environment variable overrides for secrets
+	if v := os.Getenv("TWOFA_SHARED_SECRET"); v != "" {
+		cfg.SharedSecret = v
+	}
+	if v := os.Getenv("TWOFA_DATABASE_DSN"); v != "" {
+		cfg.Database.DSN = v
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validation: %w", err)
 	}
 
 	return &cfg, nil

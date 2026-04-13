@@ -15,7 +15,7 @@ var (
 	)
 	grpcRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "twofa_mpc_latency_seconds",
+			Name:    "twofa_request_duration_seconds",
 			Help:    "Duration of gRPC requests to twofa service in seconds",
 			Buckets: prometheus.DefBuckets,
 		},

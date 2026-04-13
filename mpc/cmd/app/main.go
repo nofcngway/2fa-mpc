@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -70,7 +71,7 @@ func main() {
 	}
 	go func() {
 		slog.Info("metrics server started", "port", metricsPort)
-		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("metrics server error", "error", err)
 		}
 	}()

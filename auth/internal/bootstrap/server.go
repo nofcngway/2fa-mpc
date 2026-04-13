@@ -14,6 +14,7 @@ import (
 func NewGRPCServer(api *auth_service_api.AuthServiceAPI) *grpc.Server {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			middleware.RecoveryInterceptor,
 			middleware.MetricsInterceptor,
 			middleware.LoggingInterceptor,
 		),

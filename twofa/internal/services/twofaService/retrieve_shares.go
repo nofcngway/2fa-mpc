@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/vbncursed/vkr/twofa/internal/crypto"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 )
 
 // ErrInsufficientShares is returned when fewer than 2 MPC nodes respond successfully.
@@ -33,16 +33,13 @@ func (s *TwoFAService) retrieveShares(ctx context.Context, userID string) ([]sha
 			callCtx, callCancel := context.WithTimeout(ctx, s.mpcTimeout)
 			defer callCancel()
 
-			resp, err := c.RetrieveShare(callCtx, &mpc_api.RetrieveShareRequest{
-				UserId:     userID,
-				ShareIndex: int32(idx + 1),
-			})
+			shareData, err := c.RetrieveShare(callCtx, userID, idx+1)
 			if err != nil {
 				errs <- fmt.Errorf("node %d: %w", idx, err)
 				return
 			}
 			results <- shareResult{
-				share: shamir.Share{Index: byte(idx + 1), Data: resp.ShareData},
+				share: shamir.Share{Index: byte(idx + 1), Data: shareData},
 				node:  idx,
 			}
 		}(i, client)
@@ -50,7 +47,7 @@ func (s *TwoFAService) retrieveShares(ctx context.Context, userID string) ([]sha
 
 	var shares []shamir.Share
 	var failures int
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		select {
 		case r := <-results:
 			shares = append(shares, r.share)
@@ -62,9 +59,19 @@ func (s *TwoFAService) retrieveShares(ctx context.Context, userID string) ([]sha
 			failures++
 			slog.Warn("MPC node retrieval failed", "error", err, "user_id", userID)
 			if failures > 1 {
+				zeroizeShares(shares)
 				return nil, ErrInsufficientShares
 			}
 		}
 	}
+	zeroizeShares(shares)
 	return nil, ErrInsufficientShares
+}
+
+// zeroizeShares clears share data from memory on error paths
+// where the caller's defer block won't execute.
+func zeroizeShares(shares []shamir.Share) {
+	for i := range shares {
+		crypto.Zeroize(shares[i].Data)
+	}
 }

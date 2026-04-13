@@ -22,8 +22,7 @@ func (api *AuthServiceAPI) Register(ctx context.Context, req *pb.RegisterRequest
 
 	user, accessToken, refreshToken, err := api.service.Register(ctx, req.Email, req.Password)
 	if err != nil {
-		var validErr *domain.PasswordValidationError
-		if errors.As(err, &validErr) {
+		if validErr, ok := errors.AsType[*domain.PasswordValidationError](err); ok {
 			return nil, status.Error(codes.InvalidArgument, validErr.Error())
 		}
 		if errors.Is(err, domain.ErrInvalidEmail) {

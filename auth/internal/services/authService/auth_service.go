@@ -3,6 +3,7 @@ package authService
 import (
 	"context"
 	"crypto/rsa"
+	"errors"
 	"time"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
@@ -37,7 +38,7 @@ type AuthService struct {
 	refreshTokenTTL time.Duration
 }
 
-// NewAuthService creates a new AuthService instance.
+// NewAuthService creates a new AuthService instance. Returns an error if any required dependency is nil.
 func NewAuthService(
 	storage Storage,
 	sessionStorage SessionStorage,
@@ -46,7 +47,26 @@ func NewAuthService(
 	publicKey *rsa.PublicKey,
 	accessTokenTTL time.Duration,
 	refreshTokenTTL time.Duration,
-) *AuthService {
+) (*AuthService, error) {
+	var errs []error
+	if storage == nil {
+		errs = append(errs, errors.New("storage is required"))
+	}
+	if sessionStorage == nil {
+		errs = append(errs, errors.New("session storage is required"))
+	}
+	if eventProducer == nil {
+		errs = append(errs, errors.New("event producer is required"))
+	}
+	if privateKey == nil {
+		errs = append(errs, errors.New("private key is required"))
+	}
+	if publicKey == nil {
+		errs = append(errs, errors.New("public key is required"))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
 	return &AuthService{
 		storage:         storage,
 		sessionStorage:  sessionStorage,
@@ -55,5 +75,5 @@ func NewAuthService(
 		publicKey:       publicKey,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
-	}
+	}, nil
 }

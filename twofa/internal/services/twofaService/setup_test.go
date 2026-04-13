@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -14,10 +15,8 @@ import (
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/vbncursed/vkr/twofa/internal/models"
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
-	"google.golang.org/grpc"
 )
 
 // setupSuite holds shared setup for Setup tests.
@@ -35,7 +34,7 @@ func newSetupSuite(t *testing.T) *setupSuite {
 
 	mpcClients := make([]*mocks.MPCClientMock, 3)
 	mpcInterfaces := make([]twofaService.MPCClient, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		mpcClients[i] = mocks.NewMPCClientMock(mc)
 		mpcInterfaces[i] = mpcClients[i]
 	}
@@ -67,18 +66,18 @@ func TestSetup_Success(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, req *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	uri, codes, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	uri, codes, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	assert.Assert(t, uri != "", "provisioning URI should not be empty")
-	assert.Assert(t, len(uri) > 0 && contains(uri, "otpauth://totp/"), "URI should contain otpauth://totp/")
-	assert.Assert(t, contains(uri, "user@example.com") || contains(uri, "user%40example.com"), "URI should contain email")
+	assert.Assert(t, len(uri) > 0 && strings.Contains(uri, "otpauth://totp/"), "URI should contain otpauth://totp/")
+	assert.Assert(t, strings.Contains(uri, "user@example.com") || strings.Contains(uri, "user%40example.com"), "URI should contain email")
 	assert.Equal(t, len(codes), 10)
 }
 
@@ -89,7 +88,7 @@ func TestSetup_DuplicateEnabled(t *testing.T) {
 		&models.TwoFARecord{UserID: "test-user-id", IsEnabled: true}, nil,
 	)
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil)
 	assert.Assert(t, errors.Is(err, twofaService.ErrAlreadyEnabled),
@@ -108,13 +107,13 @@ func TestSetup_DuplicateDisabled(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	uri, codes, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	uri, codes, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	assert.Assert(t, uri != "")
@@ -130,13 +129,13 @@ func TestSetup_NewUserNoExistingRecord(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	uri, codes, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	uri, codes, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	assert.Assert(t, uri != "")
@@ -148,28 +147,28 @@ func TestSetup_PartialMPCFailure_Node2Fails(t *testing.T) {
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
 
-	s.mpcClients[0].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return &mpc_api.StoreShareResponse{ShareId: "s1"}, nil
+	s.mpcClients[0].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return nil
 	})
-	s.mpcClients[1].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return &mpc_api.StoreShareResponse{ShareId: "s2"}, nil
+	s.mpcClients[1].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return nil
 	})
-	s.mpcClients[2].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return nil, errors.New("node 2 unreachable")
+	s.mpcClients[2].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return errors.New("node 2 unreachable")
 	})
 
 	// Compensating delete should be called on ALL 3 nodes
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, _ *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-			return &mpc_api.DeleteShareResponse{DeletedCount: 1}, nil
+	for i := range 3 {
+		s.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, _ string) error {
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil, "expected error when node 2 fails")
 	// Verify delete was called on all 3 nodes
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Assert(t, s.mpcClients[i].DeleteShareAfterCounter() >= 1,
 			"DeleteShare should be called on node %d", i)
 	}
@@ -180,26 +179,26 @@ func TestSetup_PartialMPCFailure_Node0Fails(t *testing.T) {
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
 
-	s.mpcClients[0].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return nil, errors.New("node 0 unreachable")
+	s.mpcClients[0].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return errors.New("node 0 unreachable")
 	})
-	s.mpcClients[1].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return &mpc_api.StoreShareResponse{ShareId: "s2"}, nil
+	s.mpcClients[1].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return nil
 	})
-	s.mpcClients[2].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return &mpc_api.StoreShareResponse{ShareId: "s3"}, nil
+	s.mpcClients[2].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, _ *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-			return &mpc_api.DeleteShareResponse{DeletedCount: 1}, nil
+	for i := range 3 {
+		s.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, _ string) error {
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil, "expected error when node 0 fails")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Assert(t, s.mpcClients[i].DeleteShareAfterCounter() >= 1,
 			"DeleteShare should be called on node %d", i)
 	}
@@ -210,19 +209,19 @@ func TestSetup_AllMPCNodesFail(t *testing.T) {
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return nil, errors.New("node unreachable")
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return errors.New("node unreachable")
 		})
-		s.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, _ *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
-			return &mpc_api.DeleteShareResponse{DeletedCount: 0}, nil
+		s.mpcClients[i].DeleteShareMock.Set(func(_ context.Context, _ string) error {
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil, "expected error when all nodes fail")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Assert(t, s.mpcClients[i].DeleteShareAfterCounter() >= 1,
 			"DeleteShare should be called on node %d", i)
 	}
@@ -237,13 +236,13 @@ func TestSetup_BackupCodeFormat(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	_, codes, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, codes, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	codeRegex := regexp.MustCompile(`^\d{4}-\d{4}$`)
@@ -262,13 +261,13 @@ func TestSetup_BackupCodeUniqueness(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	_, codes, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, codes, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	seen := make(map[string]bool)
@@ -290,13 +289,13 @@ func TestSetup_BackupCodeHashing(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	_, codes, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, codes, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(capturedHashes), 10)
@@ -315,16 +314,16 @@ func TestSetup_ProvisioningURIContainsEmail(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	uri, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	uri, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
-	assert.Assert(t, contains(uri, "user%40example.com") || contains(uri, "user@example.com"),
+	assert.Assert(t, strings.Contains(uri, "user%40example.com") || strings.Contains(uri, "user@example.com"),
 		"provisioning URI should contain email, got: %s", uri)
 }
 
@@ -339,31 +338,31 @@ func TestSetup_StoreShareReceivesCorrectData(t *testing.T) {
 
 	type storeCall struct {
 		UserID     string
-		ShareIndex int32
+		ShareIndex int
 		ShareData  []byte
 	}
 	var calls [3]storeCall
-	var callCount int32
+	var callCount atomic.Int32
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		idx := i
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, req *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, userID string, shareIndex int, shareData []byte) error {
 			calls[idx] = storeCall{
-				UserID:     req.UserId,
-				ShareIndex: req.ShareIndex,
-				ShareData:  req.ShareData,
+				UserID:     userID,
+				ShareIndex: shareIndex,
+				ShareData:  shareData,
 			}
-			atomic.AddInt32(&callCount, 1)
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+			callCount.Add(1)
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
-	assert.Equal(t, atomic.LoadInt32(&callCount), int32(3))
+	assert.Equal(t, callCount.Load(), int32(3))
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.Equal(t, calls[i].UserID, "test-user-id", "node %d: wrong user_id", i)
 		assert.Assert(t, calls[i].ShareIndex >= 1 && calls[i].ShareIndex <= 3,
 			"node %d: share_index should be 1-3, got %d", i, calls[i].ShareIndex)
@@ -378,16 +377,16 @@ func TestSetup_CreateTwoFARecordFails(t *testing.T) {
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
 	s.storage.CreateTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(errors.New("db error"))
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil, "expected error when CreateTwoFARecord fails")
-	assert.Assert(t, contains(err.Error(), "create twofa record"),
+	assert.Assert(t, strings.Contains(err.Error(), "create twofa record"),
 		"error should mention create twofa record, got: %v", err)
 }
 
@@ -400,16 +399,16 @@ func TestSetup_StoreBatchBackupCodesFails(t *testing.T) {
 		return errors.New("db error")
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil, "expected error when StoreBatchBackupCodes fails")
-	assert.Assert(t, contains(err.Error(), "store backup codes"),
+	assert.Assert(t, strings.Contains(err.Error(), "store backup codes"),
 		"error should mention store backup codes, got: %v", err)
 }
 
@@ -418,10 +417,10 @@ func TestSetup_GetTwoFARecordFails(t *testing.T) {
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, errors.New("db error"))
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil, "expected error when GetTwoFARecord fails")
-	assert.Assert(t, contains(err.Error(), "check existing 2fa"),
+	assert.Assert(t, strings.Contains(err.Error(), "check existing 2fa"),
 		"error should mention check existing 2fa, got: %v", err)
 }
 
@@ -431,28 +430,28 @@ func TestSetup_CompensatingDeleteUsesFreshContext(t *testing.T) {
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
 
 	// Make node 0 fail to trigger compensating delete
-	s.mpcClients[0].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return nil, errors.New("node 0 failed")
+	s.mpcClients[0].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return errors.New("node 0 failed")
 	})
-	s.mpcClients[1].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return &mpc_api.StoreShareResponse{ShareId: "s2"}, nil
+	s.mpcClients[1].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return nil
 	})
-	s.mpcClients[2].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-		return &mpc_api.StoreShareResponse{ShareId: "s3"}, nil
+	s.mpcClients[2].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+		return nil
 	})
 
 	// Verify compensating delete context is NOT cancelled
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].DeleteShareMock.Set(func(ctx context.Context, req *mpc_api.DeleteShareRequest, _ ...grpc.CallOption) (*mpc_api.DeleteShareResponse, error) {
+	for i := range 3 {
+		s.mpcClients[i].DeleteShareMock.Set(func(ctx context.Context, userID string) error {
 			// The context passed to DeleteShare should NOT be already cancelled
 			assert.Assert(t, ctx.Err() == nil,
 				"compensating delete context should not be cancelled (should use fresh context)")
-			assert.Equal(t, req.UserId, "test-user-id")
-			return &mpc_api.DeleteShareResponse{DeletedCount: 1}, nil
+			assert.Equal(t, userID, "test-user-id")
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil)
 }
@@ -468,16 +467,16 @@ func TestSetup_SharesZeroized(t *testing.T) {
 
 	// Capture share data to verify it gets zeroed after setup
 	var capturedShareData [3][]byte
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		idx := i
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, req *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, shareData []byte) error {
 			// Store reference to the share data (not a copy)
-			capturedShareData[idx] = req.ShareData
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+			capturedShareData[idx] = shareData
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	// Note: share data passed to StoreShare is from the Share struct's Data field.
@@ -492,7 +491,7 @@ func TestSetup_SecretZeroized(t *testing.T) {
 	// Capture the raw secret slice to verify zeroization after Setup
 	var capturedRaw []byte
 	originalGenerate := twofaService.GenerateSecretFunc
-	twofaService.GenerateSecretFunc = func() ([]byte, string, error) {
+	twofaService.GenerateSecretFunc = func() ([]byte, []byte, error) {
 		raw, base32, err := originalGenerate()
 		capturedRaw = raw
 		return raw, base32, err
@@ -505,13 +504,13 @@ func TestSetup_SecretZeroized(t *testing.T) {
 		return nil
 	})
 
-	for i := 0; i < 3; i++ {
-		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ *mpc_api.StoreShareRequest, _ ...grpc.CallOption) (*mpc_api.StoreShareResponse, error) {
-			return &mpc_api.StoreShareResponse{ShareId: "share-id"}, nil
+	for i := range 3 {
+		s.mpcClients[i].StoreShareMock.Set(func(_ context.Context, _ string, _ int, _ []byte) error {
+			return nil
 		})
 	}
 
-	_, _, err := s.service.Setup(context.Background(), "test-user-id", "user@example.com")
+	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.NilError(t, err)
 	assert.Assert(t, capturedRaw != nil, "capturedRaw should not be nil")
@@ -521,16 +520,3 @@ func TestSetup_SecretZeroized(t *testing.T) {
 	}
 }
 
-// contains is a simple helper to check substring presence.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchSubstring(s, substr)
-}
-
-func searchSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}

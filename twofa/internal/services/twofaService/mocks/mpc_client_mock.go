@@ -11,8 +11,6 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
-	"google.golang.org/grpc"
 )
 
 // MPCClientMock implements mm_twofaService.MPCClient
@@ -20,23 +18,23 @@ type MPCClientMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcDeleteShare          func(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption) (dp1 *mpc_api.DeleteShareResponse, err error)
+	funcDeleteShare          func(ctx context.Context, userID string) (err error)
 	funcDeleteShareOrigin    string
-	inspectFuncDeleteShare   func(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption)
+	inspectFuncDeleteShare   func(ctx context.Context, userID string)
 	afterDeleteShareCounter  uint64
 	beforeDeleteShareCounter uint64
 	DeleteShareMock          mMPCClientMockDeleteShare
 
-	funcRetrieveShare          func(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption) (rp1 *mpc_api.RetrieveShareResponse, err error)
+	funcRetrieveShare          func(ctx context.Context, userID string, shareIndex int) (ba1 []byte, err error)
 	funcRetrieveShareOrigin    string
-	inspectFuncRetrieveShare   func(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption)
+	inspectFuncRetrieveShare   func(ctx context.Context, userID string, shareIndex int)
 	afterRetrieveShareCounter  uint64
 	beforeRetrieveShareCounter uint64
 	RetrieveShareMock          mMPCClientMockRetrieveShare
 
-	funcStoreShare          func(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption) (sp1 *mpc_api.StoreShareResponse, err error)
+	funcStoreShare          func(ctx context.Context, userID string, shareIndex int, shareData []byte) (err error)
 	funcStoreShareOrigin    string
-	inspectFuncStoreShare   func(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption)
+	inspectFuncStoreShare   func(ctx context.Context, userID string, shareIndex int, shareData []byte)
 	afterStoreShareCounter  uint64
 	beforeStoreShareCounter uint64
 	StoreShareMock          mMPCClientMockStoreShare
@@ -90,30 +88,26 @@ type MPCClientMockDeleteShareExpectation struct {
 
 // MPCClientMockDeleteShareParams contains parameters of the MPCClient.DeleteShare
 type MPCClientMockDeleteShareParams struct {
-	ctx  context.Context
-	in   *mpc_api.DeleteShareRequest
-	opts []grpc.CallOption
+	ctx    context.Context
+	userID string
 }
 
 // MPCClientMockDeleteShareParamPtrs contains pointers to parameters of the MPCClient.DeleteShare
 type MPCClientMockDeleteShareParamPtrs struct {
-	ctx  *context.Context
-	in   **mpc_api.DeleteShareRequest
-	opts *[]grpc.CallOption
+	ctx    *context.Context
+	userID *string
 }
 
 // MPCClientMockDeleteShareResults contains results of the MPCClient.DeleteShare
 type MPCClientMockDeleteShareResults struct {
-	dp1 *mpc_api.DeleteShareResponse
 	err error
 }
 
 // MPCClientMockDeleteShareOrigins contains origins of expectations of the MPCClient.DeleteShare
 type MPCClientMockDeleteShareExpectationOrigins struct {
-	origin     string
-	originCtx  string
-	originIn   string
-	originOpts string
+	origin       string
+	originCtx    string
+	originUserID string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -127,7 +121,7 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) Optional() *mMPCClientMockDelete
 }
 
 // Expect sets up expected params for MPCClient.DeleteShare
-func (mmDeleteShare *mMPCClientMockDeleteShare) Expect(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption) *mMPCClientMockDeleteShare {
+func (mmDeleteShare *mMPCClientMockDeleteShare) Expect(ctx context.Context, userID string) *mMPCClientMockDeleteShare {
 	if mmDeleteShare.mock.funcDeleteShare != nil {
 		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by Set")
 	}
@@ -140,7 +134,7 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) Expect(ctx context.Context, in *
 		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by ExpectParams functions")
 	}
 
-	mmDeleteShare.defaultExpectation.params = &MPCClientMockDeleteShareParams{ctx, in, opts}
+	mmDeleteShare.defaultExpectation.params = &MPCClientMockDeleteShareParams{ctx, userID}
 	mmDeleteShare.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmDeleteShare.expectations {
 		if minimock.Equal(e.params, mmDeleteShare.defaultExpectation.params) {
@@ -174,8 +168,8 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) ExpectCtxParam1(ctx context.Cont
 	return mmDeleteShare
 }
 
-// ExpectInParam2 sets up expected param in for MPCClient.DeleteShare
-func (mmDeleteShare *mMPCClientMockDeleteShare) ExpectInParam2(in *mpc_api.DeleteShareRequest) *mMPCClientMockDeleteShare {
+// ExpectUserIDParam2 sets up expected param userID for MPCClient.DeleteShare
+func (mmDeleteShare *mMPCClientMockDeleteShare) ExpectUserIDParam2(userID string) *mMPCClientMockDeleteShare {
 	if mmDeleteShare.mock.funcDeleteShare != nil {
 		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by Set")
 	}
@@ -191,37 +185,14 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) ExpectInParam2(in *mpc_api.Delet
 	if mmDeleteShare.defaultExpectation.paramPtrs == nil {
 		mmDeleteShare.defaultExpectation.paramPtrs = &MPCClientMockDeleteShareParamPtrs{}
 	}
-	mmDeleteShare.defaultExpectation.paramPtrs.in = &in
-	mmDeleteShare.defaultExpectation.expectationOrigins.originIn = minimock.CallerInfo(1)
-
-	return mmDeleteShare
-}
-
-// ExpectOptsParam3 sets up expected param opts for MPCClient.DeleteShare
-func (mmDeleteShare *mMPCClientMockDeleteShare) ExpectOptsParam3(opts ...grpc.CallOption) *mMPCClientMockDeleteShare {
-	if mmDeleteShare.mock.funcDeleteShare != nil {
-		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by Set")
-	}
-
-	if mmDeleteShare.defaultExpectation == nil {
-		mmDeleteShare.defaultExpectation = &MPCClientMockDeleteShareExpectation{}
-	}
-
-	if mmDeleteShare.defaultExpectation.params != nil {
-		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by Expect")
-	}
-
-	if mmDeleteShare.defaultExpectation.paramPtrs == nil {
-		mmDeleteShare.defaultExpectation.paramPtrs = &MPCClientMockDeleteShareParamPtrs{}
-	}
-	mmDeleteShare.defaultExpectation.paramPtrs.opts = &opts
-	mmDeleteShare.defaultExpectation.expectationOrigins.originOpts = minimock.CallerInfo(1)
+	mmDeleteShare.defaultExpectation.paramPtrs.userID = &userID
+	mmDeleteShare.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
 
 	return mmDeleteShare
 }
 
 // Inspect accepts an inspector function that has same arguments as the MPCClient.DeleteShare
-func (mmDeleteShare *mMPCClientMockDeleteShare) Inspect(f func(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption)) *mMPCClientMockDeleteShare {
+func (mmDeleteShare *mMPCClientMockDeleteShare) Inspect(f func(ctx context.Context, userID string)) *mMPCClientMockDeleteShare {
 	if mmDeleteShare.mock.inspectFuncDeleteShare != nil {
 		mmDeleteShare.mock.t.Fatalf("Inspect function is already set for MPCClientMock.DeleteShare")
 	}
@@ -232,7 +203,7 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) Inspect(f func(ctx context.Conte
 }
 
 // Return sets up results that will be returned by MPCClient.DeleteShare
-func (mmDeleteShare *mMPCClientMockDeleteShare) Return(dp1 *mpc_api.DeleteShareResponse, err error) *MPCClientMock {
+func (mmDeleteShare *mMPCClientMockDeleteShare) Return(err error) *MPCClientMock {
 	if mmDeleteShare.mock.funcDeleteShare != nil {
 		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by Set")
 	}
@@ -240,13 +211,13 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) Return(dp1 *mpc_api.DeleteShareR
 	if mmDeleteShare.defaultExpectation == nil {
 		mmDeleteShare.defaultExpectation = &MPCClientMockDeleteShareExpectation{mock: mmDeleteShare.mock}
 	}
-	mmDeleteShare.defaultExpectation.results = &MPCClientMockDeleteShareResults{dp1, err}
+	mmDeleteShare.defaultExpectation.results = &MPCClientMockDeleteShareResults{err}
 	mmDeleteShare.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
 	return mmDeleteShare.mock
 }
 
 // Set uses given function f to mock the MPCClient.DeleteShare method
-func (mmDeleteShare *mMPCClientMockDeleteShare) Set(f func(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption) (dp1 *mpc_api.DeleteShareResponse, err error)) *MPCClientMock {
+func (mmDeleteShare *mMPCClientMockDeleteShare) Set(f func(ctx context.Context, userID string) (err error)) *MPCClientMock {
 	if mmDeleteShare.defaultExpectation != nil {
 		mmDeleteShare.mock.t.Fatalf("Default expectation is already set for the MPCClient.DeleteShare method")
 	}
@@ -262,14 +233,14 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) Set(f func(ctx context.Context, 
 
 // When sets expectation for the MPCClient.DeleteShare which will trigger the result defined by the following
 // Then helper
-func (mmDeleteShare *mMPCClientMockDeleteShare) When(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption) *MPCClientMockDeleteShareExpectation {
+func (mmDeleteShare *mMPCClientMockDeleteShare) When(ctx context.Context, userID string) *MPCClientMockDeleteShareExpectation {
 	if mmDeleteShare.mock.funcDeleteShare != nil {
 		mmDeleteShare.mock.t.Fatalf("MPCClientMock.DeleteShare mock is already set by Set")
 	}
 
 	expectation := &MPCClientMockDeleteShareExpectation{
 		mock:               mmDeleteShare.mock,
-		params:             &MPCClientMockDeleteShareParams{ctx, in, opts},
+		params:             &MPCClientMockDeleteShareParams{ctx, userID},
 		expectationOrigins: MPCClientMockDeleteShareExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmDeleteShare.expectations = append(mmDeleteShare.expectations, expectation)
@@ -277,8 +248,8 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) When(ctx context.Context, in *mp
 }
 
 // Then sets up MPCClient.DeleteShare return parameters for the expectation previously defined by the When method
-func (e *MPCClientMockDeleteShareExpectation) Then(dp1 *mpc_api.DeleteShareResponse, err error) *MPCClientMock {
-	e.results = &MPCClientMockDeleteShareResults{dp1, err}
+func (e *MPCClientMockDeleteShareExpectation) Then(err error) *MPCClientMock {
+	e.results = &MPCClientMockDeleteShareResults{err}
 	return e.mock
 }
 
@@ -304,17 +275,17 @@ func (mmDeleteShare *mMPCClientMockDeleteShare) invocationsDone() bool {
 }
 
 // DeleteShare implements mm_twofaService.MPCClient
-func (mmDeleteShare *MPCClientMock) DeleteShare(ctx context.Context, in *mpc_api.DeleteShareRequest, opts ...grpc.CallOption) (dp1 *mpc_api.DeleteShareResponse, err error) {
+func (mmDeleteShare *MPCClientMock) DeleteShare(ctx context.Context, userID string) (err error) {
 	mm_atomic.AddUint64(&mmDeleteShare.beforeDeleteShareCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteShare.afterDeleteShareCounter, 1)
 
 	mmDeleteShare.t.Helper()
 
 	if mmDeleteShare.inspectFuncDeleteShare != nil {
-		mmDeleteShare.inspectFuncDeleteShare(ctx, in, opts...)
+		mmDeleteShare.inspectFuncDeleteShare(ctx, userID)
 	}
 
-	mm_params := MPCClientMockDeleteShareParams{ctx, in, opts}
+	mm_params := MPCClientMockDeleteShareParams{ctx, userID}
 
 	// Record call args
 	mmDeleteShare.DeleteShareMock.mutex.Lock()
@@ -324,7 +295,7 @@ func (mmDeleteShare *MPCClientMock) DeleteShare(ctx context.Context, in *mpc_api
 	for _, e := range mmDeleteShare.DeleteShareMock.expectations {
 		if minimock.Equal(*e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.dp1, e.results.err
+			return e.results.err
 		}
 	}
 
@@ -333,7 +304,7 @@ func (mmDeleteShare *MPCClientMock) DeleteShare(ctx context.Context, in *mpc_api
 		mm_want := mmDeleteShare.DeleteShareMock.defaultExpectation.params
 		mm_want_ptrs := mmDeleteShare.DeleteShareMock.defaultExpectation.paramPtrs
 
-		mm_got := MPCClientMockDeleteShareParams{ctx, in, opts}
+		mm_got := MPCClientMockDeleteShareParams{ctx, userID}
 
 		if mm_want_ptrs != nil {
 
@@ -342,14 +313,9 @@ func (mmDeleteShare *MPCClientMock) DeleteShare(ctx context.Context, in *mpc_api
 					mmDeleteShare.DeleteShareMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
 			}
 
-			if mm_want_ptrs.in != nil && !minimock.Equal(*mm_want_ptrs.in, mm_got.in) {
-				mmDeleteShare.t.Errorf("MPCClientMock.DeleteShare got unexpected parameter in, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmDeleteShare.DeleteShareMock.defaultExpectation.expectationOrigins.originIn, *mm_want_ptrs.in, mm_got.in, minimock.Diff(*mm_want_ptrs.in, mm_got.in))
-			}
-
-			if mm_want_ptrs.opts != nil && !minimock.Equal(*mm_want_ptrs.opts, mm_got.opts) {
-				mmDeleteShare.t.Errorf("MPCClientMock.DeleteShare got unexpected parameter opts, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmDeleteShare.DeleteShareMock.defaultExpectation.expectationOrigins.originOpts, *mm_want_ptrs.opts, mm_got.opts, minimock.Diff(*mm_want_ptrs.opts, mm_got.opts))
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmDeleteShare.t.Errorf("MPCClientMock.DeleteShare got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmDeleteShare.DeleteShareMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
 			}
 
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
@@ -361,12 +327,12 @@ func (mmDeleteShare *MPCClientMock) DeleteShare(ctx context.Context, in *mpc_api
 		if mm_results == nil {
 			mmDeleteShare.t.Fatal("No results are set for the MPCClientMock.DeleteShare")
 		}
-		return (*mm_results).dp1, (*mm_results).err
+		return (*mm_results).err
 	}
 	if mmDeleteShare.funcDeleteShare != nil {
-		return mmDeleteShare.funcDeleteShare(ctx, in, opts...)
+		return mmDeleteShare.funcDeleteShare(ctx, userID)
 	}
-	mmDeleteShare.t.Fatalf("Unexpected call to MPCClientMock.DeleteShare. %v %v %v", ctx, in, opts)
+	mmDeleteShare.t.Fatalf("Unexpected call to MPCClientMock.DeleteShare. %v %v", ctx, userID)
 	return
 }
 
@@ -464,30 +430,30 @@ type MPCClientMockRetrieveShareExpectation struct {
 
 // MPCClientMockRetrieveShareParams contains parameters of the MPCClient.RetrieveShare
 type MPCClientMockRetrieveShareParams struct {
-	ctx  context.Context
-	in   *mpc_api.RetrieveShareRequest
-	opts []grpc.CallOption
+	ctx        context.Context
+	userID     string
+	shareIndex int
 }
 
 // MPCClientMockRetrieveShareParamPtrs contains pointers to parameters of the MPCClient.RetrieveShare
 type MPCClientMockRetrieveShareParamPtrs struct {
-	ctx  *context.Context
-	in   **mpc_api.RetrieveShareRequest
-	opts *[]grpc.CallOption
+	ctx        *context.Context
+	userID     *string
+	shareIndex *int
 }
 
 // MPCClientMockRetrieveShareResults contains results of the MPCClient.RetrieveShare
 type MPCClientMockRetrieveShareResults struct {
-	rp1 *mpc_api.RetrieveShareResponse
+	ba1 []byte
 	err error
 }
 
 // MPCClientMockRetrieveShareOrigins contains origins of expectations of the MPCClient.RetrieveShare
 type MPCClientMockRetrieveShareExpectationOrigins struct {
-	origin     string
-	originCtx  string
-	originIn   string
-	originOpts string
+	origin           string
+	originCtx        string
+	originUserID     string
+	originShareIndex string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -501,7 +467,7 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) Optional() *mMPCClientMockRe
 }
 
 // Expect sets up expected params for MPCClient.RetrieveShare
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) Expect(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption) *mMPCClientMockRetrieveShare {
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) Expect(ctx context.Context, userID string, shareIndex int) *mMPCClientMockRetrieveShare {
 	if mmRetrieveShare.mock.funcRetrieveShare != nil {
 		mmRetrieveShare.mock.t.Fatalf("MPCClientMock.RetrieveShare mock is already set by Set")
 	}
@@ -514,7 +480,7 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) Expect(ctx context.Context, 
 		mmRetrieveShare.mock.t.Fatalf("MPCClientMock.RetrieveShare mock is already set by ExpectParams functions")
 	}
 
-	mmRetrieveShare.defaultExpectation.params = &MPCClientMockRetrieveShareParams{ctx, in, opts}
+	mmRetrieveShare.defaultExpectation.params = &MPCClientMockRetrieveShareParams{ctx, userID, shareIndex}
 	mmRetrieveShare.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmRetrieveShare.expectations {
 		if minimock.Equal(e.params, mmRetrieveShare.defaultExpectation.params) {
@@ -548,8 +514,8 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectCtxParam1(ctx context.
 	return mmRetrieveShare
 }
 
-// ExpectInParam2 sets up expected param in for MPCClient.RetrieveShare
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectInParam2(in *mpc_api.RetrieveShareRequest) *mMPCClientMockRetrieveShare {
+// ExpectUserIDParam2 sets up expected param userID for MPCClient.RetrieveShare
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectUserIDParam2(userID string) *mMPCClientMockRetrieveShare {
 	if mmRetrieveShare.mock.funcRetrieveShare != nil {
 		mmRetrieveShare.mock.t.Fatalf("MPCClientMock.RetrieveShare mock is already set by Set")
 	}
@@ -565,14 +531,14 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectInParam2(in *mpc_api.R
 	if mmRetrieveShare.defaultExpectation.paramPtrs == nil {
 		mmRetrieveShare.defaultExpectation.paramPtrs = &MPCClientMockRetrieveShareParamPtrs{}
 	}
-	mmRetrieveShare.defaultExpectation.paramPtrs.in = &in
-	mmRetrieveShare.defaultExpectation.expectationOrigins.originIn = minimock.CallerInfo(1)
+	mmRetrieveShare.defaultExpectation.paramPtrs.userID = &userID
+	mmRetrieveShare.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
 
 	return mmRetrieveShare
 }
 
-// ExpectOptsParam3 sets up expected param opts for MPCClient.RetrieveShare
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectOptsParam3(opts ...grpc.CallOption) *mMPCClientMockRetrieveShare {
+// ExpectShareIndexParam3 sets up expected param shareIndex for MPCClient.RetrieveShare
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectShareIndexParam3(shareIndex int) *mMPCClientMockRetrieveShare {
 	if mmRetrieveShare.mock.funcRetrieveShare != nil {
 		mmRetrieveShare.mock.t.Fatalf("MPCClientMock.RetrieveShare mock is already set by Set")
 	}
@@ -588,14 +554,14 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) ExpectOptsParam3(opts ...grp
 	if mmRetrieveShare.defaultExpectation.paramPtrs == nil {
 		mmRetrieveShare.defaultExpectation.paramPtrs = &MPCClientMockRetrieveShareParamPtrs{}
 	}
-	mmRetrieveShare.defaultExpectation.paramPtrs.opts = &opts
-	mmRetrieveShare.defaultExpectation.expectationOrigins.originOpts = minimock.CallerInfo(1)
+	mmRetrieveShare.defaultExpectation.paramPtrs.shareIndex = &shareIndex
+	mmRetrieveShare.defaultExpectation.expectationOrigins.originShareIndex = minimock.CallerInfo(1)
 
 	return mmRetrieveShare
 }
 
 // Inspect accepts an inspector function that has same arguments as the MPCClient.RetrieveShare
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) Inspect(f func(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption)) *mMPCClientMockRetrieveShare {
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) Inspect(f func(ctx context.Context, userID string, shareIndex int)) *mMPCClientMockRetrieveShare {
 	if mmRetrieveShare.mock.inspectFuncRetrieveShare != nil {
 		mmRetrieveShare.mock.t.Fatalf("Inspect function is already set for MPCClientMock.RetrieveShare")
 	}
@@ -606,7 +572,7 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) Inspect(f func(ctx context.C
 }
 
 // Return sets up results that will be returned by MPCClient.RetrieveShare
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) Return(rp1 *mpc_api.RetrieveShareResponse, err error) *MPCClientMock {
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) Return(ba1 []byte, err error) *MPCClientMock {
 	if mmRetrieveShare.mock.funcRetrieveShare != nil {
 		mmRetrieveShare.mock.t.Fatalf("MPCClientMock.RetrieveShare mock is already set by Set")
 	}
@@ -614,13 +580,13 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) Return(rp1 *mpc_api.Retrieve
 	if mmRetrieveShare.defaultExpectation == nil {
 		mmRetrieveShare.defaultExpectation = &MPCClientMockRetrieveShareExpectation{mock: mmRetrieveShare.mock}
 	}
-	mmRetrieveShare.defaultExpectation.results = &MPCClientMockRetrieveShareResults{rp1, err}
+	mmRetrieveShare.defaultExpectation.results = &MPCClientMockRetrieveShareResults{ba1, err}
 	mmRetrieveShare.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
 	return mmRetrieveShare.mock
 }
 
 // Set uses given function f to mock the MPCClient.RetrieveShare method
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) Set(f func(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption) (rp1 *mpc_api.RetrieveShareResponse, err error)) *MPCClientMock {
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) Set(f func(ctx context.Context, userID string, shareIndex int) (ba1 []byte, err error)) *MPCClientMock {
 	if mmRetrieveShare.defaultExpectation != nil {
 		mmRetrieveShare.mock.t.Fatalf("Default expectation is already set for the MPCClient.RetrieveShare method")
 	}
@@ -636,14 +602,14 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) Set(f func(ctx context.Conte
 
 // When sets expectation for the MPCClient.RetrieveShare which will trigger the result defined by the following
 // Then helper
-func (mmRetrieveShare *mMPCClientMockRetrieveShare) When(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption) *MPCClientMockRetrieveShareExpectation {
+func (mmRetrieveShare *mMPCClientMockRetrieveShare) When(ctx context.Context, userID string, shareIndex int) *MPCClientMockRetrieveShareExpectation {
 	if mmRetrieveShare.mock.funcRetrieveShare != nil {
 		mmRetrieveShare.mock.t.Fatalf("MPCClientMock.RetrieveShare mock is already set by Set")
 	}
 
 	expectation := &MPCClientMockRetrieveShareExpectation{
 		mock:               mmRetrieveShare.mock,
-		params:             &MPCClientMockRetrieveShareParams{ctx, in, opts},
+		params:             &MPCClientMockRetrieveShareParams{ctx, userID, shareIndex},
 		expectationOrigins: MPCClientMockRetrieveShareExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmRetrieveShare.expectations = append(mmRetrieveShare.expectations, expectation)
@@ -651,8 +617,8 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) When(ctx context.Context, in
 }
 
 // Then sets up MPCClient.RetrieveShare return parameters for the expectation previously defined by the When method
-func (e *MPCClientMockRetrieveShareExpectation) Then(rp1 *mpc_api.RetrieveShareResponse, err error) *MPCClientMock {
-	e.results = &MPCClientMockRetrieveShareResults{rp1, err}
+func (e *MPCClientMockRetrieveShareExpectation) Then(ba1 []byte, err error) *MPCClientMock {
+	e.results = &MPCClientMockRetrieveShareResults{ba1, err}
 	return e.mock
 }
 
@@ -678,17 +644,17 @@ func (mmRetrieveShare *mMPCClientMockRetrieveShare) invocationsDone() bool {
 }
 
 // RetrieveShare implements mm_twofaService.MPCClient
-func (mmRetrieveShare *MPCClientMock) RetrieveShare(ctx context.Context, in *mpc_api.RetrieveShareRequest, opts ...grpc.CallOption) (rp1 *mpc_api.RetrieveShareResponse, err error) {
+func (mmRetrieveShare *MPCClientMock) RetrieveShare(ctx context.Context, userID string, shareIndex int) (ba1 []byte, err error) {
 	mm_atomic.AddUint64(&mmRetrieveShare.beforeRetrieveShareCounter, 1)
 	defer mm_atomic.AddUint64(&mmRetrieveShare.afterRetrieveShareCounter, 1)
 
 	mmRetrieveShare.t.Helper()
 
 	if mmRetrieveShare.inspectFuncRetrieveShare != nil {
-		mmRetrieveShare.inspectFuncRetrieveShare(ctx, in, opts...)
+		mmRetrieveShare.inspectFuncRetrieveShare(ctx, userID, shareIndex)
 	}
 
-	mm_params := MPCClientMockRetrieveShareParams{ctx, in, opts}
+	mm_params := MPCClientMockRetrieveShareParams{ctx, userID, shareIndex}
 
 	// Record call args
 	mmRetrieveShare.RetrieveShareMock.mutex.Lock()
@@ -698,7 +664,7 @@ func (mmRetrieveShare *MPCClientMock) RetrieveShare(ctx context.Context, in *mpc
 	for _, e := range mmRetrieveShare.RetrieveShareMock.expectations {
 		if minimock.Equal(*e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.rp1, e.results.err
+			return e.results.ba1, e.results.err
 		}
 	}
 
@@ -707,7 +673,7 @@ func (mmRetrieveShare *MPCClientMock) RetrieveShare(ctx context.Context, in *mpc
 		mm_want := mmRetrieveShare.RetrieveShareMock.defaultExpectation.params
 		mm_want_ptrs := mmRetrieveShare.RetrieveShareMock.defaultExpectation.paramPtrs
 
-		mm_got := MPCClientMockRetrieveShareParams{ctx, in, opts}
+		mm_got := MPCClientMockRetrieveShareParams{ctx, userID, shareIndex}
 
 		if mm_want_ptrs != nil {
 
@@ -716,14 +682,14 @@ func (mmRetrieveShare *MPCClientMock) RetrieveShare(ctx context.Context, in *mpc
 					mmRetrieveShare.RetrieveShareMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
 			}
 
-			if mm_want_ptrs.in != nil && !minimock.Equal(*mm_want_ptrs.in, mm_got.in) {
-				mmRetrieveShare.t.Errorf("MPCClientMock.RetrieveShare got unexpected parameter in, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmRetrieveShare.RetrieveShareMock.defaultExpectation.expectationOrigins.originIn, *mm_want_ptrs.in, mm_got.in, minimock.Diff(*mm_want_ptrs.in, mm_got.in))
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmRetrieveShare.t.Errorf("MPCClientMock.RetrieveShare got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmRetrieveShare.RetrieveShareMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
 			}
 
-			if mm_want_ptrs.opts != nil && !minimock.Equal(*mm_want_ptrs.opts, mm_got.opts) {
-				mmRetrieveShare.t.Errorf("MPCClientMock.RetrieveShare got unexpected parameter opts, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmRetrieveShare.RetrieveShareMock.defaultExpectation.expectationOrigins.originOpts, *mm_want_ptrs.opts, mm_got.opts, minimock.Diff(*mm_want_ptrs.opts, mm_got.opts))
+			if mm_want_ptrs.shareIndex != nil && !minimock.Equal(*mm_want_ptrs.shareIndex, mm_got.shareIndex) {
+				mmRetrieveShare.t.Errorf("MPCClientMock.RetrieveShare got unexpected parameter shareIndex, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmRetrieveShare.RetrieveShareMock.defaultExpectation.expectationOrigins.originShareIndex, *mm_want_ptrs.shareIndex, mm_got.shareIndex, minimock.Diff(*mm_want_ptrs.shareIndex, mm_got.shareIndex))
 			}
 
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
@@ -735,12 +701,12 @@ func (mmRetrieveShare *MPCClientMock) RetrieveShare(ctx context.Context, in *mpc
 		if mm_results == nil {
 			mmRetrieveShare.t.Fatal("No results are set for the MPCClientMock.RetrieveShare")
 		}
-		return (*mm_results).rp1, (*mm_results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmRetrieveShare.funcRetrieveShare != nil {
-		return mmRetrieveShare.funcRetrieveShare(ctx, in, opts...)
+		return mmRetrieveShare.funcRetrieveShare(ctx, userID, shareIndex)
 	}
-	mmRetrieveShare.t.Fatalf("Unexpected call to MPCClientMock.RetrieveShare. %v %v %v", ctx, in, opts)
+	mmRetrieveShare.t.Fatalf("Unexpected call to MPCClientMock.RetrieveShare. %v %v %v", ctx, userID, shareIndex)
 	return
 }
 
@@ -838,30 +804,32 @@ type MPCClientMockStoreShareExpectation struct {
 
 // MPCClientMockStoreShareParams contains parameters of the MPCClient.StoreShare
 type MPCClientMockStoreShareParams struct {
-	ctx  context.Context
-	in   *mpc_api.StoreShareRequest
-	opts []grpc.CallOption
+	ctx        context.Context
+	userID     string
+	shareIndex int
+	shareData  []byte
 }
 
 // MPCClientMockStoreShareParamPtrs contains pointers to parameters of the MPCClient.StoreShare
 type MPCClientMockStoreShareParamPtrs struct {
-	ctx  *context.Context
-	in   **mpc_api.StoreShareRequest
-	opts *[]grpc.CallOption
+	ctx        *context.Context
+	userID     *string
+	shareIndex *int
+	shareData  *[]byte
 }
 
 // MPCClientMockStoreShareResults contains results of the MPCClient.StoreShare
 type MPCClientMockStoreShareResults struct {
-	sp1 *mpc_api.StoreShareResponse
 	err error
 }
 
 // MPCClientMockStoreShareOrigins contains origins of expectations of the MPCClient.StoreShare
 type MPCClientMockStoreShareExpectationOrigins struct {
-	origin     string
-	originCtx  string
-	originIn   string
-	originOpts string
+	origin           string
+	originCtx        string
+	originUserID     string
+	originShareIndex string
+	originShareData  string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -875,7 +843,7 @@ func (mmStoreShare *mMPCClientMockStoreShare) Optional() *mMPCClientMockStoreSha
 }
 
 // Expect sets up expected params for MPCClient.StoreShare
-func (mmStoreShare *mMPCClientMockStoreShare) Expect(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption) *mMPCClientMockStoreShare {
+func (mmStoreShare *mMPCClientMockStoreShare) Expect(ctx context.Context, userID string, shareIndex int, shareData []byte) *mMPCClientMockStoreShare {
 	if mmStoreShare.mock.funcStoreShare != nil {
 		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Set")
 	}
@@ -888,7 +856,7 @@ func (mmStoreShare *mMPCClientMockStoreShare) Expect(ctx context.Context, in *mp
 		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by ExpectParams functions")
 	}
 
-	mmStoreShare.defaultExpectation.params = &MPCClientMockStoreShareParams{ctx, in, opts}
+	mmStoreShare.defaultExpectation.params = &MPCClientMockStoreShareParams{ctx, userID, shareIndex, shareData}
 	mmStoreShare.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmStoreShare.expectations {
 		if minimock.Equal(e.params, mmStoreShare.defaultExpectation.params) {
@@ -922,8 +890,8 @@ func (mmStoreShare *mMPCClientMockStoreShare) ExpectCtxParam1(ctx context.Contex
 	return mmStoreShare
 }
 
-// ExpectInParam2 sets up expected param in for MPCClient.StoreShare
-func (mmStoreShare *mMPCClientMockStoreShare) ExpectInParam2(in *mpc_api.StoreShareRequest) *mMPCClientMockStoreShare {
+// ExpectUserIDParam2 sets up expected param userID for MPCClient.StoreShare
+func (mmStoreShare *mMPCClientMockStoreShare) ExpectUserIDParam2(userID string) *mMPCClientMockStoreShare {
 	if mmStoreShare.mock.funcStoreShare != nil {
 		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Set")
 	}
@@ -939,14 +907,14 @@ func (mmStoreShare *mMPCClientMockStoreShare) ExpectInParam2(in *mpc_api.StoreSh
 	if mmStoreShare.defaultExpectation.paramPtrs == nil {
 		mmStoreShare.defaultExpectation.paramPtrs = &MPCClientMockStoreShareParamPtrs{}
 	}
-	mmStoreShare.defaultExpectation.paramPtrs.in = &in
-	mmStoreShare.defaultExpectation.expectationOrigins.originIn = minimock.CallerInfo(1)
+	mmStoreShare.defaultExpectation.paramPtrs.userID = &userID
+	mmStoreShare.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
 
 	return mmStoreShare
 }
 
-// ExpectOptsParam3 sets up expected param opts for MPCClient.StoreShare
-func (mmStoreShare *mMPCClientMockStoreShare) ExpectOptsParam3(opts ...grpc.CallOption) *mMPCClientMockStoreShare {
+// ExpectShareIndexParam3 sets up expected param shareIndex for MPCClient.StoreShare
+func (mmStoreShare *mMPCClientMockStoreShare) ExpectShareIndexParam3(shareIndex int) *mMPCClientMockStoreShare {
 	if mmStoreShare.mock.funcStoreShare != nil {
 		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Set")
 	}
@@ -962,14 +930,37 @@ func (mmStoreShare *mMPCClientMockStoreShare) ExpectOptsParam3(opts ...grpc.Call
 	if mmStoreShare.defaultExpectation.paramPtrs == nil {
 		mmStoreShare.defaultExpectation.paramPtrs = &MPCClientMockStoreShareParamPtrs{}
 	}
-	mmStoreShare.defaultExpectation.paramPtrs.opts = &opts
-	mmStoreShare.defaultExpectation.expectationOrigins.originOpts = minimock.CallerInfo(1)
+	mmStoreShare.defaultExpectation.paramPtrs.shareIndex = &shareIndex
+	mmStoreShare.defaultExpectation.expectationOrigins.originShareIndex = minimock.CallerInfo(1)
+
+	return mmStoreShare
+}
+
+// ExpectShareDataParam4 sets up expected param shareData for MPCClient.StoreShare
+func (mmStoreShare *mMPCClientMockStoreShare) ExpectShareDataParam4(shareData []byte) *mMPCClientMockStoreShare {
+	if mmStoreShare.mock.funcStoreShare != nil {
+		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Set")
+	}
+
+	if mmStoreShare.defaultExpectation == nil {
+		mmStoreShare.defaultExpectation = &MPCClientMockStoreShareExpectation{}
+	}
+
+	if mmStoreShare.defaultExpectation.params != nil {
+		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Expect")
+	}
+
+	if mmStoreShare.defaultExpectation.paramPtrs == nil {
+		mmStoreShare.defaultExpectation.paramPtrs = &MPCClientMockStoreShareParamPtrs{}
+	}
+	mmStoreShare.defaultExpectation.paramPtrs.shareData = &shareData
+	mmStoreShare.defaultExpectation.expectationOrigins.originShareData = minimock.CallerInfo(1)
 
 	return mmStoreShare
 }
 
 // Inspect accepts an inspector function that has same arguments as the MPCClient.StoreShare
-func (mmStoreShare *mMPCClientMockStoreShare) Inspect(f func(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption)) *mMPCClientMockStoreShare {
+func (mmStoreShare *mMPCClientMockStoreShare) Inspect(f func(ctx context.Context, userID string, shareIndex int, shareData []byte)) *mMPCClientMockStoreShare {
 	if mmStoreShare.mock.inspectFuncStoreShare != nil {
 		mmStoreShare.mock.t.Fatalf("Inspect function is already set for MPCClientMock.StoreShare")
 	}
@@ -980,7 +971,7 @@ func (mmStoreShare *mMPCClientMockStoreShare) Inspect(f func(ctx context.Context
 }
 
 // Return sets up results that will be returned by MPCClient.StoreShare
-func (mmStoreShare *mMPCClientMockStoreShare) Return(sp1 *mpc_api.StoreShareResponse, err error) *MPCClientMock {
+func (mmStoreShare *mMPCClientMockStoreShare) Return(err error) *MPCClientMock {
 	if mmStoreShare.mock.funcStoreShare != nil {
 		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Set")
 	}
@@ -988,13 +979,13 @@ func (mmStoreShare *mMPCClientMockStoreShare) Return(sp1 *mpc_api.StoreShareResp
 	if mmStoreShare.defaultExpectation == nil {
 		mmStoreShare.defaultExpectation = &MPCClientMockStoreShareExpectation{mock: mmStoreShare.mock}
 	}
-	mmStoreShare.defaultExpectation.results = &MPCClientMockStoreShareResults{sp1, err}
+	mmStoreShare.defaultExpectation.results = &MPCClientMockStoreShareResults{err}
 	mmStoreShare.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
 	return mmStoreShare.mock
 }
 
 // Set uses given function f to mock the MPCClient.StoreShare method
-func (mmStoreShare *mMPCClientMockStoreShare) Set(f func(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption) (sp1 *mpc_api.StoreShareResponse, err error)) *MPCClientMock {
+func (mmStoreShare *mMPCClientMockStoreShare) Set(f func(ctx context.Context, userID string, shareIndex int, shareData []byte) (err error)) *MPCClientMock {
 	if mmStoreShare.defaultExpectation != nil {
 		mmStoreShare.mock.t.Fatalf("Default expectation is already set for the MPCClient.StoreShare method")
 	}
@@ -1010,14 +1001,14 @@ func (mmStoreShare *mMPCClientMockStoreShare) Set(f func(ctx context.Context, in
 
 // When sets expectation for the MPCClient.StoreShare which will trigger the result defined by the following
 // Then helper
-func (mmStoreShare *mMPCClientMockStoreShare) When(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption) *MPCClientMockStoreShareExpectation {
+func (mmStoreShare *mMPCClientMockStoreShare) When(ctx context.Context, userID string, shareIndex int, shareData []byte) *MPCClientMockStoreShareExpectation {
 	if mmStoreShare.mock.funcStoreShare != nil {
 		mmStoreShare.mock.t.Fatalf("MPCClientMock.StoreShare mock is already set by Set")
 	}
 
 	expectation := &MPCClientMockStoreShareExpectation{
 		mock:               mmStoreShare.mock,
-		params:             &MPCClientMockStoreShareParams{ctx, in, opts},
+		params:             &MPCClientMockStoreShareParams{ctx, userID, shareIndex, shareData},
 		expectationOrigins: MPCClientMockStoreShareExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmStoreShare.expectations = append(mmStoreShare.expectations, expectation)
@@ -1025,8 +1016,8 @@ func (mmStoreShare *mMPCClientMockStoreShare) When(ctx context.Context, in *mpc_
 }
 
 // Then sets up MPCClient.StoreShare return parameters for the expectation previously defined by the When method
-func (e *MPCClientMockStoreShareExpectation) Then(sp1 *mpc_api.StoreShareResponse, err error) *MPCClientMock {
-	e.results = &MPCClientMockStoreShareResults{sp1, err}
+func (e *MPCClientMockStoreShareExpectation) Then(err error) *MPCClientMock {
+	e.results = &MPCClientMockStoreShareResults{err}
 	return e.mock
 }
 
@@ -1052,17 +1043,17 @@ func (mmStoreShare *mMPCClientMockStoreShare) invocationsDone() bool {
 }
 
 // StoreShare implements mm_twofaService.MPCClient
-func (mmStoreShare *MPCClientMock) StoreShare(ctx context.Context, in *mpc_api.StoreShareRequest, opts ...grpc.CallOption) (sp1 *mpc_api.StoreShareResponse, err error) {
+func (mmStoreShare *MPCClientMock) StoreShare(ctx context.Context, userID string, shareIndex int, shareData []byte) (err error) {
 	mm_atomic.AddUint64(&mmStoreShare.beforeStoreShareCounter, 1)
 	defer mm_atomic.AddUint64(&mmStoreShare.afterStoreShareCounter, 1)
 
 	mmStoreShare.t.Helper()
 
 	if mmStoreShare.inspectFuncStoreShare != nil {
-		mmStoreShare.inspectFuncStoreShare(ctx, in, opts...)
+		mmStoreShare.inspectFuncStoreShare(ctx, userID, shareIndex, shareData)
 	}
 
-	mm_params := MPCClientMockStoreShareParams{ctx, in, opts}
+	mm_params := MPCClientMockStoreShareParams{ctx, userID, shareIndex, shareData}
 
 	// Record call args
 	mmStoreShare.StoreShareMock.mutex.Lock()
@@ -1072,7 +1063,7 @@ func (mmStoreShare *MPCClientMock) StoreShare(ctx context.Context, in *mpc_api.S
 	for _, e := range mmStoreShare.StoreShareMock.expectations {
 		if minimock.Equal(*e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.sp1, e.results.err
+			return e.results.err
 		}
 	}
 
@@ -1081,7 +1072,7 @@ func (mmStoreShare *MPCClientMock) StoreShare(ctx context.Context, in *mpc_api.S
 		mm_want := mmStoreShare.StoreShareMock.defaultExpectation.params
 		mm_want_ptrs := mmStoreShare.StoreShareMock.defaultExpectation.paramPtrs
 
-		mm_got := MPCClientMockStoreShareParams{ctx, in, opts}
+		mm_got := MPCClientMockStoreShareParams{ctx, userID, shareIndex, shareData}
 
 		if mm_want_ptrs != nil {
 
@@ -1090,14 +1081,19 @@ func (mmStoreShare *MPCClientMock) StoreShare(ctx context.Context, in *mpc_api.S
 					mmStoreShare.StoreShareMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
 			}
 
-			if mm_want_ptrs.in != nil && !minimock.Equal(*mm_want_ptrs.in, mm_got.in) {
-				mmStoreShare.t.Errorf("MPCClientMock.StoreShare got unexpected parameter in, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmStoreShare.StoreShareMock.defaultExpectation.expectationOrigins.originIn, *mm_want_ptrs.in, mm_got.in, minimock.Diff(*mm_want_ptrs.in, mm_got.in))
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmStoreShare.t.Errorf("MPCClientMock.StoreShare got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmStoreShare.StoreShareMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
 			}
 
-			if mm_want_ptrs.opts != nil && !minimock.Equal(*mm_want_ptrs.opts, mm_got.opts) {
-				mmStoreShare.t.Errorf("MPCClientMock.StoreShare got unexpected parameter opts, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmStoreShare.StoreShareMock.defaultExpectation.expectationOrigins.originOpts, *mm_want_ptrs.opts, mm_got.opts, minimock.Diff(*mm_want_ptrs.opts, mm_got.opts))
+			if mm_want_ptrs.shareIndex != nil && !minimock.Equal(*mm_want_ptrs.shareIndex, mm_got.shareIndex) {
+				mmStoreShare.t.Errorf("MPCClientMock.StoreShare got unexpected parameter shareIndex, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmStoreShare.StoreShareMock.defaultExpectation.expectationOrigins.originShareIndex, *mm_want_ptrs.shareIndex, mm_got.shareIndex, minimock.Diff(*mm_want_ptrs.shareIndex, mm_got.shareIndex))
+			}
+
+			if mm_want_ptrs.shareData != nil && !minimock.Equal(*mm_want_ptrs.shareData, mm_got.shareData) {
+				mmStoreShare.t.Errorf("MPCClientMock.StoreShare got unexpected parameter shareData, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmStoreShare.StoreShareMock.defaultExpectation.expectationOrigins.originShareData, *mm_want_ptrs.shareData, mm_got.shareData, minimock.Diff(*mm_want_ptrs.shareData, mm_got.shareData))
 			}
 
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
@@ -1109,12 +1105,12 @@ func (mmStoreShare *MPCClientMock) StoreShare(ctx context.Context, in *mpc_api.S
 		if mm_results == nil {
 			mmStoreShare.t.Fatal("No results are set for the MPCClientMock.StoreShare")
 		}
-		return (*mm_results).sp1, (*mm_results).err
+		return (*mm_results).err
 	}
 	if mmStoreShare.funcStoreShare != nil {
-		return mmStoreShare.funcStoreShare(ctx, in, opts...)
+		return mmStoreShare.funcStoreShare(ctx, userID, shareIndex, shareData)
 	}
-	mmStoreShare.t.Fatalf("Unexpected call to MPCClientMock.StoreShare. %v %v %v", ctx, in, opts)
+	mmStoreShare.t.Fatalf("Unexpected call to MPCClientMock.StoreShare. %v %v %v %v", ctx, userID, shareIndex, shareData)
 	return
 }
 

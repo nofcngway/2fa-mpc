@@ -15,11 +15,11 @@ import (
 
 const testSecret = "test-shared-secret-value"
 
-func mockHandler(ctx context.Context, req interface{}) (interface{}, error) {
+func mockHandler(ctx context.Context, req any) (any, error) {
 	return "ok", nil
 }
 
-func callInterceptor(ctx context.Context, fullMethod string) (interface{}, error) {
+func callInterceptor(ctx context.Context, fullMethod string) (any, error) {
 	interceptor := middleware.AuthInterceptor(testSecret)
 	info := &grpc.UnaryServerInfo{FullMethod: fullMethod}
 	return interceptor(ctx, nil, info, mockHandler)
@@ -27,7 +27,7 @@ func callInterceptor(ctx context.Context, fullMethod string) (interface{}, error
 
 func TestAuthInterceptorValidSecret(t *testing.T) {
 	md := metadata.Pairs("authorization", testSecret)
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	resp, err := callInterceptor(ctx, "/mpc.MPCNodeService/StoreShare")
 	assert.NilError(t, err)
@@ -36,7 +36,7 @@ func TestAuthInterceptorValidSecret(t *testing.T) {
 
 func TestAuthInterceptorWrongSecret(t *testing.T) {
 	md := metadata.Pairs("authorization", "wrong-secret")
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	_, err := callInterceptor(ctx, "/mpc.MPCNodeService/StoreShare")
 	assert.Assert(t, err != nil)
@@ -46,7 +46,7 @@ func TestAuthInterceptorWrongSecret(t *testing.T) {
 }
 
 func TestAuthInterceptorMissingMetadata(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := callInterceptor(ctx, "/mpc.MPCNodeService/StoreShare")
 	assert.Assert(t, err != nil)
@@ -57,7 +57,7 @@ func TestAuthInterceptorMissingMetadata(t *testing.T) {
 
 func TestAuthInterceptorEmptySecret(t *testing.T) {
 	md := metadata.Pairs("authorization", "")
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	_, err := callInterceptor(ctx, "/mpc.MPCNodeService/StoreShare")
 	assert.Assert(t, err != nil)
@@ -68,7 +68,7 @@ func TestAuthInterceptorEmptySecret(t *testing.T) {
 
 func TestAuthInterceptorMissingAuthKey(t *testing.T) {
 	md := metadata.Pairs("other-key", "some-value")
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	_, err := callInterceptor(ctx, "/mpc.MPCNodeService/StoreShare")
 	assert.Assert(t, err != nil)
@@ -79,7 +79,7 @@ func TestAuthInterceptorMissingAuthKey(t *testing.T) {
 
 func TestAuthInterceptorHealthCheckExcluded(t *testing.T) {
 	// No metadata at all -- health check should pass without auth
-	ctx := context.Background()
+	ctx := t.Context()
 
 	resp, err := callInterceptor(ctx, "/grpc.health.v1.Health/Check")
 	assert.NilError(t, err)
@@ -91,7 +91,7 @@ func TestAuthInterceptorConstantTimeCompare(t *testing.T) {
 	// This is a code inspection test -- we verify by calling with valid secret
 	// and confirming it works (implementation uses constant-time comparison)
 	md := metadata.Pairs("authorization", testSecret)
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	resp, err := callInterceptor(ctx, "/mpc.MPCNodeService/RetrieveShare")
 	assert.NilError(t, err)

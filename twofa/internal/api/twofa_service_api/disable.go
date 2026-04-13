@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/google/uuid"
+
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"google.golang.org/grpc/codes"
@@ -15,6 +17,9 @@ import (
 func (api *TwoFAServiceAPI) Disable2FA(ctx context.Context, req *pb.Disable2FARequest) (*pb.Disable2FAResponse, error) {
 	if req.GetUserId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if err := uuid.Validate(req.GetUserId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid UUID")
 	}
 	if req.GetOtpCode() == "" {
 		return nil, status.Error(codes.InvalidArgument, "otp_code is required")

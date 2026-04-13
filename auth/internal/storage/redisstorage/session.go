@@ -3,6 +3,7 @@ package redisstorage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -57,7 +58,7 @@ func (rs *RedisStorage) StoreRefreshToken(ctx context.Context, jti, userID, toke
 func (rs *RedisStorage) GetRefreshToken(ctx context.Context, jti string) (*domain.RefreshTokenData, error) {
 	val, err := rs.client.Get(ctx, prefixRefreshToken+jti).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get refresh token: %w", err)
@@ -120,7 +121,7 @@ func (rs *RedisStorage) DeleteTokenFamily(ctx context.Context, family, userID st
 	// Get all JTIs in the family
 	jtis, err := rs.client.SMembers(ctx, prefixTokenFamily+family).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil
 		}
 		return fmt.Errorf("get family members: %w", err)
@@ -175,7 +176,7 @@ var deleteAllScript = redis.NewScript(`
 // server-side operation, preventing TOCTOU races with concurrent StoreRefreshToken.
 func (rs *RedisStorage) DeleteAllUserTokens(ctx context.Context, userID string) error {
 	err := deleteAllScript.Run(ctx, rs.client, []string{prefixUserTokens + userID}).Err()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return fmt.Errorf("delete all user tokens: %w", err)
 	}
 	return nil

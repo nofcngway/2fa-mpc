@@ -3,12 +3,13 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 
-	"github.com/vbncursed/vkr/auth/internal/services/authService"
+	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
 // KafkaProducer implements EventProducer using kafka-go Writer.
@@ -18,7 +19,7 @@ type KafkaProducer struct {
 
 // NewKafkaProducer creates a Kafka producer for audit events.
 // Returns NoOpProducer if brokers are empty or not configured.
-func NewKafkaProducer(brokers []string, topic string) authService.EventProducer {
+func NewKafkaProducer(brokers []string, topic string) domain.EventProducer {
 	if len(brokers) == 0 || brokers[0] == "" {
 		slog.Warn("Kafka not configured, audit events disabled")
 		return &NoOpProducer{}
@@ -32,12 +33,15 @@ func NewKafkaProducer(brokers []string, topic string) authService.EventProducer 
 			BatchTimeout: 10 * time.Millisecond,
 			MaxAttempts:  3,
 			Async:        true,
+			ErrorLogger: kafka.LoggerFunc(func(msg string, args ...any) {
+				slog.Error("kafka writer error", "message", fmt.Sprintf(msg, args...))
+			}),
 		},
 	}
 }
 
 // PublishEvent sends an audit event to Kafka.
-func (p *KafkaProducer) PublishEvent(ctx context.Context, event authService.AuditEvent) error {
+func (p *KafkaProducer) PublishEvent(ctx context.Context, event domain.AuditEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {
 		return err
@@ -57,7 +61,7 @@ func (p *KafkaProducer) Close() error {
 type NoOpProducer struct{}
 
 // PublishEvent is a no-op that always returns nil.
-func (p *NoOpProducer) PublishEvent(_ context.Context, _ authService.AuditEvent) error {
+func (p *NoOpProducer) PublishEvent(_ context.Context, _ domain.AuditEvent) error {
 	return nil
 }
 

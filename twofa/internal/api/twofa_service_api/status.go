@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
+
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,6 +16,9 @@ import (
 func (api *TwoFAServiceAPI) Get2FAStatus(ctx context.Context, req *pb.Get2FAStatusRequest) (*pb.Get2FAStatusResponse, error) {
 	if req.GetUserId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if err := uuid.Validate(req.GetUserId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid UUID")
 	}
 
 	record, err := api.service.GetStatus(ctx, req.GetUserId())

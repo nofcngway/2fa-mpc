@@ -6,12 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gojuno/minimock/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 
 	"github.com/vbncursed/vkr/auth/internal/bootstrap"
 	"github.com/vbncursed/vkr/auth/internal/domain"
 	"github.com/vbncursed/vkr/auth/internal/services/authService"
+	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
 )
 
 func generateTestKeyPair(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
@@ -23,8 +25,14 @@ func generateTestKeyPair(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
 
 func newJWTTestService(t *testing.T) *authService.AuthService {
 	t.Helper()
+	mc := minimock.NewController(t)
 	privateKey, publicKey := generateTestKeyPair(t)
-	return authService.NewAuthService(nil, nil, &bootstrap.NoOpProducer{}, privateKey, publicKey, 15*time.Minute, 168*time.Hour)
+	svc, err := authService.NewAuthService(
+		mocks.NewStorageMock(mc), mocks.NewSessionStorageMock(mc), &bootstrap.NoOpProducer{},
+		privateKey, publicKey, 15*time.Minute, 168*time.Hour,
+	)
+	assert.NilError(t, err, "failed to create auth service")
+	return svc
 }
 
 func TestJWT_GenerateAccessToken_ValidClaims(t *testing.T) {
@@ -89,12 +97,6 @@ func TestJWT_ParseToken_ValidRS256(t *testing.T) {
 
 func TestJWT_ParseToken_RejectsHS256_AlgorithmConfusion(t *testing.T) {
 	svc := newJWTTestService(t)
-	_, publicKey := generateTestKeyPair(t)
-
-	// Create an HS256 token using public key bytes as HMAC secret (algorithm confusion attack)
-	pubKeyBytes, err := jwt.ParseRSAPublicKeyFromPEM(nil)
-	_ = pubKeyBytes
-	_ = err
 
 	// Build HS256 token manually
 	claims := jwt.MapClaims{
@@ -104,11 +106,6 @@ func TestJWT_ParseToken_RejectsHS256_AlgorithmConfusion(t *testing.T) {
 		"iss":   "mpc-2fa-auth",
 	}
 	hs256Token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Sign with public key bytes as HMAC secret (classic alg confusion)
-	pubKeyPEM, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, []byte("test"))
-	_ = pubKeyPEM
-	_ = err
 
 	// Use arbitrary bytes as HMAC secret
 	tokenStr, err := hs256Token.SignedString([]byte("some-hmac-secret"))
@@ -123,7 +120,12 @@ func TestJWT_ParseToken_RejectsHS256_AlgorithmConfusion(t *testing.T) {
 func TestJWT_ParseToken_ExpiredToken(t *testing.T) {
 	privateKey, publicKey := generateTestKeyPair(t)
 	// Create service with very short TTL
-	svc := authService.NewAuthService(nil, nil, &bootstrap.NoOpProducer{}, privateKey, publicKey, 1*time.Millisecond, 168*time.Hour)
+	mc := minimock.NewController(t)
+	svc, err := authService.NewAuthService(
+		mocks.NewStorageMock(mc), mocks.NewSessionStorageMock(mc), &bootstrap.NoOpProducer{},
+		privateKey, publicKey, 1*time.Millisecond, 168*time.Hour,
+	)
+	assert.NilError(t, err)
 
 	tokenStr, _, err := svc.GenerateAccessToken("user-789", "expired@test.com")
 	assert.NilError(t, err)

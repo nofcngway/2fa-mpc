@@ -31,7 +31,7 @@ func init() {
 	// Generate log/exp tables using generator element 3 in GF(256).
 	// The generator 3 produces all 255 non-zero elements of the field.
 	x := byte(1)
-	for i := 0; i < 255; i++ {
+	for i := range 255 {
 		expTable[i] = x
 		logTable[x] = byte(i)
 		x = gfMulNoTable(x, 3)

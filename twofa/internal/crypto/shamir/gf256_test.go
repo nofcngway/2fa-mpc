@@ -14,8 +14,8 @@ func TestGF256_ExpLogTableConsistency(t *testing.T) {
 
 // TestGF256_AddCommutativity verifies gfAdd(a, b) == gfAdd(b, a) for all 256x256 pairs.
 func TestGF256_AddCommutativity(t *testing.T) {
-	for a := 0; a < 256; a++ {
-		for b := 0; b < 256; b++ {
+	for a := range 256 {
+		for b := range 256 {
 			ab := gfAdd(byte(a), byte(b))
 			ba := gfAdd(byte(b), byte(a))
 			if ab != ba {
@@ -27,9 +27,9 @@ func TestGF256_AddCommutativity(t *testing.T) {
 
 // TestGF256_AddAssociativity verifies gfAdd(gfAdd(a, b), c) == gfAdd(a, gfAdd(b, c)) for sampled triples.
 func TestGF256_AddAssociativity(t *testing.T) {
-	for a := 0; a < 256; a++ {
-		for b := 0; b < 256; b++ {
-			for c := 0; c < 256; c++ {
+	for a := range 256 {
+		for b := range 256 {
+			for c := range 256 {
 				lhs := gfAdd(gfAdd(byte(a), byte(b)), byte(c))
 				rhs := gfAdd(byte(a), gfAdd(byte(b), byte(c)))
 				if lhs != rhs {
@@ -42,7 +42,7 @@ func TestGF256_AddAssociativity(t *testing.T) {
 
 // TestGF256_AddIdentity verifies gfAdd(a, 0) == a for all 256 elements.
 func TestGF256_AddIdentity(t *testing.T) {
-	for a := 0; a < 256; a++ {
+	for a := range 256 {
 		got := gfAdd(byte(a), 0)
 		if got != byte(a) {
 			t.Fatalf("gfAdd(%d, 0) = %d, want %d", a, got, a)
@@ -52,7 +52,7 @@ func TestGF256_AddIdentity(t *testing.T) {
 
 // TestGF256_AddInverse verifies gfAdd(a, a) == 0 for all 256 elements (self-inverse in GF(2^n)).
 func TestGF256_AddInverse(t *testing.T) {
-	for a := 0; a < 256; a++ {
+	for a := range 256 {
 		got := gfAdd(byte(a), byte(a))
 		if got != 0 {
 			t.Fatalf("gfAdd(%d, %d) = %d, want 0", a, a, got)
@@ -62,8 +62,8 @@ func TestGF256_AddInverse(t *testing.T) {
 
 // TestGF256_MulCommutative verifies gfMul(a, b) == gfMul(b, a) for all 256x256 pairs.
 func TestGF256_MulCommutative(t *testing.T) {
-	for a := 0; a < 256; a++ {
-		for b := 0; b < 256; b++ {
+	for a := range 256 {
+		for b := range 256 {
 			ab := gfMul(byte(a), byte(b))
 			ba := gfMul(byte(b), byte(a))
 			if ab != ba {
@@ -92,7 +92,7 @@ func TestGF256_MulAssociative(t *testing.T) {
 
 // TestGF256_MulIdentity verifies gfMul(a, 1) == a for all 256 elements.
 func TestGF256_MulIdentity(t *testing.T) {
-	for a := 0; a < 256; a++ {
+	for a := range 256 {
 		got := gfMul(byte(a), 1)
 		if got != byte(a) {
 			t.Fatalf("gfMul(%d, 1) = %d, want %d", a, got, a)
@@ -102,7 +102,7 @@ func TestGF256_MulIdentity(t *testing.T) {
 
 // TestGF256_MulZero verifies gfMul(a, 0) == 0 and gfMul(0, b) == 0 for all 256 elements.
 func TestGF256_MulZero(t *testing.T) {
-	for a := 0; a < 256; a++ {
+	for a := range 256 {
 		if got := gfMul(byte(a), 0); got != 0 {
 			t.Fatalf("gfMul(%d, 0) = %d, want 0", a, got)
 		}
@@ -125,9 +125,9 @@ func TestGF256_MulInverse(t *testing.T) {
 
 // TestGF256_Distributive verifies gfMul(a, gfAdd(b, c)) == gfAdd(gfMul(a, b), gfMul(a, c)) for all 16M+ triples.
 func TestGF256_Distributive(t *testing.T) {
-	for a := 0; a < 256; a++ {
-		for b := 0; b < 256; b++ {
-			for c := 0; c < 256; c++ {
+	for a := range 256 {
+		for b := range 256 {
+			for c := range 256 {
 				lhs := gfMul(byte(a), gfAdd(byte(b), byte(c)))
 				rhs := gfAdd(gfMul(byte(a), byte(b)), gfMul(byte(a), byte(c)))
 				if lhs != rhs {
@@ -141,7 +141,7 @@ func TestGF256_Distributive(t *testing.T) {
 // TestGF256_DivInverse verifies gfDiv(gfMul(a, b), b) == a for all non-zero b, all a.
 func TestGF256_DivInverse(t *testing.T) {
 	for b := 1; b <= 255; b++ {
-		for a := 0; a < 256; a++ {
+		for a := range 256 {
 			product := gfMul(byte(a), byte(b))
 			got := gfDiv(product, byte(b))
 			if got != byte(a) {
@@ -153,7 +153,7 @@ func TestGF256_DivInverse(t *testing.T) {
 
 // TestGF256_DivByZeroPanics verifies gfDiv(x, 0) panics for any x.
 func TestGF256_DivByZeroPanics(t *testing.T) {
-	for x := 0; x < 256; x++ {
+	for x := range 256 {
 		func() {
 			defer func() {
 				if r := recover(); r == nil {

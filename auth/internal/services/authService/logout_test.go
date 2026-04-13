@@ -38,11 +38,12 @@ func newLogoutSuite(t *testing.T) *logoutSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service := authService.NewAuthService(
+	service, err := authService.NewAuthService(
 		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 	return &logoutSuite{
 		mc:             mc,
 		storage:        storage,
@@ -67,7 +68,7 @@ func TestLogout_Success(t *testing.T) {
 		return nil
 	})
 
-	err = s.service.Logout(context.Background(), refreshToken)
+	err = s.service.Logout(t.Context(), refreshToken)
 
 	assert.NilError(t, err)
 	assert.Assert(t, deleteCalled, "DeleteRefreshToken should have been called")
@@ -76,7 +77,7 @@ func TestLogout_Success(t *testing.T) {
 func TestLogout_InvalidToken(t *testing.T) {
 	s := newLogoutSuite(t)
 
-	err := s.service.Logout(context.Background(), "not-a-valid-token")
+	err := s.service.Logout(t.Context(), "not-a-valid-token")
 
 	assert.Assert(t, err != nil, "expected error for invalid token")
 	assert.Assert(t, errors.Is(err, domain.ErrInvalidToken),

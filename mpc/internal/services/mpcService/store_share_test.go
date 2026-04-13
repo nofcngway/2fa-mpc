@@ -43,7 +43,7 @@ func TestStoreShareHappyPath(t *testing.T) {
 		return nil
 	})
 
-	shareID, err := s.service.StoreShare(context.Background(), "user-123", 0, []byte("share-data"))
+	shareID, err := s.service.StoreShare(t.Context(), "user-123", 0, []byte("share-data"))
 	assert.NilError(t, err)
 	assert.Assert(t, shareID != "", "share ID should be returned")
 }
@@ -53,7 +53,7 @@ func TestStoreShareDuplicate(t *testing.T) {
 
 	s.storage.CreateShareMock.Return(models.ErrDuplicateShare)
 
-	_, err := s.service.StoreShare(context.Background(), "user-123", 0, []byte("share-data"))
+	_, err := s.service.StoreShare(t.Context(), "user-123", 0, []byte("share-data"))
 	assert.Assert(t, err != nil, "expected error for duplicate share")
 	assert.Assert(t, errors.Is(err, models.ErrDuplicateShare),
 		"expected ErrDuplicateShare, got: %v", err)
@@ -64,7 +64,7 @@ func TestStoreShareStorageError(t *testing.T) {
 
 	s.storage.CreateShareMock.Return(errors.New("connection refused"))
 
-	_, err := s.service.StoreShare(context.Background(), "user-123", 0, []byte("share-data"))
+	_, err := s.service.StoreShare(t.Context(), "user-123", 0, []byte("share-data"))
 	assert.Assert(t, err != nil, "expected error for storage failure")
 	assert.Assert(t, !errors.Is(err, models.ErrDuplicateShare),
 		"generic error should not be ErrDuplicateShare")
@@ -79,7 +79,7 @@ func TestStoreShareEmptyData(t *testing.T) {
 		return nil
 	})
 
-	shareID, err := s.service.StoreShare(context.Background(), "user-123", 0, []byte{})
+	shareID, err := s.service.StoreShare(t.Context(), "user-123", 0, []byte{})
 	assert.NilError(t, err)
 	assert.Assert(t, shareID != "", "share ID should be returned for empty data")
 }

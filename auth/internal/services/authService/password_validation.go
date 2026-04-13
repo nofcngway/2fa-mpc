@@ -1,6 +1,7 @@
 package authService
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -10,6 +11,9 @@ import (
 
 // MIN_PASSWORD_LENGTH is the minimum required password length.
 const MIN_PASSWORD_LENGTH = 12
+
+// MAX_PASSWORD_LENGTH caps input to prevent bcrypt truncation (72 bytes) and CPU DoS.
+const MAX_PASSWORD_LENGTH = 128
 
 // SEQUENCE_THRESHOLD is the minimum number of sequential or repeated characters to trigger rejection.
 const SEQUENCE_THRESHOLD = 4
@@ -29,8 +33,12 @@ var sequences = []string{
 func ValidatePassword(password string) error {
 	var violations []error
 
-	if utf8.RuneCountInString(password) < MIN_PASSWORD_LENGTH {
+	runeCount := utf8.RuneCountInString(password)
+	if runeCount < MIN_PASSWORD_LENGTH {
 		violations = append(violations, domain.ErrPasswordTooShort)
+	}
+	if runeCount > MAX_PASSWORD_LENGTH {
+		violations = append(violations, domain.ErrPasswordTooLong)
 	}
 
 	hasUpper, hasLower, hasDigit, hasSpecial := false, false, false, false
@@ -97,7 +105,7 @@ func containsSubseq(password string, seq string, winSize int) bool {
 	if len(password) < winSize {
 		return false
 	}
-	for i := 0; i <= len(password)-winSize; i++ {
+	for i := range len(password) - winSize + 1 {
 		window := password[i : i+winSize]
 		if strings.Contains(seq, window) {
 			return true
@@ -113,7 +121,7 @@ func containsRepeated(password string, minLen int) bool {
 	if len(lower) < minLen {
 		return false
 	}
-	for i := 0; i <= len(lower)-minLen; i++ {
+	for i := range len(lower) - minLen + 1 {
 		allSame := true
 		for j := 1; j < minLen; j++ {
 			if lower[i+j] != lower[i] {
@@ -131,8 +139,6 @@ func containsRepeated(password string, minLen int) bool {
 // reverse returns the string with its characters in reverse order.
 func reverse(s string) string {
 	runes := []rune(s)
-	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
-	}
+	slices.Reverse(runes)
 	return string(runes)
 }

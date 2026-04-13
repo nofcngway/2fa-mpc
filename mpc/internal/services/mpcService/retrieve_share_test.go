@@ -1,7 +1,6 @@
 package mpcService_test
 
 import (
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -65,7 +64,7 @@ func TestRetrieveShareHappyPath(t *testing.T) {
 		CreatedAt:     time.Now(),
 	}, nil)
 
-	result, err := s.service.RetrieveShare(context.Background(), "user-123", 0)
+	result, err := s.service.RetrieveShare(t.Context(), "user-123", 0)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, result, plaintext)
 }
@@ -75,7 +74,7 @@ func TestRetrieveShareNotFound(t *testing.T) {
 
 	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(nil, models.ErrShareNotFound)
 
-	_, err := s.service.RetrieveShare(context.Background(), "user-123", 0)
+	_, err := s.service.RetrieveShare(t.Context(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for not found share")
 	assert.Assert(t, errors.Is(err, models.ErrShareNotFound),
 		"expected ErrShareNotFound, got: %v", err)
@@ -94,7 +93,7 @@ func TestRetrieveShareDecryptFailure(t *testing.T) {
 		CreatedAt:     time.Now(),
 	}, nil)
 
-	_, err := s.service.RetrieveShare(context.Background(), "user-123", 0)
+	_, err := s.service.RetrieveShare(t.Context(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for decryption failure")
 }
 
@@ -103,7 +102,7 @@ func TestRetrieveShareStorageError(t *testing.T) {
 
 	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(nil, errors.New("connection refused"))
 
-	_, err := s.service.RetrieveShare(context.Background(), "user-123", 0)
+	_, err := s.service.RetrieveShare(t.Context(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for storage failure")
 	assert.Assert(t, !errors.Is(err, models.ErrShareNotFound),
 		"generic error should not be ErrShareNotFound")

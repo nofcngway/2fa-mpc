@@ -9,32 +9,32 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can register with email and password (bcrypt cost=12)
-- [ ] **AUTH-02**: Password validated before hashing — min 12 chars, 1 lowercase, 1 uppercase, 1 digit, 1 special char, no 4+ sequential chars (ASCII/keyboard)
-- [ ] **AUTH-03**: User can login and receive JWT access token (RS256, 15min) and refresh token (7 days, stored in Redis)
-- [ ] **AUTH-04**: User can refresh access token via refresh token with rotation (old token deleted, new issued)
-- [ ] **AUTH-05**: Refresh token reuse detected — revoke all tokens for user (theft detection)
-- [ ] **AUTH-06**: User can logout (refresh token deleted from Redis, session invalidated)
-- [ ] **AUTH-07**: Access token can be validated by other services (returns user_id and claims)
-- [ ] **AUTH-08**: Password validation has unit tests covering each rule and boundary cases (3 vs 4 sequential chars)
+- [x] **AUTH-01**: User can register with email and password (bcrypt cost=12)
+- [x] **AUTH-02**: Password validated before hashing — min 12 chars, 1 lowercase, 1 uppercase, 1 digit, 1 special char, no 4+ sequential chars (ASCII/keyboard)
+- [x] **AUTH-03**: User can login and receive JWT access token (RS256, 15min) and refresh token (7 days, stored in Redis)
+- [x] **AUTH-04**: User can refresh access token via refresh token with rotation (old token deleted, new issued)
+- [x] **AUTH-05**: Refresh token reuse detected — revoke all tokens for user (theft detection)
+- [x] **AUTH-06**: User can logout (refresh token deleted from Redis, session invalidated)
+- [x] **AUTH-07**: Access token can be validated by other services (returns user_id and claims)
+- [x] **AUTH-08**: Password validation has unit tests covering each rule and boundary cases (3 vs 4 sequential chars)
 
 ### TwoFA Orchestration
 
-- [ ] **2FA-01**: User can setup 2FA — TOTP secret generated, split via Shamir (2-of-3), shares sent to 3 MPC nodes, secret zeroized, provisioning URI returned
-- [ ] **2FA-02**: Setup fails if any MPC node is unreachable (all 3 shares MUST be stored)
-- [ ] **2FA-03**: User can verify OTP — 2 shares retrieved from MPC nodes, Shamir combine, TOTP validation (+-1 window), secret zeroized
-- [ ] **2FA-04**: First successful verification enables 2FA (is_enabled=true)
-- [ ] **2FA-05**: OTP verification rate limited — max 5 attempts per 5 minutes per user_id (Redis)
-- [ ] **2FA-06**: User can disable 2FA — verify OTP first, then delete shares from all 3 nodes and metadata from PostgreSQL
-- [ ] **2FA-07**: User can check 2FA status (is_enabled, created_at)
-- [ ] **2FA-08**: 10 backup codes generated on setup, each bcrypt-hashed, stored in PostgreSQL
-- [ ] **2FA-09**: OTP single-use enforcement — store last-used time counter per user, reject reuse within same window
+- [x] **2FA-01**: User can setup 2FA — TOTP secret generated, split via Shamir (2-of-3), shares sent to 3 MPC nodes, secret zeroized, provisioning URI returned
+- [x] **2FA-02**: Setup fails if any MPC node is unreachable (all 3 shares MUST be stored)
+- [x] **2FA-03**: User can verify OTP — 2 shares retrieved from MPC nodes, Shamir combine, TOTP validation (+-1 window), secret zeroized
+- [x] **2FA-04**: First successful verification enables 2FA (is_enabled=true)
+- [x] **2FA-05**: OTP verification rate limited — max 5 attempts per 5 minutes per user_id (Redis)
+- [x] **2FA-06**: User can disable 2FA — verify OTP first, then delete shares from all 3 nodes and metadata from PostgreSQL
+- [x] **2FA-07**: User can check 2FA status (is_enabled, created_at)
+- [x] **2FA-08**: 10 backup codes generated on setup, each bcrypt-hashed, stored in PostgreSQL
+- [x] **2FA-09**: OTP single-use enforcement — store last-used time counter per user, reject reuse within same window
 
 ### Cryptographic Core
 
-- [ ] **CRYPTO-01**: Shamir Secret Sharing implemented from scratch — Split(secret, n=3, threshold=2) and Combine(shares) in GF(256)
-- [ ] **CRYPTO-02**: GF(256) arithmetic — addition via XOR, multiplication via log/exp tables, polynomial evaluation
-- [ ] **CRYPTO-03**: Shamir unit tests — split→combine roundtrip, any 2-of-3 recovers, 1-of-3 does NOT recover
+- [x] **CRYPTO-01**: Shamir Secret Sharing implemented from scratch — Split(secret, n=3, threshold=2) and Combine(shares) in GF(256)
+- [x] **CRYPTO-02**: GF(256) arithmetic — addition via XOR, multiplication via log/exp tables, polynomial evaluation
+- [x] **CRYPTO-03**: Shamir unit tests — split→combine roundtrip, any 2-of-3 recovers, 1-of-3 does NOT recover
 - [x] **CRYPTO-04**: TOTP implementation per RFC 6238 — SHA-1, 6 digits, 30s period, base32 secret (20 bytes)
 - [x] **CRYPTO-05**: TOTP generates valid provisioning URI (otpauth://totp/...)
 - [x] **CRYPTO-06**: TOTP validation allows +-1 time window
@@ -42,34 +42,34 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### MPC Node
 
-- [ ] **MPC-01**: StoreShare — encrypt share data with AES-256-GCM (unique nonce via crypto/rand), store encrypted_data + nonce in PostgreSQL
-- [ ] **MPC-02**: RetrieveShare — read encrypted_data + nonce, decrypt, return share data
-- [ ] **MPC-03**: DeleteShare — delete all shares for a user from this node
-- [ ] **MPC-04**: Unique constraint on (user_id, share_index) per node
-- [ ] **MPC-05**: gRPC interceptor validates shared secret via metadata ("authorization" header)
-- [ ] **MPC-06**: AES-256-GCM encryption key loaded from config (ENCRYPTION_KEY), nonce never reused
+- [x] **MPC-01**: StoreShare — encrypt share data with AES-256-GCM (unique nonce via crypto/rand), store encrypted_data + nonce in PostgreSQL
+- [x] **MPC-02**: RetrieveShare — read encrypted_data + nonce, decrypt, return share data
+- [x] **MPC-03**: DeleteShare — delete all shares for a user from this node
+- [x] **MPC-04**: Unique constraint on (user_id, share_index) per node
+- [x] **MPC-05**: gRPC interceptor validates shared secret via metadata ("authorization" header)
+- [x] **MPC-06**: AES-256-GCM encryption key loaded from config (ENCRYPTION_KEY), nonce never reused
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Each service follows Clean Architecture — handler → service → repository, dependencies via interfaces
-- [ ] **INFRA-02**: DI through bootstrap factories in internal/bootstrap/
-- [ ] **INFRA-03**: gRPC Health Check Protocol in each service
-- [ ] **INFRA-04**: Graceful shutdown with ordered teardown (gRPC stop → Kafka flush → Redis close → PG close)
-- [ ] **INFRA-05**: Prometheus metrics per service (requests total, duration, service-specific counters)
-- [ ] **INFRA-06**: Structured logging with slog — secrets, passwords, shares, encryption keys NEVER logged
+- [x] **INFRA-01**: Each service follows Clean Architecture — handler → service → repository, dependencies via interfaces
+- [x] **INFRA-02**: DI through bootstrap factories in internal/bootstrap/
+- [x] **INFRA-03**: gRPC Health Check Protocol in each service
+- [x] **INFRA-04**: Graceful shutdown with ordered teardown (gRPC stop → Kafka flush → Redis close → PG close)
+- [x] **INFRA-05**: Prometheus metrics per service (requests total, duration, service-specific counters)
+- [x] **INFRA-06**: Structured logging with slog — secrets, passwords, shares, encryption keys NEVER logged
 - [x] **INFRA-07**: Kafka audit events per service (user_id, operation, timestamp — no secret data)
-- [ ] **INFRA-08**: Configuration via config.yaml loaded in config/config.go
-- [ ] **INFRA-09**: Proto definitions in api/ with generate.sh for protobuf code generation
-- [ ] **INFRA-10**: Each service is separate Go module (github.com/vbncursed/vkr/{auth,twofa,mpc})
-- [ ] **INFRA-11**: Docker Compose per service for local dependencies (PostgreSQL, Redis)
+- [x] **INFRA-08**: Configuration via config.yaml loaded in config/config.go
+- [x] **INFRA-09**: Proto definitions in api/ with generate.sh for protobuf code generation
+- [x] **INFRA-10**: Each service is separate Go module (github.com/vbncursed/vkr/{auth,twofa,mpc})
+- [x] **INFRA-11**: Docker Compose per service for local dependencies (PostgreSQL, Redis)
 
 ### Security
 
-- [ ] **SEC-01**: JWT validation uses WithValidMethods([]string{"RS256"}) — prevents algorithm confusion attack
-- [ ] **SEC-02**: gRPC errors sanitized — no internal state leaked in error messages
-- [ ] **SEC-03**: Passwords never returned in responses or logged
-- [ ] **SEC-04**: TOTP secret never persisted — only transient in memory, zeroized after use
-- [ ] **SEC-05**: Share data and encryption keys never logged or included in Kafka events
+- [x] **SEC-01**: JWT validation uses WithValidMethods([]string{"RS256"}) — prevents algorithm confusion attack
+- [x] **SEC-02**: gRPC errors sanitized — no internal state leaked in error messages
+- [x] **SEC-03**: Passwords never returned in responses or logged
+- [x] **SEC-04**: TOTP secret never persisted — only transient in memory, zeroized after use
+- [x] **SEC-05**: Share data and encryption keys never logged or included in Kafka events
 
 ## v2 Requirements
 
@@ -115,58 +115,59 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 3 | Pending |
-| AUTH-04 | Phase 3 | Pending |
-| AUTH-05 | Phase 3 | Pending |
-| AUTH-06 | Phase 3 | Pending |
-| AUTH-07 | Phase 3 | Pending |
-| AUTH-08 | Phase 2 | Pending |
-| 2FA-01 | Phase 7 | Pending |
-| 2FA-02 | Phase 7 | Pending |
-| 2FA-03 | Phase 8 | Pending |
-| 2FA-04 | Phase 8 | Pending |
-| 2FA-05 | Phase 8 | Pending |
-| 2FA-06 | Phase 8 | Pending |
-| 2FA-07 | Phase 8 | Pending |
-| 2FA-08 | Phase 7 | Pending |
-| 2FA-09 | Phase 8 | Pending |
-| CRYPTO-01 | Phase 4 | Pending |
-| CRYPTO-02 | Phase 4 | Pending |
-| CRYPTO-03 | Phase 4 | Pending |
+| AUTH-01 | Phase 2 | Complete |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 3 | Complete |
+| AUTH-04 | Phase 3 | Complete |
+| AUTH-05 | Phase 3 | Complete |
+| AUTH-06 | Phase 3 | Complete |
+| AUTH-07 | Phase 3 | Complete |
+| AUTH-08 | Phase 2 | Complete |
+| 2FA-01 | Phase 7 | Complete |
+| 2FA-02 | Phase 7 | Complete |
+| 2FA-03 | Phase 8 | Complete |
+| 2FA-04 | Phase 8 | Complete |
+| 2FA-05 | Phase 8 | Complete |
+| 2FA-06 | Phase 8 | Complete |
+| 2FA-07 | Phase 8 | Complete |
+| 2FA-08 | Phase 7 | Complete |
+| 2FA-09 | Phase 8 | Complete |
+| CRYPTO-01 | Phase 4 | Complete |
+| CRYPTO-02 | Phase 4 | Complete |
+| CRYPTO-03 | Phase 4 | Complete |
 | CRYPTO-04 | Phase 5 | Complete |
 | CRYPTO-05 | Phase 5 | Complete |
 | CRYPTO-06 | Phase 5 | Complete |
 | CRYPTO-07 | Phase 5 | Complete |
-| MPC-01 | Phase 6 | Pending |
-| MPC-02 | Phase 6 | Pending |
-| MPC-03 | Phase 6 | Pending |
-| MPC-04 | Phase 6 | Pending |
-| MPC-05 | Phase 6 | Pending |
-| MPC-06 | Phase 6 | Pending |
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 9 | Pending |
-| INFRA-04 | Phase 9 | Pending |
-| INFRA-05 | Phase 9 | Pending |
-| INFRA-06 | Phase 9 | Pending |
+| MPC-01 | Phase 6 | Complete |
+| MPC-02 | Phase 6 | Complete |
+| MPC-03 | Phase 6 | Complete |
+| MPC-04 | Phase 6 | Complete |
+| MPC-05 | Phase 6 | Complete |
+| MPC-06 | Phase 6 | Complete |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 9 | Complete |
+| INFRA-04 | Phase 9 | Complete |
+| INFRA-05 | Phase 9 | Complete |
+| INFRA-06 | Phase 9 | Complete |
 | INFRA-07 | Phase 9 | Complete |
-| INFRA-08 | Phase 1 | Pending |
-| INFRA-09 | Phase 1 | Pending |
-| INFRA-10 | Phase 1 | Pending |
-| INFRA-11 | Phase 1 | Pending |
-| SEC-01 | Phase 3 | Pending |
-| SEC-02 | Phase 9 | Pending |
-| SEC-03 | Phase 3 | Pending |
-| SEC-04 | Phase 7 | Pending |
-| SEC-05 | Phase 8 | Pending |
+| INFRA-08 | Phase 1 | Complete |
+| INFRA-09 | Phase 1 | Complete |
+| INFRA-10 | Phase 1 | Complete |
+| INFRA-11 | Phase 1 | Complete |
+| SEC-01 | Phase 3 | Complete |
+| SEC-02 | Phase 9 | Complete |
+| SEC-03 | Phase 3 | Complete |
+| SEC-04 | Phase 7 | Complete |
+| SEC-05 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 46 total
 - Mapped to phases: 46
 - Unmapped: 0
+- **Complete: 46 / 46 (100%)**
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 after roadmap creation*
+*Last updated: 2026-04-13 — all v1 requirements verified complete*

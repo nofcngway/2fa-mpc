@@ -35,11 +35,12 @@ func newLogoutAllSuite(t *testing.T) *logoutAllSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service := authService.NewAuthService(
+	service, err := authService.NewAuthService(
 		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 	return &logoutAllSuite{
 		mc:             mc,
 		storage:        storage,
@@ -58,18 +59,9 @@ func TestLogoutAll_Success(t *testing.T) {
 		return nil
 	})
 
-	err := s.service.LogoutAll(context.Background(), "user-123")
+	err := s.service.LogoutAll(t.Context(), "user-123")
 
 	assert.NilError(t, err)
 	assert.Assert(t, deleteCalled, "DeleteAllUserTokens should have been called")
 }
 
-func TestLogoutAll_ReturnsNilOnSuccess(t *testing.T) {
-	s := newLogoutAllSuite(t)
-
-	s.sessionStorage.DeleteAllUserTokensMock.Expect(minimock.AnyContext, "user-456").Return(nil)
-
-	err := s.service.LogoutAll(context.Background(), "user-456")
-
-	assert.NilError(t, err)
-}

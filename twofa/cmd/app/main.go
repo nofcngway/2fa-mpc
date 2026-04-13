@@ -1,7 +1,9 @@
 package main
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -45,7 +47,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	redisStorage := bootstrap.NewRedisStorage(ctx, cfg)
+	sessionStorage := bootstrap.NewSessionStorage(ctx, cfg)
 
 	mpcClients, mpcConns, err := bootstrap.NewMPCClients(cfg)
 	if err != nil {
@@ -55,22 +57,19 @@ func main() {
 
 	kafkaProducer := bootstrap.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 
-	service := bootstrap.NewTwoFAService(pgStorage, redisStorage, mpcClients, kafkaProducer, cfg)
+	service := bootstrap.NewTwoFAService(pgStorage, sessionStorage, mpcClients, kafkaProducer, cfg)
 	api := bootstrap.NewTwoFAServiceAPI(service)
 	grpcServer := bootstrap.NewGRPCServer(api)
 
 	// Metrics HTTP server on separate port
-	metricsPort := cfg.Server.MetricsPort
-	if metricsPort == 0 {
-		metricsPort = 9101
-	}
+	metricsPort := cmp.Or(cfg.Server.MetricsPort, 9101)
 	metricsServer := &http.Server{
 		Addr:    fmt.Sprintf(":%d", metricsPort),
 		Handler: promhttp.Handler(),
 	}
 	go func() {
 		slog.Info("metrics server started", "port", metricsPort)
-		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("metrics server error", "error", err)
 		}
 	}()
@@ -98,9 +97,19 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	// 1. Stop gRPC
-	grpcServer.GracefulStop()
-	slog.Info("gRPC server stopped")
+	// 1. Stop gRPC with timeout fallback
+	grpcDone := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(grpcDone)
+	}()
+	select {
+	case <-grpcDone:
+		slog.Info("gRPC server stopped gracefully")
+	case <-shutdownCtx.Done():
+		grpcServer.Stop()
+		slog.Warn("gRPC server force-stopped after timeout")
+	}
 
 	// 2. Flush Kafka (pending audit events)
 	if err := kafkaProducer.Close(); err != nil {
@@ -108,9 +117,11 @@ func main() {
 	}
 	slog.Info("Kafka producer closed")
 
-	// 3. Close Redis
-	if redisStorage != nil {
-		redisStorage.Close()
+	// 3. Close Redis (if backed by real Redis, not NoOp)
+	if closer, ok := sessionStorage.(interface{ Close() error }); ok {
+		if err := closer.Close(); err != nil {
+			slog.Error("failed to close Redis", "error", err)
+		}
 		slog.Info("Redis connection closed")
 	}
 

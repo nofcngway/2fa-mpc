@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/google/uuid"
+
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"google.golang.org/grpc/codes"
@@ -15,6 +17,9 @@ import (
 func (api *TwoFAServiceAPI) Verify2FA(ctx context.Context, req *pb.Verify2FARequest) (*pb.Verify2FAResponse, error) {
 	if req.GetUserId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if err := uuid.Validate(req.GetUserId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid UUID")
 	}
 	if req.GetOtpCode() == "" {
 		return nil, status.Error(codes.InvalidArgument, "otp_code is required")
@@ -27,6 +32,8 @@ func (api *TwoFAServiceAPI) Verify2FA(ctx context.Context, req *pb.Verify2FARequ
 			return nil, status.Error(codes.ResourceExhausted, "too many verification attempts")
 		case errors.Is(err, twofaService.ErrOTPReused):
 			return nil, status.Error(codes.InvalidArgument, "OTP code already used")
+		case errors.Is(err, twofaService.ErrInvalidBackupCode):
+			return nil, status.Error(codes.InvalidArgument, "invalid backup code")
 		case errors.Is(err, twofaService.ErrNotSetUp):
 			return nil, status.Error(codes.FailedPrecondition, "2FA not set up")
 		default:

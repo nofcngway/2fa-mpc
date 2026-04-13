@@ -17,7 +17,7 @@ import (
 // from the "authorization" metadata header using constant-time comparison.
 // Health check requests (/grpc.health.v1.Health/Check) are excluded from authentication.
 func AuthInterceptor(expectedSecret string) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		// Exclude health check from authentication
 		if info.FullMethod == "/grpc.health.v1.Health/Check" {
 			return handler(ctx, req)
@@ -42,7 +42,7 @@ func AuthInterceptor(expectedSecret string) grpc.UnaryServerInterceptor {
 }
 
 // MetricsInterceptor records gRPC request count and duration.
-func MetricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func MetricsInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	start := time.Now()
 	resp, err := handler(ctx, req)
 	duration := time.Since(start).Seconds()
@@ -57,10 +57,10 @@ func MetricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnarySe
 // LoggingInterceptor logs gRPC method calls with duration.
 func LoggingInterceptor(
 	ctx context.Context,
-	req interface{},
+	req any,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
-) (interface{}, error) {
+) (any, error) {
 	start := time.Now()
 
 	resp, err := handler(ctx, req)

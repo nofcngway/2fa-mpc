@@ -38,11 +38,12 @@ func newLoginSuite(t *testing.T) *loginSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service := authService.NewAuthService(
+	service, err := authService.NewAuthService(
 		storage, sessionStorage, eventProducer,
 		privateKey, &privateKey.PublicKey,
 		15*time.Minute, 168*time.Hour,
 	)
+	assert.NilError(t, err, "failed to create auth service")
 	return &loginSuite{
 		mc:             mc,
 		storage:        storage,
@@ -74,7 +75,7 @@ func TestLogin_Success(t *testing.T) {
 		return nil
 	})
 
-	user, accessToken, refreshToken, err := s.service.Login(context.Background(), "test@example.com", "MyStr0ng!Pass99")
+	user, accessToken, refreshToken, err := s.service.Login(t.Context(), "test@example.com", "MyStr0ng!Pass99")
 
 	assert.NilError(t, err)
 	assert.Assert(t, user != nil, "expected user, got nil")
@@ -86,9 +87,9 @@ func TestLogin_Success(t *testing.T) {
 func TestLogin_NonExistentEmail(t *testing.T) {
 	s := newLoginSuite(t)
 
-	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "nobody@example.com").Return(nil, nil)
+	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "nobody@example.com").Return(nil, domain.ErrUserNotFound)
 
-	_, _, _, err := s.service.Login(context.Background(), "nobody@example.com", "MyStr0ng!Pass99")
+	_, _, _, err := s.service.Login(t.Context(), "nobody@example.com", "MyStr0ng!Pass99")
 
 	assert.Assert(t, err != nil, "expected error for non-existent email")
 	assert.Assert(t, errors.Is(err, domain.ErrInvalidCredentials),
@@ -109,7 +110,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "test@example.com").Return(existingUser, nil)
 
-	_, _, _, err = s.service.Login(context.Background(), "test@example.com", "WrongPassword!1")
+	_, _, _, err = s.service.Login(t.Context(), "test@example.com", "WrongPassword!1")
 
 	assert.Assert(t, err != nil, "expected error for wrong password")
 	assert.Assert(t, errors.Is(err, domain.ErrInvalidCredentials),
@@ -139,7 +140,7 @@ func TestLogin_StoresRefreshToken(t *testing.T) {
 		return nil
 	})
 
-	_, _, _, err = s.service.Login(context.Background(), "store@example.com", "MyStr0ng!Pass99")
+	_, _, _, err = s.service.Login(t.Context(), "store@example.com", "MyStr0ng!Pass99")
 	assert.NilError(t, err)
 	assert.Assert(t, storeCalled, "StoreRefreshToken should have been called")
 }
@@ -159,7 +160,7 @@ func TestLogin_EmailNormalization(t *testing.T) {
 	s.storage.GetUserByEmailMock.Expect(minimock.AnyContext, "user@example.com").Return(existingUser, nil)
 	s.sessionStorage.StoreRefreshTokenMock.Return(nil)
 
-	user, _, _, err := s.service.Login(context.Background(), "  User@Example.COM  ", "MyStr0ng!Pass99")
+	user, _, _, err := s.service.Login(t.Context(), "  User@Example.COM  ", "MyStr0ng!Pass99")
 
 	assert.NilError(t, err)
 	assert.Assert(t, user != nil, "expected user, got nil")

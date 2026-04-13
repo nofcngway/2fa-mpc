@@ -17,8 +17,7 @@ func (ps *PGStorage) CreateUser(ctx context.Context, user *domain.User) error {
 		VALUES ($1, $2, $3, $4, $5)
 	`, user.ID, user.Email, user.PasswordHash, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 			return domain.ErrDuplicateEmail
 		}
 		return err
@@ -26,7 +25,7 @@ func (ps *PGStorage) CreateUser(ctx context.Context, user *domain.User) error {
 	return nil
 }
 
-// GetUserByEmail retrieves a user by email address. Returns (nil, nil) if not found.
+// GetUserByEmail retrieves a user by email address. Returns domain.ErrUserNotFound if not found.
 func (ps *PGStorage) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var user domain.User
 	err := ps.pool.QueryRow(ctx, `
@@ -35,7 +34,7 @@ func (ps *PGStorage) GetUserByEmail(ctx context.Context, email string) (*domain.
 	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, err
 	}

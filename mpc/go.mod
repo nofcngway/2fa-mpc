@@ -8,9 +8,9 @@ require (
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/segmentio/kafka-go v0.4.50
+	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
-	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 )
 

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -63,17 +65,14 @@ func main() {
 	grpcServer := bootstrap.NewGRPCServer(authAPI)
 
 	// Metrics HTTP server on separate port
-	metricsPort := cfg.Server.MetricsPort
-	if metricsPort == 0 {
-		metricsPort = 9100
-	}
+	metricsPort := cmp.Or(cfg.Server.MetricsPort, 9100)
 	metricsServer := &http.Server{
 		Addr:    fmt.Sprintf(":%d", metricsPort),
 		Handler: promhttp.Handler(),
 	}
 	go func() {
 		slog.Info("metrics server started", "port", metricsPort)
-		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("metrics server error", "error", err)
 		}
 	}()
@@ -101,8 +100,17 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	// 1. Stop accepting new gRPC requests
-	grpcServer.GracefulStop()
+	// 1. Stop accepting new gRPC requests (with timeout fallback)
+	grpcDone := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(grpcDone)
+	}()
+	select {
+	case <-grpcDone:
+	case <-shutdownCtx.Done():
+		grpcServer.Stop()
+	}
 	slog.Info("gRPC server stopped")
 
 	// 2. Flush Kafka (pending audit events)
@@ -113,7 +121,9 @@ func main() {
 
 	// 3. Close Redis
 	if redisStorage != nil {
-		redisStorage.Close()
+		if err := redisStorage.Close(); err != nil {
+			slog.Error("failed to close Redis", "error", err)
+		}
 		slog.Info("Redis connection closed")
 	}
 

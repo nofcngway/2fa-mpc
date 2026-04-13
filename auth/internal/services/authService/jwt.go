@@ -17,7 +17,8 @@ import (
 type Claims struct {
 	jwt.RegisteredClaims
 	Email       string `json:"email"`
-	TokenFamily string `json:"token_family,omitempty"`
+	TokenType   string `json:"token_type"`
+	TokenFamily string `json:"token_family,omitzero"`
 }
 
 // GenerateAccessToken creates an RS256-signed JWT access token with standard claims.
@@ -33,7 +34,8 @@ func (s *AuthService) GenerateAccessToken(userID, email string) (string, string,
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTokenTTL)),
 			Issuer:    "mpc-2fa-auth",
 		},
-		Email: email,
+		Email:     email,
+		TokenType: "access",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -60,6 +62,7 @@ func (s *AuthService) GenerateRefreshToken(userID, email, tokenFamily string) (s
 			Issuer:    "mpc-2fa-auth",
 		},
 		Email:       email,
+		TokenType:   "refresh",
 		TokenFamily: tokenFamily,
 	}
 
@@ -77,7 +80,7 @@ func (s *AuthService) GenerateRefreshToken(userID, email, tokenFamily string) (s
 func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		// Algorithm check is delegated to jwt.WithValidMethods below (SEC-01).
 		return s.publicKey, nil
 	},

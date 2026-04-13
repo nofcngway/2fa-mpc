@@ -54,6 +54,20 @@ type StorageMock struct {
 	beforeGetTwoFARecordCounter uint64
 	GetTwoFARecordMock          mStorageMockGetTwoFARecord
 
+	funcGetUnusedBackupCodeHashes          func(ctx context.Context, userID string) (ba1 []models.BackupCodeRow, err error)
+	funcGetUnusedBackupCodeHashesOrigin    string
+	inspectFuncGetUnusedBackupCodeHashes   func(ctx context.Context, userID string)
+	afterGetUnusedBackupCodeHashesCounter  uint64
+	beforeGetUnusedBackupCodeHashesCounter uint64
+	GetUnusedBackupCodeHashesMock          mStorageMockGetUnusedBackupCodeHashes
+
+	funcMarkBackupCodeUsed          func(ctx context.Context, codeID string) (err error)
+	funcMarkBackupCodeUsedOrigin    string
+	inspectFuncMarkBackupCodeUsed   func(ctx context.Context, codeID string)
+	afterMarkBackupCodeUsedCounter  uint64
+	beforeMarkBackupCodeUsedCounter uint64
+	MarkBackupCodeUsedMock          mStorageMockMarkBackupCodeUsed
+
 	funcStoreBatchBackupCodes          func(ctx context.Context, userID string, codeHashes []string) (err error)
 	funcStoreBatchBackupCodesOrigin    string
 	inspectFuncStoreBatchBackupCodes   func(ctx context.Context, userID string, codeHashes []string)
@@ -84,6 +98,12 @@ func NewStorageMock(t minimock.Tester) *StorageMock {
 
 	m.GetTwoFARecordMock = mStorageMockGetTwoFARecord{mock: m}
 	m.GetTwoFARecordMock.callArgs = []*StorageMockGetTwoFARecordParams{}
+
+	m.GetUnusedBackupCodeHashesMock = mStorageMockGetUnusedBackupCodeHashes{mock: m}
+	m.GetUnusedBackupCodeHashesMock.callArgs = []*StorageMockGetUnusedBackupCodeHashesParams{}
+
+	m.MarkBackupCodeUsedMock = mStorageMockMarkBackupCodeUsed{mock: m}
+	m.MarkBackupCodeUsedMock.callArgs = []*StorageMockMarkBackupCodeUsedParams{}
 
 	m.StoreBatchBackupCodesMock = mStorageMockStoreBatchBackupCodes{mock: m}
 	m.StoreBatchBackupCodesMock.callArgs = []*StorageMockStoreBatchBackupCodesParams{}
@@ -1804,6 +1824,691 @@ func (m *StorageMock) MinimockGetTwoFARecordInspect() {
 	}
 }
 
+type mStorageMockGetUnusedBackupCodeHashes struct {
+	optional           bool
+	mock               *StorageMock
+	defaultExpectation *StorageMockGetUnusedBackupCodeHashesExpectation
+	expectations       []*StorageMockGetUnusedBackupCodeHashesExpectation
+
+	callArgs []*StorageMockGetUnusedBackupCodeHashesParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// StorageMockGetUnusedBackupCodeHashesExpectation specifies expectation struct of the Storage.GetUnusedBackupCodeHashes
+type StorageMockGetUnusedBackupCodeHashesExpectation struct {
+	mock               *StorageMock
+	params             *StorageMockGetUnusedBackupCodeHashesParams
+	paramPtrs          *StorageMockGetUnusedBackupCodeHashesParamPtrs
+	expectationOrigins StorageMockGetUnusedBackupCodeHashesExpectationOrigins
+	results            *StorageMockGetUnusedBackupCodeHashesResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// StorageMockGetUnusedBackupCodeHashesParams contains parameters of the Storage.GetUnusedBackupCodeHashes
+type StorageMockGetUnusedBackupCodeHashesParams struct {
+	ctx    context.Context
+	userID string
+}
+
+// StorageMockGetUnusedBackupCodeHashesParamPtrs contains pointers to parameters of the Storage.GetUnusedBackupCodeHashes
+type StorageMockGetUnusedBackupCodeHashesParamPtrs struct {
+	ctx    *context.Context
+	userID *string
+}
+
+// StorageMockGetUnusedBackupCodeHashesResults contains results of the Storage.GetUnusedBackupCodeHashes
+type StorageMockGetUnusedBackupCodeHashesResults struct {
+	ba1 []models.BackupCodeRow
+	err error
+}
+
+// StorageMockGetUnusedBackupCodeHashesOrigins contains origins of expectations of the Storage.GetUnusedBackupCodeHashes
+type StorageMockGetUnusedBackupCodeHashesExpectationOrigins struct {
+	origin       string
+	originCtx    string
+	originUserID string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Optional() *mStorageMockGetUnusedBackupCodeHashes {
+	mmGetUnusedBackupCodeHashes.optional = true
+	return mmGetUnusedBackupCodeHashes
+}
+
+// Expect sets up expected params for Storage.GetUnusedBackupCodeHashes
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Expect(ctx context.Context, userID string) *mStorageMockGetUnusedBackupCodeHashes {
+	if mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Set")
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation == nil {
+		mmGetUnusedBackupCodeHashes.defaultExpectation = &StorageMockGetUnusedBackupCodeHashesExpectation{}
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by ExpectParams functions")
+	}
+
+	mmGetUnusedBackupCodeHashes.defaultExpectation.params = &StorageMockGetUnusedBackupCodeHashesParams{ctx, userID}
+	mmGetUnusedBackupCodeHashes.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmGetUnusedBackupCodeHashes.expectations {
+		if minimock.Equal(e.params, mmGetUnusedBackupCodeHashes.defaultExpectation.params) {
+			mmGetUnusedBackupCodeHashes.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetUnusedBackupCodeHashes.defaultExpectation.params)
+		}
+	}
+
+	return mmGetUnusedBackupCodeHashes
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Storage.GetUnusedBackupCodeHashes
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) ExpectCtxParam1(ctx context.Context) *mStorageMockGetUnusedBackupCodeHashes {
+	if mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Set")
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation == nil {
+		mmGetUnusedBackupCodeHashes.defaultExpectation = &StorageMockGetUnusedBackupCodeHashesExpectation{}
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation.params != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Expect")
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs == nil {
+		mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs = &StorageMockGetUnusedBackupCodeHashesParamPtrs{}
+	}
+	mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs.ctx = &ctx
+	mmGetUnusedBackupCodeHashes.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmGetUnusedBackupCodeHashes
+}
+
+// ExpectUserIDParam2 sets up expected param userID for Storage.GetUnusedBackupCodeHashes
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) ExpectUserIDParam2(userID string) *mStorageMockGetUnusedBackupCodeHashes {
+	if mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Set")
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation == nil {
+		mmGetUnusedBackupCodeHashes.defaultExpectation = &StorageMockGetUnusedBackupCodeHashesExpectation{}
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation.params != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Expect")
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs == nil {
+		mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs = &StorageMockGetUnusedBackupCodeHashesParamPtrs{}
+	}
+	mmGetUnusedBackupCodeHashes.defaultExpectation.paramPtrs.userID = &userID
+	mmGetUnusedBackupCodeHashes.defaultExpectation.expectationOrigins.originUserID = minimock.CallerInfo(1)
+
+	return mmGetUnusedBackupCodeHashes
+}
+
+// Inspect accepts an inspector function that has same arguments as the Storage.GetUnusedBackupCodeHashes
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Inspect(f func(ctx context.Context, userID string)) *mStorageMockGetUnusedBackupCodeHashes {
+	if mmGetUnusedBackupCodeHashes.mock.inspectFuncGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("Inspect function is already set for StorageMock.GetUnusedBackupCodeHashes")
+	}
+
+	mmGetUnusedBackupCodeHashes.mock.inspectFuncGetUnusedBackupCodeHashes = f
+
+	return mmGetUnusedBackupCodeHashes
+}
+
+// Return sets up results that will be returned by Storage.GetUnusedBackupCodeHashes
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Return(ba1 []models.BackupCodeRow, err error) *StorageMock {
+	if mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Set")
+	}
+
+	if mmGetUnusedBackupCodeHashes.defaultExpectation == nil {
+		mmGetUnusedBackupCodeHashes.defaultExpectation = &StorageMockGetUnusedBackupCodeHashesExpectation{mock: mmGetUnusedBackupCodeHashes.mock}
+	}
+	mmGetUnusedBackupCodeHashes.defaultExpectation.results = &StorageMockGetUnusedBackupCodeHashesResults{ba1, err}
+	mmGetUnusedBackupCodeHashes.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmGetUnusedBackupCodeHashes.mock
+}
+
+// Set uses given function f to mock the Storage.GetUnusedBackupCodeHashes method
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Set(f func(ctx context.Context, userID string) (ba1 []models.BackupCodeRow, err error)) *StorageMock {
+	if mmGetUnusedBackupCodeHashes.defaultExpectation != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("Default expectation is already set for the Storage.GetUnusedBackupCodeHashes method")
+	}
+
+	if len(mmGetUnusedBackupCodeHashes.expectations) > 0 {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("Some expectations are already set for the Storage.GetUnusedBackupCodeHashes method")
+	}
+
+	mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes = f
+	mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashesOrigin = minimock.CallerInfo(1)
+	return mmGetUnusedBackupCodeHashes.mock
+}
+
+// When sets expectation for the Storage.GetUnusedBackupCodeHashes which will trigger the result defined by the following
+// Then helper
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) When(ctx context.Context, userID string) *StorageMockGetUnusedBackupCodeHashesExpectation {
+	if mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Set")
+	}
+
+	expectation := &StorageMockGetUnusedBackupCodeHashesExpectation{
+		mock:               mmGetUnusedBackupCodeHashes.mock,
+		params:             &StorageMockGetUnusedBackupCodeHashesParams{ctx, userID},
+		expectationOrigins: StorageMockGetUnusedBackupCodeHashesExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmGetUnusedBackupCodeHashes.expectations = append(mmGetUnusedBackupCodeHashes.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Storage.GetUnusedBackupCodeHashes return parameters for the expectation previously defined by the When method
+func (e *StorageMockGetUnusedBackupCodeHashesExpectation) Then(ba1 []models.BackupCodeRow, err error) *StorageMock {
+	e.results = &StorageMockGetUnusedBackupCodeHashesResults{ba1, err}
+	return e.mock
+}
+
+// Times sets number of times Storage.GetUnusedBackupCodeHashes should be invoked
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Times(n uint64) *mStorageMockGetUnusedBackupCodeHashes {
+	if n == 0 {
+		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("Times of StorageMock.GetUnusedBackupCodeHashes mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmGetUnusedBackupCodeHashes.expectedInvocations, n)
+	mmGetUnusedBackupCodeHashes.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmGetUnusedBackupCodeHashes
+}
+
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) invocationsDone() bool {
+	if len(mmGetUnusedBackupCodeHashes.expectations) == 0 && mmGetUnusedBackupCodeHashes.defaultExpectation == nil && mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmGetUnusedBackupCodeHashes.mock.afterGetUnusedBackupCodeHashesCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmGetUnusedBackupCodeHashes.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// GetUnusedBackupCodeHashes implements mm_twofaService.Storage
+func (mmGetUnusedBackupCodeHashes *StorageMock) GetUnusedBackupCodeHashes(ctx context.Context, userID string) (ba1 []models.BackupCodeRow, err error) {
+	mm_atomic.AddUint64(&mmGetUnusedBackupCodeHashes.beforeGetUnusedBackupCodeHashesCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetUnusedBackupCodeHashes.afterGetUnusedBackupCodeHashesCounter, 1)
+
+	mmGetUnusedBackupCodeHashes.t.Helper()
+
+	if mmGetUnusedBackupCodeHashes.inspectFuncGetUnusedBackupCodeHashes != nil {
+		mmGetUnusedBackupCodeHashes.inspectFuncGetUnusedBackupCodeHashes(ctx, userID)
+	}
+
+	mm_params := StorageMockGetUnusedBackupCodeHashesParams{ctx, userID}
+
+	// Record call args
+	mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.mutex.Lock()
+	mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.callArgs = append(mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.callArgs, &mm_params)
+	mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.mutex.Unlock()
+
+	for _, e := range mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.ba1, e.results.err
+		}
+	}
+
+	if mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.Counter, 1)
+		mm_want := mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.params
+		mm_want_ptrs := mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.paramPtrs
+
+		mm_got := StorageMockGetUnusedBackupCodeHashesParams{ctx, userID}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmGetUnusedBackupCodeHashes.t.Errorf("StorageMock.GetUnusedBackupCodeHashes got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
+				mmGetUnusedBackupCodeHashes.t.Errorf("StorageMock.GetUnusedBackupCodeHashes got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.expectationOrigins.originUserID, *mm_want_ptrs.userID, mm_got.userID, minimock.Diff(*mm_want_ptrs.userID, mm_got.userID))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetUnusedBackupCodeHashes.t.Errorf("StorageMock.GetUnusedBackupCodeHashes got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmGetUnusedBackupCodeHashes.GetUnusedBackupCodeHashesMock.defaultExpectation.results
+		if mm_results == nil {
+			mmGetUnusedBackupCodeHashes.t.Fatal("No results are set for the StorageMock.GetUnusedBackupCodeHashes")
+		}
+		return (*mm_results).ba1, (*mm_results).err
+	}
+	if mmGetUnusedBackupCodeHashes.funcGetUnusedBackupCodeHashes != nil {
+		return mmGetUnusedBackupCodeHashes.funcGetUnusedBackupCodeHashes(ctx, userID)
+	}
+	mmGetUnusedBackupCodeHashes.t.Fatalf("Unexpected call to StorageMock.GetUnusedBackupCodeHashes. %v %v", ctx, userID)
+	return
+}
+
+// GetUnusedBackupCodeHashesAfterCounter returns a count of finished StorageMock.GetUnusedBackupCodeHashes invocations
+func (mmGetUnusedBackupCodeHashes *StorageMock) GetUnusedBackupCodeHashesAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetUnusedBackupCodeHashes.afterGetUnusedBackupCodeHashesCounter)
+}
+
+// GetUnusedBackupCodeHashesBeforeCounter returns a count of StorageMock.GetUnusedBackupCodeHashes invocations
+func (mmGetUnusedBackupCodeHashes *StorageMock) GetUnusedBackupCodeHashesBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetUnusedBackupCodeHashes.beforeGetUnusedBackupCodeHashesCounter)
+}
+
+// Calls returns a list of arguments used in each call to StorageMock.GetUnusedBackupCodeHashes.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Calls() []*StorageMockGetUnusedBackupCodeHashesParams {
+	mmGetUnusedBackupCodeHashes.mutex.RLock()
+
+	argCopy := make([]*StorageMockGetUnusedBackupCodeHashesParams, len(mmGetUnusedBackupCodeHashes.callArgs))
+	copy(argCopy, mmGetUnusedBackupCodeHashes.callArgs)
+
+	mmGetUnusedBackupCodeHashes.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockGetUnusedBackupCodeHashesDone returns true if the count of the GetUnusedBackupCodeHashes invocations corresponds
+// the number of defined expectations
+func (m *StorageMock) MinimockGetUnusedBackupCodeHashesDone() bool {
+	if m.GetUnusedBackupCodeHashesMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.GetUnusedBackupCodeHashesMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.GetUnusedBackupCodeHashesMock.invocationsDone()
+}
+
+// MinimockGetUnusedBackupCodeHashesInspect logs each unmet expectation
+func (m *StorageMock) MinimockGetUnusedBackupCodeHashesInspect() {
+	for _, e := range m.GetUnusedBackupCodeHashesMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to StorageMock.GetUnusedBackupCodeHashes at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterGetUnusedBackupCodeHashesCounter := mm_atomic.LoadUint64(&m.afterGetUnusedBackupCodeHashesCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetUnusedBackupCodeHashesMock.defaultExpectation != nil && afterGetUnusedBackupCodeHashesCounter < 1 {
+		if m.GetUnusedBackupCodeHashesMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to StorageMock.GetUnusedBackupCodeHashes at\n%s", m.GetUnusedBackupCodeHashesMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to StorageMock.GetUnusedBackupCodeHashes at\n%s with params: %#v", m.GetUnusedBackupCodeHashesMock.defaultExpectation.expectationOrigins.origin, *m.GetUnusedBackupCodeHashesMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetUnusedBackupCodeHashes != nil && afterGetUnusedBackupCodeHashesCounter < 1 {
+		m.t.Errorf("Expected call to StorageMock.GetUnusedBackupCodeHashes at\n%s", m.funcGetUnusedBackupCodeHashesOrigin)
+	}
+
+	if !m.GetUnusedBackupCodeHashesMock.invocationsDone() && afterGetUnusedBackupCodeHashesCounter > 0 {
+		m.t.Errorf("Expected %d calls to StorageMock.GetUnusedBackupCodeHashes at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.GetUnusedBackupCodeHashesMock.expectedInvocations), m.GetUnusedBackupCodeHashesMock.expectedInvocationsOrigin, afterGetUnusedBackupCodeHashesCounter)
+	}
+}
+
+type mStorageMockMarkBackupCodeUsed struct {
+	optional           bool
+	mock               *StorageMock
+	defaultExpectation *StorageMockMarkBackupCodeUsedExpectation
+	expectations       []*StorageMockMarkBackupCodeUsedExpectation
+
+	callArgs []*StorageMockMarkBackupCodeUsedParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// StorageMockMarkBackupCodeUsedExpectation specifies expectation struct of the Storage.MarkBackupCodeUsed
+type StorageMockMarkBackupCodeUsedExpectation struct {
+	mock               *StorageMock
+	params             *StorageMockMarkBackupCodeUsedParams
+	paramPtrs          *StorageMockMarkBackupCodeUsedParamPtrs
+	expectationOrigins StorageMockMarkBackupCodeUsedExpectationOrigins
+	results            *StorageMockMarkBackupCodeUsedResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// StorageMockMarkBackupCodeUsedParams contains parameters of the Storage.MarkBackupCodeUsed
+type StorageMockMarkBackupCodeUsedParams struct {
+	ctx    context.Context
+	codeID string
+}
+
+// StorageMockMarkBackupCodeUsedParamPtrs contains pointers to parameters of the Storage.MarkBackupCodeUsed
+type StorageMockMarkBackupCodeUsedParamPtrs struct {
+	ctx    *context.Context
+	codeID *string
+}
+
+// StorageMockMarkBackupCodeUsedResults contains results of the Storage.MarkBackupCodeUsed
+type StorageMockMarkBackupCodeUsedResults struct {
+	err error
+}
+
+// StorageMockMarkBackupCodeUsedOrigins contains origins of expectations of the Storage.MarkBackupCodeUsed
+type StorageMockMarkBackupCodeUsedExpectationOrigins struct {
+	origin       string
+	originCtx    string
+	originCodeID string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Optional() *mStorageMockMarkBackupCodeUsed {
+	mmMarkBackupCodeUsed.optional = true
+	return mmMarkBackupCodeUsed
+}
+
+// Expect sets up expected params for Storage.MarkBackupCodeUsed
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Expect(ctx context.Context, codeID string) *mStorageMockMarkBackupCodeUsed {
+	if mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Set")
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation == nil {
+		mmMarkBackupCodeUsed.defaultExpectation = &StorageMockMarkBackupCodeUsedExpectation{}
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation.paramPtrs != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by ExpectParams functions")
+	}
+
+	mmMarkBackupCodeUsed.defaultExpectation.params = &StorageMockMarkBackupCodeUsedParams{ctx, codeID}
+	mmMarkBackupCodeUsed.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmMarkBackupCodeUsed.expectations {
+		if minimock.Equal(e.params, mmMarkBackupCodeUsed.defaultExpectation.params) {
+			mmMarkBackupCodeUsed.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmMarkBackupCodeUsed.defaultExpectation.params)
+		}
+	}
+
+	return mmMarkBackupCodeUsed
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Storage.MarkBackupCodeUsed
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) ExpectCtxParam1(ctx context.Context) *mStorageMockMarkBackupCodeUsed {
+	if mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Set")
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation == nil {
+		mmMarkBackupCodeUsed.defaultExpectation = &StorageMockMarkBackupCodeUsedExpectation{}
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation.params != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Expect")
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation.paramPtrs == nil {
+		mmMarkBackupCodeUsed.defaultExpectation.paramPtrs = &StorageMockMarkBackupCodeUsedParamPtrs{}
+	}
+	mmMarkBackupCodeUsed.defaultExpectation.paramPtrs.ctx = &ctx
+	mmMarkBackupCodeUsed.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmMarkBackupCodeUsed
+}
+
+// ExpectCodeIDParam2 sets up expected param codeID for Storage.MarkBackupCodeUsed
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) ExpectCodeIDParam2(codeID string) *mStorageMockMarkBackupCodeUsed {
+	if mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Set")
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation == nil {
+		mmMarkBackupCodeUsed.defaultExpectation = &StorageMockMarkBackupCodeUsedExpectation{}
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation.params != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Expect")
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation.paramPtrs == nil {
+		mmMarkBackupCodeUsed.defaultExpectation.paramPtrs = &StorageMockMarkBackupCodeUsedParamPtrs{}
+	}
+	mmMarkBackupCodeUsed.defaultExpectation.paramPtrs.codeID = &codeID
+	mmMarkBackupCodeUsed.defaultExpectation.expectationOrigins.originCodeID = minimock.CallerInfo(1)
+
+	return mmMarkBackupCodeUsed
+}
+
+// Inspect accepts an inspector function that has same arguments as the Storage.MarkBackupCodeUsed
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Inspect(f func(ctx context.Context, codeID string)) *mStorageMockMarkBackupCodeUsed {
+	if mmMarkBackupCodeUsed.mock.inspectFuncMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("Inspect function is already set for StorageMock.MarkBackupCodeUsed")
+	}
+
+	mmMarkBackupCodeUsed.mock.inspectFuncMarkBackupCodeUsed = f
+
+	return mmMarkBackupCodeUsed
+}
+
+// Return sets up results that will be returned by Storage.MarkBackupCodeUsed
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Return(err error) *StorageMock {
+	if mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Set")
+	}
+
+	if mmMarkBackupCodeUsed.defaultExpectation == nil {
+		mmMarkBackupCodeUsed.defaultExpectation = &StorageMockMarkBackupCodeUsedExpectation{mock: mmMarkBackupCodeUsed.mock}
+	}
+	mmMarkBackupCodeUsed.defaultExpectation.results = &StorageMockMarkBackupCodeUsedResults{err}
+	mmMarkBackupCodeUsed.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmMarkBackupCodeUsed.mock
+}
+
+// Set uses given function f to mock the Storage.MarkBackupCodeUsed method
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Set(f func(ctx context.Context, codeID string) (err error)) *StorageMock {
+	if mmMarkBackupCodeUsed.defaultExpectation != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("Default expectation is already set for the Storage.MarkBackupCodeUsed method")
+	}
+
+	if len(mmMarkBackupCodeUsed.expectations) > 0 {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("Some expectations are already set for the Storage.MarkBackupCodeUsed method")
+	}
+
+	mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed = f
+	mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsedOrigin = minimock.CallerInfo(1)
+	return mmMarkBackupCodeUsed.mock
+}
+
+// When sets expectation for the Storage.MarkBackupCodeUsed which will trigger the result defined by the following
+// Then helper
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) When(ctx context.Context, codeID string) *StorageMockMarkBackupCodeUsedExpectation {
+	if mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("StorageMock.MarkBackupCodeUsed mock is already set by Set")
+	}
+
+	expectation := &StorageMockMarkBackupCodeUsedExpectation{
+		mock:               mmMarkBackupCodeUsed.mock,
+		params:             &StorageMockMarkBackupCodeUsedParams{ctx, codeID},
+		expectationOrigins: StorageMockMarkBackupCodeUsedExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmMarkBackupCodeUsed.expectations = append(mmMarkBackupCodeUsed.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Storage.MarkBackupCodeUsed return parameters for the expectation previously defined by the When method
+func (e *StorageMockMarkBackupCodeUsedExpectation) Then(err error) *StorageMock {
+	e.results = &StorageMockMarkBackupCodeUsedResults{err}
+	return e.mock
+}
+
+// Times sets number of times Storage.MarkBackupCodeUsed should be invoked
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Times(n uint64) *mStorageMockMarkBackupCodeUsed {
+	if n == 0 {
+		mmMarkBackupCodeUsed.mock.t.Fatalf("Times of StorageMock.MarkBackupCodeUsed mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmMarkBackupCodeUsed.expectedInvocations, n)
+	mmMarkBackupCodeUsed.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmMarkBackupCodeUsed
+}
+
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) invocationsDone() bool {
+	if len(mmMarkBackupCodeUsed.expectations) == 0 && mmMarkBackupCodeUsed.defaultExpectation == nil && mmMarkBackupCodeUsed.mock.funcMarkBackupCodeUsed == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmMarkBackupCodeUsed.mock.afterMarkBackupCodeUsedCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmMarkBackupCodeUsed.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// MarkBackupCodeUsed implements mm_twofaService.Storage
+func (mmMarkBackupCodeUsed *StorageMock) MarkBackupCodeUsed(ctx context.Context, codeID string) (err error) {
+	mm_atomic.AddUint64(&mmMarkBackupCodeUsed.beforeMarkBackupCodeUsedCounter, 1)
+	defer mm_atomic.AddUint64(&mmMarkBackupCodeUsed.afterMarkBackupCodeUsedCounter, 1)
+
+	mmMarkBackupCodeUsed.t.Helper()
+
+	if mmMarkBackupCodeUsed.inspectFuncMarkBackupCodeUsed != nil {
+		mmMarkBackupCodeUsed.inspectFuncMarkBackupCodeUsed(ctx, codeID)
+	}
+
+	mm_params := StorageMockMarkBackupCodeUsedParams{ctx, codeID}
+
+	// Record call args
+	mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.mutex.Lock()
+	mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.callArgs = append(mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.callArgs, &mm_params)
+	mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.mutex.Unlock()
+
+	for _, e := range mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.Counter, 1)
+		mm_want := mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.params
+		mm_want_ptrs := mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.paramPtrs
+
+		mm_got := StorageMockMarkBackupCodeUsedParams{ctx, codeID}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmMarkBackupCodeUsed.t.Errorf("StorageMock.MarkBackupCodeUsed got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.codeID != nil && !minimock.Equal(*mm_want_ptrs.codeID, mm_got.codeID) {
+				mmMarkBackupCodeUsed.t.Errorf("StorageMock.MarkBackupCodeUsed got unexpected parameter codeID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.expectationOrigins.originCodeID, *mm_want_ptrs.codeID, mm_got.codeID, minimock.Diff(*mm_want_ptrs.codeID, mm_got.codeID))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmMarkBackupCodeUsed.t.Errorf("StorageMock.MarkBackupCodeUsed got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmMarkBackupCodeUsed.MarkBackupCodeUsedMock.defaultExpectation.results
+		if mm_results == nil {
+			mmMarkBackupCodeUsed.t.Fatal("No results are set for the StorageMock.MarkBackupCodeUsed")
+		}
+		return (*mm_results).err
+	}
+	if mmMarkBackupCodeUsed.funcMarkBackupCodeUsed != nil {
+		return mmMarkBackupCodeUsed.funcMarkBackupCodeUsed(ctx, codeID)
+	}
+	mmMarkBackupCodeUsed.t.Fatalf("Unexpected call to StorageMock.MarkBackupCodeUsed. %v %v", ctx, codeID)
+	return
+}
+
+// MarkBackupCodeUsedAfterCounter returns a count of finished StorageMock.MarkBackupCodeUsed invocations
+func (mmMarkBackupCodeUsed *StorageMock) MarkBackupCodeUsedAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmMarkBackupCodeUsed.afterMarkBackupCodeUsedCounter)
+}
+
+// MarkBackupCodeUsedBeforeCounter returns a count of StorageMock.MarkBackupCodeUsed invocations
+func (mmMarkBackupCodeUsed *StorageMock) MarkBackupCodeUsedBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmMarkBackupCodeUsed.beforeMarkBackupCodeUsedCounter)
+}
+
+// Calls returns a list of arguments used in each call to StorageMock.MarkBackupCodeUsed.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmMarkBackupCodeUsed *mStorageMockMarkBackupCodeUsed) Calls() []*StorageMockMarkBackupCodeUsedParams {
+	mmMarkBackupCodeUsed.mutex.RLock()
+
+	argCopy := make([]*StorageMockMarkBackupCodeUsedParams, len(mmMarkBackupCodeUsed.callArgs))
+	copy(argCopy, mmMarkBackupCodeUsed.callArgs)
+
+	mmMarkBackupCodeUsed.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockMarkBackupCodeUsedDone returns true if the count of the MarkBackupCodeUsed invocations corresponds
+// the number of defined expectations
+func (m *StorageMock) MinimockMarkBackupCodeUsedDone() bool {
+	if m.MarkBackupCodeUsedMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.MarkBackupCodeUsedMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.MarkBackupCodeUsedMock.invocationsDone()
+}
+
+// MinimockMarkBackupCodeUsedInspect logs each unmet expectation
+func (m *StorageMock) MinimockMarkBackupCodeUsedInspect() {
+	for _, e := range m.MarkBackupCodeUsedMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to StorageMock.MarkBackupCodeUsed at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterMarkBackupCodeUsedCounter := mm_atomic.LoadUint64(&m.afterMarkBackupCodeUsedCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.MarkBackupCodeUsedMock.defaultExpectation != nil && afterMarkBackupCodeUsedCounter < 1 {
+		if m.MarkBackupCodeUsedMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to StorageMock.MarkBackupCodeUsed at\n%s", m.MarkBackupCodeUsedMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to StorageMock.MarkBackupCodeUsed at\n%s with params: %#v", m.MarkBackupCodeUsedMock.defaultExpectation.expectationOrigins.origin, *m.MarkBackupCodeUsedMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcMarkBackupCodeUsed != nil && afterMarkBackupCodeUsedCounter < 1 {
+		m.t.Errorf("Expected call to StorageMock.MarkBackupCodeUsed at\n%s", m.funcMarkBackupCodeUsedOrigin)
+	}
+
+	if !m.MarkBackupCodeUsedMock.invocationsDone() && afterMarkBackupCodeUsedCounter > 0 {
+		m.t.Errorf("Expected %d calls to StorageMock.MarkBackupCodeUsed at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.MarkBackupCodeUsedMock.expectedInvocations), m.MarkBackupCodeUsedMock.expectedInvocationsOrigin, afterMarkBackupCodeUsedCounter)
+	}
+}
+
 type mStorageMockStoreBatchBackupCodes struct {
 	optional           bool
 	mock               *StorageMock
@@ -2191,6 +2896,10 @@ func (m *StorageMock) MinimockFinish() {
 
 			m.MinimockGetTwoFARecordInspect()
 
+			m.MinimockGetUnusedBackupCodeHashesInspect()
+
+			m.MinimockMarkBackupCodeUsedInspect()
+
 			m.MinimockStoreBatchBackupCodesInspect()
 		}
 	})
@@ -2220,5 +2929,7 @@ func (m *StorageMock) minimockDone() bool {
 		m.MinimockDeleteTwoFARecordDone() &&
 		m.MinimockEnableTwoFADone() &&
 		m.MinimockGetTwoFARecordDone() &&
+		m.MinimockGetUnusedBackupCodeHashesDone() &&
+		m.MinimockMarkBackupCodeUsedDone() &&
 		m.MinimockStoreBatchBackupCodesDone()
 }
