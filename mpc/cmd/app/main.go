@@ -88,9 +88,19 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	// 1. Stop gRPC
-	grpcServer.GracefulStop()
-	slog.Info("gRPC server stopped")
+	// 1. Stop gRPC with timeout fallback
+	grpcDone := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(grpcDone)
+	}()
+	select {
+	case <-grpcDone:
+		slog.Info("gRPC server stopped gracefully")
+	case <-shutdownCtx.Done():
+		grpcServer.Stop()
+		slog.Warn("gRPC server force-stopped after timeout")
+	}
 
 	// 2. Flush Kafka (pending audit events)
 	if err := kafkaProducer.Close(); err != nil {

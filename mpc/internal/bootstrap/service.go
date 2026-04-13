@@ -5,12 +5,11 @@ import (
 
 	"github.com/vbncursed/vkr/mpc/config"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
-	"github.com/vbncursed/vkr/mpc/internal/storage/pgstorage"
 )
 
 // NewMPCService creates a new MPC business logic service.
 // Returns error if encryption key is not exactly 32 bytes.
-func NewMPCService(storage *pgstorage.PGStorage, cfg *config.Config, eventProducer mpcService.EventProducer) (*mpcService.MPCService, error) {
+func NewMPCService(storage mpcService.Storage, cfg *config.Config, eventProducer mpcService.EventProducer) (*mpcService.MPCService, error) {
 	key := []byte(cfg.Node.EncryptionKey)
 	if len(key) != 32 {
 		return nil, fmt.Errorf("encryption key must be exactly 32 bytes, got %d", len(key))
