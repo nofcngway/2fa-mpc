@@ -2,6 +2,7 @@
 .obsidian/
 .claude/
 workspace/
+bin/
 
 # OS
 .DS_Store
