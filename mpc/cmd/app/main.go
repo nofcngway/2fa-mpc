@@ -26,18 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// slog JSON handler with configurable log level
-	logLevel := slog.LevelInfo
-	switch cfg.Server.LogLevel {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
-	}
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
-	slog.SetDefault(logger)
+	slog.SetDefault(bootstrap.NewLogger(cfg))
 
 	slog.Info("MPC Node starting", "node_id", cfg.Node.ID, "port", cfg.Server.Port)
 
