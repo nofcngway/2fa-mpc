@@ -1,0 +1,14 @@
+.planning/
+.obsidian/
+.claude/
+workspace/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Temp
+TZ.md
