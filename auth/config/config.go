@@ -2,7 +2,10 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v4"
@@ -77,20 +80,67 @@ func (c *Config) Validate() error {
 	return errors.Join(errs...)
 }
 
+func envString(key string, target *string) {
+	if v := os.Getenv(key); v != "" {
+		*target = v
+	}
+}
+
+func envInt(key string, target *int) {
+	if v := os.Getenv(key); v != "" {
+		if i, err := strconv.Atoi(v); err == nil {
+			*target = i
+		}
+	}
+}
+
+func envDuration(key string, target *time.Duration) {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			*target = d
+		}
+	}
+}
+
+func envStringSlice(key string, target *[]string) {
+	if v := os.Getenv(key); v != "" {
+		*target = strings.Split(v, ",")
+	}
+}
+
+func applyEnvOverrides(cfg *Config) {
+	envInt("AUTH_SERVER_PORT", &cfg.Server.Port)
+	envInt("AUTH_SERVER_METRICS_PORT", &cfg.Server.MetricsPort)
+	envString("AUTH_SERVER_LOG_LEVEL", &cfg.Server.LogLevel)
+	envString("AUTH_DATABASE_DSN", &cfg.Database.DSN)
+	envString("AUTH_REDIS_ADDR", &cfg.Redis.Addr)
+	envString("AUTH_REDIS_PASSWORD", &cfg.Redis.Password)
+	envInt("AUTH_REDIS_DB", &cfg.Redis.DB)
+	envStringSlice("AUTH_KAFKA_BROKERS", &cfg.Kafka.Brokers)
+	envString("AUTH_KAFKA_TOPIC", &cfg.Kafka.Topic)
+	envString("AUTH_JWT_PRIVATE_KEY_PATH", &cfg.JWT.PrivateKeyPath)
+	envString("AUTH_JWT_PUBLIC_KEY_PATH", &cfg.JWT.PublicKeyPath)
+	envDuration("AUTH_JWT_ACCESS_TOKEN_TTL", &cfg.JWT.AccessTokenTTL)
+	envDuration("AUTH_JWT_REFRESH_TOKEN_TTL", &cfg.JWT.RefreshTokenTTL)
+}
+
 // Load reads and parses the config file at the given path.
+// If the file does not exist, configuration is loaded entirely from environment variables.
+// Environment variables always override yaml values (AUTH_* prefix).
 func Load(path string) (*Config, error) {
+	var cfg Config
+
 	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		if err := yaml.Load(data, &cfg); err != nil {
+			return nil, fmt.Errorf("parse config file: %w", err)
+		}
 	}
 
-	var cfg Config
-	if err := yaml.Load(data, &cfg); err != nil {
-		return nil, err
-	}
+	applyEnvOverrides(&cfg)
 
 	if err := cfg.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config validation: %w", err)
 	}
 
 	return &cfg, nil
