@@ -1,0 +1,9 @@
+auth/
+gateway/
+migration/
+monitoring/
+workspace/
+.obsidian/
+.planning/
+.git/
+*.md
