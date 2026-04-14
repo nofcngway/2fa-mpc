@@ -29,5 +29,17 @@ services:
     ports:
       - "9093:9092"
 
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    depends_on:
+      twofa-kafka:
+        condition: service_started
+    environment:
+      KAFKA_CLUSTERS_0_NAME: twofa
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: twofa-kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "8090:8080"
+
 volumes:
   twofa-pg-data:

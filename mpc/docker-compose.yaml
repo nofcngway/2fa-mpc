@@ -23,5 +23,17 @@ services:
     ports:
       - "9094:9092"
 
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    depends_on:
+      mpc-kafka:
+        condition: service_started
+    environment:
+      KAFKA_CLUSTERS_0_NAME: mpc
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: mpc-kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "8090:8080"
+
 volumes:
   mpc-pg-data:
