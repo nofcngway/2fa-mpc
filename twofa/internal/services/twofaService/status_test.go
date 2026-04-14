@@ -9,7 +9,7 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
 )
@@ -49,7 +49,7 @@ func TestGetStatus_Found(t *testing.T) {
 	sessionStorage.DeleteKeysMock.Optional()
 
 	createdAt := time.Date(2026, 4, 12, 10, 0, 0, 0, time.UTC)
-	expected := &models.TwoFARecord{
+	expected := &domain.TwoFARecord{
 		UserID:    "test-user",
 		IsEnabled: true,
 		CreatedAt: createdAt,

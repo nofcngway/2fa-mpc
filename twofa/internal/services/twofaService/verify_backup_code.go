@@ -2,15 +2,13 @@ package twofaService
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"golang.org/x/crypto/bcrypt"
-)
 
-// ErrInvalidBackupCode indicates that the backup code didn't match any unused code.
-var ErrInvalidBackupCode = errors.New("2fa: invalid backup code")
+	"github.com/vbncursed/vkr/twofa/internal/domain"
+)
 
 // VerifyBackupCode validates a plaintext backup code against stored bcrypt hashes.
 // On match, the code is marked as used (one-time use). Rate limiting applies.
@@ -36,5 +34,5 @@ func (s *TwoFAService) VerifyBackupCode(ctx context.Context, userID, code string
 		}
 	}
 
-	return ErrInvalidBackupCode
+	return domain.ErrInvalidBackupCode
 }

@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
-	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,13 +28,13 @@ func (api *TwoFAServiceAPI) Verify2FA(ctx context.Context, req *pb.Verify2FARequ
 	valid, isNewlyEnabled, err := api.service.Verify(ctx, req.GetUserId(), req.GetOtpCode())
 	if err != nil {
 		switch {
-		case errors.Is(err, twofaService.ErrRateLimitExceeded):
+		case errors.Is(err, domain.ErrRateLimitExceeded):
 			return nil, status.Error(codes.ResourceExhausted, "too many verification attempts")
-		case errors.Is(err, twofaService.ErrOTPReused):
+		case errors.Is(err, domain.ErrOTPReused):
 			return nil, status.Error(codes.InvalidArgument, "OTP code already used")
-		case errors.Is(err, twofaService.ErrInvalidBackupCode):
+		case errors.Is(err, domain.ErrInvalidBackupCode):
 			return nil, status.Error(codes.InvalidArgument, "invalid backup code")
-		case errors.Is(err, twofaService.ErrNotSetUp):
+		case errors.Is(err, domain.ErrNotSetUp):
 			return nil, status.Error(codes.FailedPrecondition, "2FA not set up")
 		default:
 			slog.Error("verify 2fa failed", "user_id", req.GetUserId(), "error", err)

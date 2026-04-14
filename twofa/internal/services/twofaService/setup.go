@@ -2,7 +2,6 @@ package twofaService
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,14 +10,12 @@ import (
 	"github.com/vbncursed/vkr/twofa/internal/crypto"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/totp"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
 
 // GenerateSecretFunc is the function used to generate TOTP secrets.
 // Exported to allow test injection for zeroization verification.
 var GenerateSecretFunc = totp.GenerateSecret
-
-// ErrAlreadyEnabled is returned when 2FA is already active for the user.
-var ErrAlreadyEnabled = errors.New("2fa: already enabled for this user")
 
 // Setup orchestrates 2FA enrollment for a user (per 2FA-01, 2FA-02, 2FA-08, SEC-04).
 //
@@ -40,7 +37,7 @@ func (s *TwoFAService) Setup(ctx context.Context, userID, email string) (string,
 		return "", nil, fmt.Errorf("check existing 2fa: %w", err)
 	}
 	if existing != nil && existing.IsEnabled {
-		return "", nil, ErrAlreadyEnabled
+		return "", nil, domain.ErrAlreadyEnabled
 	}
 
 	// 2. Generate TOTP secret (SEC-04: defer zeroize immediately, D-08)

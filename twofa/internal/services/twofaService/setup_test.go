@@ -14,7 +14,7 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
 )
@@ -85,13 +85,13 @@ func TestSetup_DuplicateEnabled(t *testing.T) {
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(
-		&models.TwoFARecord{UserID: "test-user-id", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user-id", IsEnabled: true}, nil,
 	)
 
 	_, _, err := s.service.Setup(t.Context(), "test-user-id", "user@example.com")
 
 	assert.Assert(t, err != nil)
-	assert.Assert(t, errors.Is(err, twofaService.ErrAlreadyEnabled),
+	assert.Assert(t, errors.Is(err, domain.ErrAlreadyEnabled),
 		"expected ErrAlreadyEnabled, got: %v", err)
 }
 
@@ -99,7 +99,7 @@ func TestSetup_DuplicateDisabled(t *testing.T) {
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(
-		&models.TwoFARecord{UserID: "test-user-id", IsEnabled: false}, nil,
+		&domain.TwoFARecord{UserID: "test-user-id", IsEnabled: false}, nil,
 	)
 	// No CreateTwoFARecord call expected (record already exists)
 	s.storage.CreateTwoFARecordMock.Optional()

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
 
 //go:generate minimock -i Storage -o ./mocks/ -s _mock.go
@@ -14,12 +14,12 @@ import (
 // Storage defines the interface for TwoFA persistent data access.
 type Storage interface {
 	CreateTwoFARecord(ctx context.Context, userID string) error
-	GetTwoFARecord(ctx context.Context, userID string) (*models.TwoFARecord, error)
+	GetTwoFARecord(ctx context.Context, userID string) (*domain.TwoFARecord, error)
 	StoreBatchBackupCodes(ctx context.Context, userID string, codeHashes []string) error
 	EnableTwoFA(ctx context.Context, userID string) error
 	DeleteTwoFARecord(ctx context.Context, userID string) error
 	DeleteBackupCodes(ctx context.Context, userID string) error
-	GetUnusedBackupCodeHashes(ctx context.Context, userID string) ([]models.BackupCodeRow, error)
+	GetUnusedBackupCodeHashes(ctx context.Context, userID string) ([]domain.BackupCodeRow, error)
 	MarkBackupCodeUsed(ctx context.Context, codeID string) error
 }
 

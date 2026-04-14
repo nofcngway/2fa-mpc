@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
-	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,7 +28,7 @@ func (api *TwoFAServiceAPI) Setup2FA(ctx context.Context, req *pb.Setup2FAReques
 
 	uri, backupCodes, err := api.service.Setup(ctx, req.UserId, req.Email)
 	if err != nil {
-		if errors.Is(err, twofaService.ErrAlreadyEnabled) {
+		if errors.Is(err, domain.ErrAlreadyEnabled) {
 			return nil, status.Error(codes.AlreadyExists, "2FA already enabled")
 		}
 		return nil, status.Error(codes.Internal, "internal error")

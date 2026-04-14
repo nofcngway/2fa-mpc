@@ -10,7 +10,7 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
 )
@@ -65,7 +65,7 @@ func TestVerifyBackupCode_Success(t *testing.T) {
 	svc, storage, _ := newBackupCodeService(t)
 
 	code := "1234-5678"
-	storage.GetUnusedBackupCodeHashesMock.Return([]models.BackupCodeRow{
+	storage.GetUnusedBackupCodeHashesMock.Return([]domain.BackupCodeRow{
 		{ID: "code-1", CodeHash: hashCode(t, "0000-0000")},
 		{ID: "code-2", CodeHash: hashCode(t, code)},
 		{ID: "code-3", CodeHash: hashCode(t, "9999-9999")},
@@ -79,13 +79,13 @@ func TestVerifyBackupCode_Success(t *testing.T) {
 func TestVerifyBackupCode_InvalidCode(t *testing.T) {
 	svc, storage, _ := newBackupCodeService(t)
 
-	storage.GetUnusedBackupCodeHashesMock.Return([]models.BackupCodeRow{
+	storage.GetUnusedBackupCodeHashesMock.Return([]domain.BackupCodeRow{
 		{ID: "code-1", CodeHash: hashCode(t, "1111-1111")},
 	}, nil)
 	storage.MarkBackupCodeUsedMock.Optional()
 
 	err := svc.VerifyBackupCode(t.Context(), "user-1", "9999-0000")
-	assert.Assert(t, errors.Is(err, twofaService.ErrInvalidBackupCode))
+	assert.Assert(t, errors.Is(err, domain.ErrInvalidBackupCode))
 }
 
 func TestVerifyBackupCode_NoCodes(t *testing.T) {
@@ -95,7 +95,7 @@ func TestVerifyBackupCode_NoCodes(t *testing.T) {
 	storage.MarkBackupCodeUsedMock.Optional()
 
 	err := svc.VerifyBackupCode(t.Context(), "user-1", "1234-5678")
-	assert.Assert(t, errors.Is(err, twofaService.ErrInvalidBackupCode))
+	assert.Assert(t, errors.Is(err, domain.ErrInvalidBackupCode))
 }
 
 func TestVerifyBackupCode_StorageError(t *testing.T) {
@@ -106,7 +106,7 @@ func TestVerifyBackupCode_StorageError(t *testing.T) {
 
 	err := svc.VerifyBackupCode(t.Context(), "user-1", "1234-5678")
 	assert.Assert(t, err != nil)
-	assert.Assert(t, !errors.Is(err, twofaService.ErrInvalidBackupCode))
+	assert.Assert(t, !errors.Is(err, domain.ErrInvalidBackupCode))
 }
 
 func TestVerify_BackupCodeIntegration(t *testing.T) {
@@ -115,11 +115,11 @@ func TestVerify_BackupCodeIntegration(t *testing.T) {
 	code := "5555-6666"
 
 	storage.GetTwoFARecordMock.Return(
-		&models.TwoFARecord{UserID: "user-1", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "user-1", IsEnabled: true}, nil,
 	)
 	sessionStorage.IncrementRateLimitMock.Return(1, nil)
 
-	storage.GetUnusedBackupCodeHashesMock.Return([]models.BackupCodeRow{
+	storage.GetUnusedBackupCodeHashesMock.Return([]domain.BackupCodeRow{
 		{ID: "bc-1", CodeHash: hashCode(t, code)},
 	}, nil)
 	storage.MarkBackupCodeUsedMock.Expect(minimock.AnyContext, "bc-1").Return(nil)

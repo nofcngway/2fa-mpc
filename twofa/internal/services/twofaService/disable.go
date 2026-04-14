@@ -9,13 +9,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/vbncursed/vkr/twofa/internal/crypto"
-	"github.com/vbncursed/vkr/twofa/internal/models"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/totp"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
-
-// ErrNotEnabled is returned when trying to disable 2FA that is not enabled.
-var ErrNotEnabled = errors.New("2fa: not enabled for this user")
 
 // Disable removes 2FA for a user after OTP verification (per D-12).
 // Order: verify OTP -> delete shares (parallel) -> delete backup codes -> delete record -> cleanup Redis.
@@ -26,10 +23,10 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 		return fmt.Errorf("get twofa record: %w", err)
 	}
 	if record == nil {
-		return ErrNotSetUp
+		return domain.ErrNotSetUp
 	}
 	if !record.IsEnabled {
-		return ErrNotEnabled
+		return domain.ErrNotEnabled
 	}
 
 	// 2. Verify OTP (inline, not via s.Verify to avoid side effects like enable-on-first)
@@ -56,11 +53,11 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 
 	// Check OTP reuse (unified pattern with Verify, per D-10, M-13)
 	lastCounter, counterErr := s.sessionStorage.GetUsedOTPCounter(ctx, userID)
-	if counterErr != nil && !errors.Is(counterErr, models.ErrCounterNotFound) {
+	if counterErr != nil && !errors.Is(counterErr, domain.ErrCounterNotFound) {
 		slog.Warn("get used OTP counter failed, proceeding", "user_id", userID, "error", counterErr)
 	}
 	if counterErr == nil && lastCounter == matchedCounter {
-		return ErrOTPReused
+		return domain.ErrOTPReused
 	}
 
 	// Store the used counter to prevent replay

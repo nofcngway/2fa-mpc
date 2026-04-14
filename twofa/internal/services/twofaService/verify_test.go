@@ -12,7 +12,7 @@ import (
 
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/totp"
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
 )
@@ -84,13 +84,13 @@ func TestVerify_Success(t *testing.T) {
 	shamirPkg := shamirSplit(t, testSecret)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 1, nil
 	})
 	vs.setupMPCReturnsShares(shamirPkg)
-	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, models.ErrCounterNotFound)
+	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, domain.ErrCounterNotFound)
 	vs.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
 	})
@@ -121,13 +121,13 @@ func TestVerify_EnablesOnFirst(t *testing.T) {
 	shamirPkg := shamirSplit(t, testSecret)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: false}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: false}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 1, nil
 	})
 	vs.setupMPCReturnsShares(shamirPkg)
-	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, models.ErrCounterNotFound)
+	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, domain.ErrCounterNotFound)
 	vs.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
 	})
@@ -157,7 +157,7 @@ func TestVerify_RateLimit_Exceeded(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 6, nil // Exceeds 5
@@ -179,7 +179,7 @@ func TestVerify_RateLimit_Exceeded(t *testing.T) {
 	_, _, err := vs.service.Verify(t.Context(), "test-user", "123456")
 
 	assert.Assert(t, err != nil)
-	assert.Assert(t, errors.Is(err, twofaService.ErrRateLimitExceeded),
+	assert.Assert(t, errors.Is(err, domain.ErrRateLimitExceeded),
 		"expected ErrRateLimitExceeded, got: %v", err)
 
 	// Verify NO MPC calls were made
@@ -195,7 +195,7 @@ func TestVerify_RateLimit_RedisDown(t *testing.T) {
 	shamirPkg := shamirSplit(t, testSecret)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	// Redis down - IncrementRateLimit returns error
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
@@ -234,7 +234,7 @@ func TestVerify_OTPReuse(t *testing.T) {
 	shamirPkg := shamirSplit(t, testSecret)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 1, nil
@@ -265,7 +265,7 @@ func TestVerify_OTPReuse(t *testing.T) {
 	_, _, err := vs.service.Verify(t.Context(), "test-user", code)
 
 	assert.Assert(t, err != nil)
-	assert.Assert(t, errors.Is(err, twofaService.ErrOTPReused),
+	assert.Assert(t, errors.Is(err, domain.ErrOTPReused),
 		"expected ErrOTPReused, got: %v", err)
 }
 
@@ -275,13 +275,13 @@ func TestVerify_InvalidOTP(t *testing.T) {
 	shamirPkg := shamirSplit(t, testSecret)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 1, nil
 	})
 	vs.setupMPCReturnsShares(shamirPkg)
-	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, models.ErrCounterNotFound)
+	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, domain.ErrCounterNotFound)
 
 	// Make remaining mocks optional
 	vs.storage.EnableTwoFAMock.Optional()
@@ -306,7 +306,7 @@ func TestVerify_InsufficientShares(t *testing.T) {
 	vs := newVerifySuite(t)
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 1, nil
@@ -339,7 +339,7 @@ func TestVerify_InsufficientShares(t *testing.T) {
 	_, _, err := vs.service.Verify(t.Context(), "test-user", "123456")
 
 	assert.Assert(t, err != nil, "expected error with insufficient shares")
-	assert.Assert(t, errors.Is(err, twofaService.ErrInsufficientShares),
+	assert.Assert(t, errors.Is(err, domain.ErrInsufficientShares),
 		"expected ErrInsufficientShares, got: %v", err)
 }
 
@@ -365,7 +365,7 @@ func TestVerify_NoRecord(t *testing.T) {
 	_, _, err := vs.service.Verify(t.Context(), "test-user", "123456")
 
 	assert.Assert(t, err != nil)
-	assert.Assert(t, errors.Is(err, twofaService.ErrNotSetUp),
+	assert.Assert(t, errors.Is(err, domain.ErrNotSetUp),
 		"expected ErrNotSetUp, got: %v", err)
 
 	// No MPC calls should be made
@@ -397,12 +397,12 @@ func TestVerify_Zeroization(t *testing.T) {
 	}
 
 	vs.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 	vs.sessionStorage.IncrementRateLimitMock.Set(func(_ context.Context, _ string, _ time.Duration) (int64, error) {
 		return 1, nil
 	})
-	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, models.ErrCounterNotFound)
+	vs.sessionStorage.GetUsedOTPCounterMock.Expect(minimock.AnyContext, "test-user").Return(0, domain.ErrCounterNotFound)
 	vs.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
 	})

@@ -10,8 +10,9 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
+
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService/mocks"
 )
 
@@ -82,7 +83,7 @@ func TestDisable_Success(t *testing.T) {
 
 	// Record exists and is enabled
 	ds.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 
 	// MPC RetrieveShare returns valid shares
@@ -107,7 +108,7 @@ func TestDisable_Success(t *testing.T) {
 
 	// OTP reuse check: no prior counter stored
 	ds.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
-		return 0, models.ErrCounterNotFound
+		return 0, domain.ErrCounterNotFound
 	})
 	ds.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
@@ -129,7 +130,7 @@ func TestDisable_InvalidOTP(t *testing.T) {
 	shamirPkg := shamirSplit(t, testSecret)
 
 	ds.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 
 	for i := range 3 {
@@ -147,8 +148,8 @@ func TestDisable_InvalidOTP(t *testing.T) {
 
 	err := ds.service.Disable(t.Context(), "test-user", "000000")
 	assert.Assert(t, err != nil, "expected error for invalid OTP")
-	assert.Assert(t, !errors.Is(err, twofaService.ErrNotSetUp))
-	assert.Assert(t, !errors.Is(err, twofaService.ErrNotEnabled))
+	assert.Assert(t, !errors.Is(err, domain.ErrNotSetUp))
+	assert.Assert(t, !errors.Is(err, domain.ErrNotEnabled))
 
 	// Verify NO DeleteShare calls were made
 	for i := range 3 {
@@ -166,7 +167,7 @@ func TestDisable_ShareDeletionFails(t *testing.T) {
 	code := makeValidCode(now)
 
 	ds.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: true}, nil,
 	)
 
 	for i := range 3 {
@@ -178,7 +179,7 @@ func TestDisable_ShareDeletionFails(t *testing.T) {
 
 	// OTP reuse check: no prior counter stored
 	ds.sessionStorage.GetUsedOTPCounterMock.Set(func(_ context.Context, _ string) (int64, error) {
-		return 0, models.ErrCounterNotFound
+		return 0, domain.ErrCounterNotFound
 	})
 	ds.sessionStorage.SetUsedOTPCounterMock.Set(func(_ context.Context, _ string, _ int64, _ time.Duration) error {
 		return nil
@@ -219,7 +220,7 @@ func TestDisable_NotSetUp(t *testing.T) {
 	}
 
 	err := ds.service.Disable(t.Context(), "test-user", "123456")
-	assert.Assert(t, errors.Is(err, twofaService.ErrNotSetUp),
+	assert.Assert(t, errors.Is(err, domain.ErrNotSetUp),
 		"expected ErrNotSetUp, got: %v", err)
 
 	// No MPC calls
@@ -234,7 +235,7 @@ func TestDisable_NotEnabled(t *testing.T) {
 	ds.makeAllMocksOptional()
 
 	ds.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user").Return(
-		&models.TwoFARecord{UserID: "test-user", IsEnabled: false}, nil,
+		&domain.TwoFARecord{UserID: "test-user", IsEnabled: false}, nil,
 	)
 
 	// Make MPC optional
@@ -245,7 +246,7 @@ func TestDisable_NotEnabled(t *testing.T) {
 	}
 
 	err := ds.service.Disable(t.Context(), "test-user", "123456")
-	assert.Assert(t, errors.Is(err, twofaService.ErrNotEnabled),
+	assert.Assert(t, errors.Is(err, domain.ErrNotEnabled),
 		"expected ErrNotEnabled, got: %v", err)
 
 	// No MPC calls

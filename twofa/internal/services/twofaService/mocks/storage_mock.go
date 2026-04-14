@@ -11,7 +11,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
 
 // StorageMock implements mm_twofaService.Storage
@@ -47,14 +47,14 @@ type StorageMock struct {
 	beforeEnableTwoFACounter uint64
 	EnableTwoFAMock          mStorageMockEnableTwoFA
 
-	funcGetTwoFARecord          func(ctx context.Context, userID string) (tp1 *models.TwoFARecord, err error)
+	funcGetTwoFARecord          func(ctx context.Context, userID string) (tp1 *domain.TwoFARecord, err error)
 	funcGetTwoFARecordOrigin    string
 	inspectFuncGetTwoFARecord   func(ctx context.Context, userID string)
 	afterGetTwoFARecordCounter  uint64
 	beforeGetTwoFARecordCounter uint64
 	GetTwoFARecordMock          mStorageMockGetTwoFARecord
 
-	funcGetUnusedBackupCodeHashes          func(ctx context.Context, userID string) (ba1 []models.BackupCodeRow, err error)
+	funcGetUnusedBackupCodeHashes          func(ctx context.Context, userID string) (ba1 []domain.BackupCodeRow, err error)
 	funcGetUnusedBackupCodeHashesOrigin    string
 	inspectFuncGetUnusedBackupCodeHashes   func(ctx context.Context, userID string)
 	afterGetUnusedBackupCodeHashesCounter  uint64
@@ -1519,7 +1519,7 @@ type StorageMockGetTwoFARecordParamPtrs struct {
 
 // StorageMockGetTwoFARecordResults contains results of the Storage.GetTwoFARecord
 type StorageMockGetTwoFARecordResults struct {
-	tp1 *models.TwoFARecord
+	tp1 *domain.TwoFARecord
 	err error
 }
 
@@ -1623,7 +1623,7 @@ func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) Inspect(f func(ctx context.C
 }
 
 // Return sets up results that will be returned by Storage.GetTwoFARecord
-func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) Return(tp1 *models.TwoFARecord, err error) *StorageMock {
+func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) Return(tp1 *domain.TwoFARecord, err error) *StorageMock {
 	if mmGetTwoFARecord.mock.funcGetTwoFARecord != nil {
 		mmGetTwoFARecord.mock.t.Fatalf("StorageMock.GetTwoFARecord mock is already set by Set")
 	}
@@ -1637,7 +1637,7 @@ func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) Return(tp1 *models.TwoFAReco
 }
 
 // Set uses given function f to mock the Storage.GetTwoFARecord method
-func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) Set(f func(ctx context.Context, userID string) (tp1 *models.TwoFARecord, err error)) *StorageMock {
+func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) Set(f func(ctx context.Context, userID string) (tp1 *domain.TwoFARecord, err error)) *StorageMock {
 	if mmGetTwoFARecord.defaultExpectation != nil {
 		mmGetTwoFARecord.mock.t.Fatalf("Default expectation is already set for the Storage.GetTwoFARecord method")
 	}
@@ -1668,7 +1668,7 @@ func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) When(ctx context.Context, us
 }
 
 // Then sets up Storage.GetTwoFARecord return parameters for the expectation previously defined by the When method
-func (e *StorageMockGetTwoFARecordExpectation) Then(tp1 *models.TwoFARecord, err error) *StorageMock {
+func (e *StorageMockGetTwoFARecordExpectation) Then(tp1 *domain.TwoFARecord, err error) *StorageMock {
 	e.results = &StorageMockGetTwoFARecordResults{tp1, err}
 	return e.mock
 }
@@ -1695,7 +1695,7 @@ func (mmGetTwoFARecord *mStorageMockGetTwoFARecord) invocationsDone() bool {
 }
 
 // GetTwoFARecord implements mm_twofaService.Storage
-func (mmGetTwoFARecord *StorageMock) GetTwoFARecord(ctx context.Context, userID string) (tp1 *models.TwoFARecord, err error) {
+func (mmGetTwoFARecord *StorageMock) GetTwoFARecord(ctx context.Context, userID string) (tp1 *domain.TwoFARecord, err error) {
 	mm_atomic.AddUint64(&mmGetTwoFARecord.beforeGetTwoFARecordCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetTwoFARecord.afterGetTwoFARecordCounter, 1)
 
@@ -1862,7 +1862,7 @@ type StorageMockGetUnusedBackupCodeHashesParamPtrs struct {
 
 // StorageMockGetUnusedBackupCodeHashesResults contains results of the Storage.GetUnusedBackupCodeHashes
 type StorageMockGetUnusedBackupCodeHashesResults struct {
-	ba1 []models.BackupCodeRow
+	ba1 []domain.BackupCodeRow
 	err error
 }
 
@@ -1966,7 +1966,7 @@ func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Inspec
 }
 
 // Return sets up results that will be returned by Storage.GetUnusedBackupCodeHashes
-func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Return(ba1 []models.BackupCodeRow, err error) *StorageMock {
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Return(ba1 []domain.BackupCodeRow, err error) *StorageMock {
 	if mmGetUnusedBackupCodeHashes.mock.funcGetUnusedBackupCodeHashes != nil {
 		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("StorageMock.GetUnusedBackupCodeHashes mock is already set by Set")
 	}
@@ -1980,7 +1980,7 @@ func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Return
 }
 
 // Set uses given function f to mock the Storage.GetUnusedBackupCodeHashes method
-func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Set(f func(ctx context.Context, userID string) (ba1 []models.BackupCodeRow, err error)) *StorageMock {
+func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) Set(f func(ctx context.Context, userID string) (ba1 []domain.BackupCodeRow, err error)) *StorageMock {
 	if mmGetUnusedBackupCodeHashes.defaultExpectation != nil {
 		mmGetUnusedBackupCodeHashes.mock.t.Fatalf("Default expectation is already set for the Storage.GetUnusedBackupCodeHashes method")
 	}
@@ -2011,7 +2011,7 @@ func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) When(c
 }
 
 // Then sets up Storage.GetUnusedBackupCodeHashes return parameters for the expectation previously defined by the When method
-func (e *StorageMockGetUnusedBackupCodeHashesExpectation) Then(ba1 []models.BackupCodeRow, err error) *StorageMock {
+func (e *StorageMockGetUnusedBackupCodeHashesExpectation) Then(ba1 []domain.BackupCodeRow, err error) *StorageMock {
 	e.results = &StorageMockGetUnusedBackupCodeHashesResults{ba1, err}
 	return e.mock
 }
@@ -2038,7 +2038,7 @@ func (mmGetUnusedBackupCodeHashes *mStorageMockGetUnusedBackupCodeHashes) invoca
 }
 
 // GetUnusedBackupCodeHashes implements mm_twofaService.Storage
-func (mmGetUnusedBackupCodeHashes *StorageMock) GetUnusedBackupCodeHashes(ctx context.Context, userID string) (ba1 []models.BackupCodeRow, err error) {
+func (mmGetUnusedBackupCodeHashes *StorageMock) GetUnusedBackupCodeHashes(ctx context.Context, userID string) (ba1 []domain.BackupCodeRow, err error) {
 	mm_atomic.AddUint64(&mmGetUnusedBackupCodeHashes.beforeGetUnusedBackupCodeHashesCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetUnusedBackupCodeHashes.afterGetUnusedBackupCodeHashesCounter, 1)
 

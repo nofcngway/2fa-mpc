@@ -3,7 +3,7 @@ package twofa_service_api
 import (
 	"context"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
 )
 
@@ -12,7 +12,7 @@ type Service interface {
 	Setup(ctx context.Context, userID, email string) (string, []string, error)
 	Verify(ctx context.Context, userID, otpCode string) (bool, bool, error)
 	Disable(ctx context.Context, userID, otpCode string) error
-	GetStatus(ctx context.Context, userID string) (*models.TwoFARecord, error)
+	GetStatus(ctx context.Context, userID string) (*domain.TwoFARecord, error)
 }
 
 // TwoFAServiceAPI implements the gRPC TwoFAServiceServer interface.

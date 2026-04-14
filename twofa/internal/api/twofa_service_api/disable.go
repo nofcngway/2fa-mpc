@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
-	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,9 +28,9 @@ func (api *TwoFAServiceAPI) Disable2FA(ctx context.Context, req *pb.Disable2FARe
 	err := api.service.Disable(ctx, req.GetUserId(), req.GetOtpCode())
 	if err != nil {
 		switch {
-		case errors.Is(err, twofaService.ErrNotSetUp):
+		case errors.Is(err, domain.ErrNotSetUp):
 			return nil, status.Error(codes.FailedPrecondition, "2FA not set up")
-		case errors.Is(err, twofaService.ErrNotEnabled):
+		case errors.Is(err, domain.ErrNotEnabled):
 			return nil, status.Error(codes.FailedPrecondition, "2FA not enabled")
 		default:
 			slog.Error("disable 2fa failed", "user_id", req.GetUserId(), "error", err)

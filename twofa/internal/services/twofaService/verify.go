@@ -11,14 +11,7 @@ import (
 	"github.com/vbncursed/vkr/twofa/internal/crypto"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/shamir"
 	"github.com/vbncursed/vkr/twofa/internal/crypto/totp"
-	"github.com/vbncursed/vkr/twofa/internal/models"
-)
-
-// Domain errors for 2FA verification.
-var (
-	ErrRateLimitExceeded = errors.New("2fa: rate limit exceeded")
-	ErrOTPReused         = errors.New("2fa: OTP code already used")
-	ErrNotSetUp          = errors.New("2fa: not set up for this user")
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
 
 // backupCodePattern matches the "xxxx-xxxx" backup code format.
@@ -54,7 +47,7 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 		return false, false, fmt.Errorf("get twofa record: %w", err)
 	}
 	if record == nil {
-		return false, false, ErrNotSetUp
+		return false, false, domain.ErrNotSetUp
 	}
 
 	// 2. Rate limit check (per D-05, D-06: increment BEFORE validation)
@@ -64,13 +57,13 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 		// D-07: proceed without rate check on Redis failure
 		slog.Warn("rate limit check failed, proceeding", "user_id", userID, "error", err)
 	} else if count > int64(rateLimitMaxAttempts) {
-		return false, false, ErrRateLimitExceeded
+		return false, false, domain.ErrRateLimitExceeded
 	}
 
 	// 3. Backup code path — if input matches "xxxx-xxxx" format, verify as backup code
 	if backupCodePattern.MatchString(otpCode) {
 		if err := s.VerifyBackupCode(ctx, userID, otpCode); err != nil {
-			if errors.Is(err, ErrInvalidBackupCode) {
+			if errors.Is(err, domain.ErrInvalidBackupCode) {
 				return false, false, nil
 			}
 			return false, false, fmt.Errorf("verify backup code: %w", err)
@@ -100,7 +93,7 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 
 	// 5. OTP reuse check (per D-09, D-10, M-04, M-13)
 	lastCounter, counterErr := s.sessionStorage.GetUsedOTPCounter(ctx, userID)
-	if counterErr != nil && !errors.Is(counterErr, models.ErrCounterNotFound) {
+	if counterErr != nil && !errors.Is(counterErr, domain.ErrCounterNotFound) {
 		slog.Warn("get used OTP counter failed, proceeding", "user_id", userID, "error", counterErr)
 	}
 
@@ -112,7 +105,7 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 
 	// Check OTP reuse — only when a previous counter was found (per D-10, M-13)
 	if counterErr == nil && lastCounter == matchedCounter {
-		return false, false, ErrOTPReused
+		return false, false, domain.ErrOTPReused
 	}
 
 	// 7. Store used counter (per D-09)

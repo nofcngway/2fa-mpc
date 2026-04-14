@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
 
 // NoOpSessionStorage is a no-op implementation of twofaService.SessionStorage.
@@ -25,7 +25,7 @@ func (n *NoOpSessionStorage) SetUsedOTPCounter(_ context.Context, _ string, _ in
 }
 
 func (n *NoOpSessionStorage) GetUsedOTPCounter(_ context.Context, _ string) (int64, error) {
-	return 0, models.ErrCounterNotFound
+	return 0, domain.ErrCounterNotFound
 }
 
 func (n *NoOpSessionStorage) DeleteKeys(_ context.Context, _ ...string) error {

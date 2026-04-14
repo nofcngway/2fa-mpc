@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/vbncursed/vkr/twofa/internal/models"
+	"github.com/vbncursed/vkr/twofa/internal/domain"
 )
 
 // StoreBatchBackupCodes inserts bcrypt-hashed backup codes for a user.
@@ -35,7 +35,7 @@ func (ps *PGStorage) StoreBatchBackupCodes(ctx context.Context, userID string, c
 }
 
 // GetUnusedBackupCodeHashes returns all unused backup code hashes for a user.
-func (ps *PGStorage) GetUnusedBackupCodeHashes(ctx context.Context, userID string) ([]models.BackupCodeRow, error) {
+func (ps *PGStorage) GetUnusedBackupCodeHashes(ctx context.Context, userID string) ([]domain.BackupCodeRow, error) {
 	query := `SELECT id, code_hash FROM backup_codes WHERE user_id = $1 AND is_used = FALSE`
 	rows, err := ps.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -43,9 +43,9 @@ func (ps *PGStorage) GetUnusedBackupCodeHashes(ctx context.Context, userID strin
 	}
 	defer rows.Close()
 
-	var codes []models.BackupCodeRow
+	var codes []domain.BackupCodeRow
 	for rows.Next() {
-		var row models.BackupCodeRow
+		var row domain.BackupCodeRow
 		if err := rows.Scan(&row.ID, &row.CodeHash); err != nil {
 			return nil, fmt.Errorf("scan backup code: %w", err)
 		}
