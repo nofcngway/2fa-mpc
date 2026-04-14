@@ -57,7 +57,7 @@ Frontend (Next.js) → HTTPS → API Gateway (Go, REST → gRPC) → серви�
 ├── internal/
 │   ├── api/<service>_service_api/ # gRPC handlers (по одному файлу на метод)
 │   ├── bootstrap/                # DI-фабрики для всех зависимостей
-│   ├── domain/ или models/       # Доменные модели и ошибки
+│   ├── domain/                    # Доменные модели и ошибки
 │   ├── services/<serviceName>/   # Бизнес-логика (по одному файлу на метод)
 │   ├── storage/pgstorage/        # PostgreSQL repository (pgx, без ORM)
 │   ├── storage/redisstorage/     # Redis storage (Auth: сессии, TwoFA: rate limiting)
@@ -76,7 +76,7 @@ Frontend (Next.js) → HTTPS → API Gateway (Go, REST → gRPC) → серви�
 
 | Аспект | Auth | TwoFA | MPC |
 |--------|------|-------|-----|
-| Доменные модели | `internal/domain/` (models.go, errors.go) | `internal/models/` | `internal/models/` (models.go, errors.go) |
+| Доменные модели | `internal/domain/` (models.go, errors.go) | `internal/domain/` (models.go, errors.go) | `internal/domain/` (models.go, errors.go) |
 | Redis | `storage/redisstorage/` (сессии) | `storage/redisstorage/` (rate limit, OTP, noop) | Нет Redis |
 | Криптография | В сервисном слое (jwt.go, password_validation.go) | `internal/crypto/` (shamir/, totp/, zeroize.go) | В сервисном слое (encrypt.go) |
 | Bootstrap | Отдельные файлы (auth_service.go, pgstorage.go, ...) | Консолидированный bootstrap.go + kafka.go + mpc_adapter.go | Консолидированный bootstrap.go + kafka.go |
@@ -288,6 +288,7 @@ workspace/
 - ADR-005: Clean Architecture (handler → service → storage)
 - ADR-006: pgx без ORM
 - ADR-007: Миграция yaml.v3 → yaml/v4 и модернизация Go 1.26.2
+- ADR-010: Rename internal/models to internal/domain in MPC and TwoFA
 
 ### Правила ведения заметок
 - Используй Obsidian wikilinks: `[[имя заметки]]`
