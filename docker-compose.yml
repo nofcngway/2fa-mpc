@@ -1,0 +1,208 @@
+# Development-only configuration. Do NOT use these credentials in production.
+
+services:
+  # --- Infrastructure ---
+
+  kafka:
+    image: bitnami/kafka:4.1
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+
+  auth-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    volumes:
+      - auth-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  twofa-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: twofa_db
+      POSTGRES_USER: twofa_user
+      POSTGRES_PASSWORD: twofa_pass
+    volumes:
+      - twofa-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twofa_user -d twofa_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mpc-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: mpc_db_1
+      POSTGRES_USER: mpc_user
+      POSTGRES_PASSWORD: mpc_pass
+    volumes:
+      - mpc-pg-data:/var/lib/postgresql/data
+      - ./scripts/init-mpc-dbs.sql:/docker-entrypoint-initdb.d/init-mpc-dbs.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mpc_user -d mpc_db_1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Application Services ---
+
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      - AUTH_SERVER_PORT=9090
+      - AUTH_SERVER_METRICS_PORT=9100
+      - AUTH_SERVER_LOG_LEVEL=info
+      - AUTH_DATABASE_DSN=postgres://auth_user:auth_pass@auth-postgres:5432/auth_db?sslmode=disable
+      - AUTH_REDIS_ADDR=redis:6379
+      - AUTH_REDIS_PASSWORD=
+      - AUTH_REDIS_DB=0
+      - AUTH_KAFKA_BROKERS=kafka:9092
+      - AUTH_KAFKA_TOPIC=auth-events
+      - AUTH_JWT_PRIVATE_KEY_PATH=/keys/private.pem
+      - AUTH_JWT_PUBLIC_KEY_PATH=/keys/public.pem
+      - AUTH_JWT_ACCESS_TOKEN_TTL=15m
+      - AUTH_JWT_REFRESH_TOKEN_TTL=168h
+    volumes:
+      - ./auth/keys:/keys:ro
+    ports:
+      - "9090:9090"
+      - "9100:9100"
+
+  twofa:
+    build:
+      context: .
+      dockerfile: twofa/Dockerfile
+    depends_on:
+      twofa-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mpc-node-1:
+        condition: service_started
+      mpc-node-2:
+        condition: service_started
+      mpc-node-3:
+        condition: service_started
+    environment:
+      - TWOFA_SERVER_PORT=9091
+      - TWOFA_SERVER_METRICS_PORT=9101
+      - TWOFA_SERVER_LOG_LEVEL=info
+      - TWOFA_DATABASE_DSN=postgres://twofa_user:twofa_pass@twofa-postgres:5432/twofa_db?sslmode=disable
+      - TWOFA_REDIS_ADDR=redis:6379
+      - TWOFA_REDIS_PASSWORD=
+      - TWOFA_REDIS_DB=1
+      - TWOFA_KAFKA_BROKERS=kafka:9092
+      - TWOFA_KAFKA_TOPIC=twofa-events
+      - TWOFA_MPC_NODES=mpc-node-1:9200,mpc-node-2:9201,mpc-node-3:9202
+      - TWOFA_SHARED_SECRET=dev-shared-secret-change-in-production
+      - TWOFA_MPC_TIMEOUT=5s
+    ports:
+      - "9091:9091"
+      - "9101:9101"
+
+  mpc-node-1:
+    build:
+      context: ./mpc
+      dockerfile: Dockerfile
+    depends_on:
+      mpc-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      - MPC_SERVER_PORT=9200
+      - MPC_SERVER_METRICS_PORT=9210
+      - MPC_SERVER_LOG_LEVEL=info
+      - MPC_DATABASE_DSN=postgres://mpc_user:mpc_pass@mpc-postgres:5432/mpc_db_1?sslmode=disable
+      - MPC_KAFKA_BROKERS=kafka:9092
+      - MPC_KAFKA_TOPIC=mpc-events
+      - MPC_NODE_ID=1
+      - MPC_NODE_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+      - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+    ports:
+      - "9200:9200"
+      - "9210:9210"
+
+  mpc-node-2:
+    build:
+      context: ./mpc
+      dockerfile: Dockerfile
+    depends_on:
+      mpc-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      - MPC_SERVER_PORT=9201
+      - MPC_SERVER_METRICS_PORT=9211
+      - MPC_SERVER_LOG_LEVEL=info
+      - MPC_DATABASE_DSN=postgres://mpc_user:mpc_pass@mpc-postgres:5432/mpc_db_2?sslmode=disable
+      - MPC_KAFKA_BROKERS=kafka:9092
+      - MPC_KAFKA_TOPIC=mpc-events
+      - MPC_NODE_ID=2
+      - MPC_NODE_ENCRYPTION_KEY=abcdef0123456789abcdef0123456789
+      - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+    ports:
+      - "9201:9201"
+      - "9211:9211"
+
+  mpc-node-3:
+    build:
+      context: ./mpc
+      dockerfile: Dockerfile
+    depends_on:
+      mpc-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      - MPC_SERVER_PORT=9202
+      - MPC_SERVER_METRICS_PORT=9212
+      - MPC_SERVER_LOG_LEVEL=info
+      - MPC_DATABASE_DSN=postgres://mpc_user:mpc_pass@mpc-postgres:5432/mpc_db_3?sslmode=disable
+      - MPC_KAFKA_BROKERS=kafka:9092
+      - MPC_KAFKA_TOPIC=mpc-events
+      - MPC_NODE_ID=3
+      - MPC_NODE_ENCRYPTION_KEY=56789abcdef012345678abcdef012345
+      - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+    ports:
+      - "9202:9202"
+      - "9212:9212"
+
+volumes:
+  auth-pg-data:
+  twofa-pg-data:
+  mpc-pg-data:
