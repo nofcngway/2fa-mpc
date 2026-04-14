@@ -1,0 +1,5 @@
+bin/
+*.md
+.git/
+docker-compose.yaml
+keys/
