@@ -206,9 +206,9 @@ Note: Phases 4, 5, 6 can execute in parallel after Phase 1 (no mutual dependenci
 **Goal:** Consistent `internal/domain/` package across all 3 services, with TwoFA error sentinels consolidated in domain/errors.go, and all documentation updated
 **Requirements**: D-01 through D-10 (refactoring decisions from phase context)
 **Depends on:** Phase 10
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 11-01-PLAN.md — MPC rename internal/models to internal/domain, update imports, regenerate mocks
-- [ ] 11-02-PLAN.md — TwoFA rename internal/models to internal/domain, consolidate error sentinels, update imports, regenerate mocks
+- [x] 11-02-PLAN.md — TwoFA rename internal/models to internal/domain, consolidate error sentinels, update imports, regenerate mocks
 - [ ] 11-03-PLAN.md — Update CLAUDE.md, workspace service docs, add ADR entry
