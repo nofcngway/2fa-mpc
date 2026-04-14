@@ -8,7 +8,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	"gotest.tools/v3/assert"
 
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService/mocks"
 )
@@ -34,7 +34,7 @@ func newStoreSuite(t *testing.T) *storeSuite {
 func TestStoreShareHappyPath(t *testing.T) {
 	s := newStoreSuite(t)
 
-	s.storage.CreateShareMock.Set(func(_ context.Context, share *models.Share) error {
+	s.storage.CreateShareMock.Set(func(_ context.Context, share *domain.Share) error {
 		assert.Assert(t, share.ID != "", "share ID should be generated")
 		assert.Equal(t, share.UserID, "user-123")
 		assert.Equal(t, share.ShareIndex, 0)
@@ -51,11 +51,11 @@ func TestStoreShareHappyPath(t *testing.T) {
 func TestStoreShareDuplicate(t *testing.T) {
 	s := newStoreSuite(t)
 
-	s.storage.CreateShareMock.Return(models.ErrDuplicateShare)
+	s.storage.CreateShareMock.Return(domain.ErrDuplicateShare)
 
 	_, err := s.service.StoreShare(t.Context(), "user-123", 0, []byte("share-data"))
 	assert.Assert(t, err != nil, "expected error for duplicate share")
-	assert.Assert(t, errors.Is(err, models.ErrDuplicateShare),
+	assert.Assert(t, errors.Is(err, domain.ErrDuplicateShare),
 		"expected ErrDuplicateShare, got: %v", err)
 }
 
@@ -66,14 +66,14 @@ func TestStoreShareStorageError(t *testing.T) {
 
 	_, err := s.service.StoreShare(t.Context(), "user-123", 0, []byte("share-data"))
 	assert.Assert(t, err != nil, "expected error for storage failure")
-	assert.Assert(t, !errors.Is(err, models.ErrDuplicateShare),
+	assert.Assert(t, !errors.Is(err, domain.ErrDuplicateShare),
 		"generic error should not be ErrDuplicateShare")
 }
 
 func TestStoreShareEmptyData(t *testing.T) {
 	s := newStoreSuite(t)
 
-	s.storage.CreateShareMock.Set(func(_ context.Context, share *models.Share) error {
+	s.storage.CreateShareMock.Set(func(_ context.Context, share *domain.Share) error {
 		// Empty share data should still produce encrypted data (GCM tag).
 		assert.Assert(t, len(share.EncryptedData) > 0, "encrypted data for empty input should contain GCM tag")
 		return nil

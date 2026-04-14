@@ -11,7 +11,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	"gotest.tools/v3/assert"
 
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService/mocks"
 )
@@ -55,7 +55,7 @@ func TestRetrieveShareHappyPath(t *testing.T) {
 
 	encData, nonce := testEncrypt(t, s.key, plaintext)
 
-	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(&models.Share{
+	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(&domain.Share{
 		ID:            "share-id-1",
 		UserID:        "user-123",
 		ShareIndex:    0,
@@ -72,11 +72,11 @@ func TestRetrieveShareHappyPath(t *testing.T) {
 func TestRetrieveShareNotFound(t *testing.T) {
 	s := newRetrieveSuite(t)
 
-	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(nil, models.ErrShareNotFound)
+	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(nil, domain.ErrShareNotFound)
 
 	_, err := s.service.RetrieveShare(t.Context(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for not found share")
-	assert.Assert(t, errors.Is(err, models.ErrShareNotFound),
+	assert.Assert(t, errors.Is(err, domain.ErrShareNotFound),
 		"expected ErrShareNotFound, got: %v", err)
 }
 
@@ -84,7 +84,7 @@ func TestRetrieveShareDecryptFailure(t *testing.T) {
 	s := newRetrieveSuite(t)
 
 	// Return corrupted encrypted data that cannot be decrypted.
-	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(&models.Share{
+	s.storage.GetShareMock.Expect(minimock.AnyContext, "user-123", 0).Return(&domain.Share{
 		ID:            "share-id-1",
 		UserID:        "user-123",
 		ShareIndex:    0,
@@ -104,6 +104,6 @@ func TestRetrieveShareStorageError(t *testing.T) {
 
 	_, err := s.service.RetrieveShare(t.Context(), "user-123", 0)
 	assert.Assert(t, err != nil, "expected error for storage failure")
-	assert.Assert(t, !errors.Is(err, models.ErrShareNotFound),
+	assert.Assert(t, !errors.Is(err, domain.ErrShareNotFound),
 		"generic error should not be ErrShareNotFound")
 }

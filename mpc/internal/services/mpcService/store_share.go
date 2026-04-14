@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 )
 
 // StoreShare encrypts share data and persists it.
@@ -20,7 +20,7 @@ func (s *MPCService) StoreShare(ctx context.Context, userID string, shareIndex i
 		return "", fmt.Errorf("encrypt share: %w", err)
 	}
 
-	share := &models.Share{
+	share := &domain.Share{
 		ID:            uuid.New().String(),
 		UserID:        userID,
 		ShareIndex:    shareIndex,
@@ -30,8 +30,8 @@ func (s *MPCService) StoreShare(ctx context.Context, userID string, shareIndex i
 	}
 
 	if err := s.storage.CreateShare(ctx, share); err != nil {
-		if errors.Is(err, models.ErrDuplicateShare) {
-			return "", models.ErrDuplicateShare
+		if errors.Is(err, domain.ErrDuplicateShare) {
+			return "", domain.ErrDuplicateShare
 		}
 		return "", fmt.Errorf("store share: %w", err)
 	}

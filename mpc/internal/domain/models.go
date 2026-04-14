@@ -1,5 +1,5 @@
-// Package models defines domain models for the MPC service.
-package models
+// Package domain defines domain models for the MPC service.
+package domain
 
 import "time"
 

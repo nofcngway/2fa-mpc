@@ -9,7 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 )
 
 // StorageMock implements mm_mpcService.Storage
@@ -17,9 +17,9 @@ type StorageMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcCreateShare          func(ctx context.Context, share *models.Share) (err error)
+	funcCreateShare          func(ctx context.Context, share *domain.Share) (err error)
 	funcCreateShareOrigin    string
-	inspectFuncCreateShare   func(ctx context.Context, share *models.Share)
+	inspectFuncCreateShare   func(ctx context.Context, share *domain.Share)
 	afterCreateShareCounter  uint64
 	beforeCreateShareCounter uint64
 	CreateShareMock          mStorageMockCreateShare
@@ -31,7 +31,7 @@ type StorageMock struct {
 	beforeDeleteSharesByUserIDCounter uint64
 	DeleteSharesByUserIDMock          mStorageMockDeleteSharesByUserID
 
-	funcGetShare          func(ctx context.Context, userID string, shareIndex int) (sp1 *models.Share, err error)
+	funcGetShare          func(ctx context.Context, userID string, shareIndex int) (sp1 *domain.Share, err error)
 	funcGetShareOrigin    string
 	inspectFuncGetShare   func(ctx context.Context, userID string, shareIndex int)
 	afterGetShareCounter  uint64
@@ -88,13 +88,13 @@ type StorageMockCreateShareExpectation struct {
 // StorageMockCreateShareParams contains parameters of the Storage.CreateShare
 type StorageMockCreateShareParams struct {
 	ctx   context.Context
-	share *models.Share
+	share *domain.Share
 }
 
 // StorageMockCreateShareParamPtrs contains pointers to parameters of the Storage.CreateShare
 type StorageMockCreateShareParamPtrs struct {
 	ctx   *context.Context
-	share **models.Share
+	share **domain.Share
 }
 
 // StorageMockCreateShareResults contains results of the Storage.CreateShare
@@ -120,7 +120,7 @@ func (mmCreateShare *mStorageMockCreateShare) Optional() *mStorageMockCreateShar
 }
 
 // Expect sets up expected params for Storage.CreateShare
-func (mmCreateShare *mStorageMockCreateShare) Expect(ctx context.Context, share *models.Share) *mStorageMockCreateShare {
+func (mmCreateShare *mStorageMockCreateShare) Expect(ctx context.Context, share *domain.Share) *mStorageMockCreateShare {
 	if mmCreateShare.mock.funcCreateShare != nil {
 		mmCreateShare.mock.t.Fatalf("StorageMock.CreateShare mock is already set by Set")
 	}
@@ -168,7 +168,7 @@ func (mmCreateShare *mStorageMockCreateShare) ExpectCtxParam1(ctx context.Contex
 }
 
 // ExpectShareParam2 sets up expected param share for Storage.CreateShare
-func (mmCreateShare *mStorageMockCreateShare) ExpectShareParam2(share *models.Share) *mStorageMockCreateShare {
+func (mmCreateShare *mStorageMockCreateShare) ExpectShareParam2(share *domain.Share) *mStorageMockCreateShare {
 	if mmCreateShare.mock.funcCreateShare != nil {
 		mmCreateShare.mock.t.Fatalf("StorageMock.CreateShare mock is already set by Set")
 	}
@@ -191,7 +191,7 @@ func (mmCreateShare *mStorageMockCreateShare) ExpectShareParam2(share *models.Sh
 }
 
 // Inspect accepts an inspector function that has same arguments as the Storage.CreateShare
-func (mmCreateShare *mStorageMockCreateShare) Inspect(f func(ctx context.Context, share *models.Share)) *mStorageMockCreateShare {
+func (mmCreateShare *mStorageMockCreateShare) Inspect(f func(ctx context.Context, share *domain.Share)) *mStorageMockCreateShare {
 	if mmCreateShare.mock.inspectFuncCreateShare != nil {
 		mmCreateShare.mock.t.Fatalf("Inspect function is already set for StorageMock.CreateShare")
 	}
@@ -216,7 +216,7 @@ func (mmCreateShare *mStorageMockCreateShare) Return(err error) *StorageMock {
 }
 
 // Set uses given function f to mock the Storage.CreateShare method
-func (mmCreateShare *mStorageMockCreateShare) Set(f func(ctx context.Context, share *models.Share) (err error)) *StorageMock {
+func (mmCreateShare *mStorageMockCreateShare) Set(f func(ctx context.Context, share *domain.Share) (err error)) *StorageMock {
 	if mmCreateShare.defaultExpectation != nil {
 		mmCreateShare.mock.t.Fatalf("Default expectation is already set for the Storage.CreateShare method")
 	}
@@ -232,7 +232,7 @@ func (mmCreateShare *mStorageMockCreateShare) Set(f func(ctx context.Context, sh
 
 // When sets expectation for the Storage.CreateShare which will trigger the result defined by the following
 // Then helper
-func (mmCreateShare *mStorageMockCreateShare) When(ctx context.Context, share *models.Share) *StorageMockCreateShareExpectation {
+func (mmCreateShare *mStorageMockCreateShare) When(ctx context.Context, share *domain.Share) *StorageMockCreateShareExpectation {
 	if mmCreateShare.mock.funcCreateShare != nil {
 		mmCreateShare.mock.t.Fatalf("StorageMock.CreateShare mock is already set by Set")
 	}
@@ -274,7 +274,7 @@ func (mmCreateShare *mStorageMockCreateShare) invocationsDone() bool {
 }
 
 // CreateShare implements mm_mpcService.Storage
-func (mmCreateShare *StorageMock) CreateShare(ctx context.Context, share *models.Share) (err error) {
+func (mmCreateShare *StorageMock) CreateShare(ctx context.Context, share *domain.Share) (err error) {
 	mm_atomic.AddUint64(&mmCreateShare.beforeCreateShareCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateShare.afterCreateShareCounter, 1)
 
@@ -786,7 +786,7 @@ type StorageMockGetShareParamPtrs struct {
 
 // StorageMockGetShareResults contains results of the Storage.GetShare
 type StorageMockGetShareResults struct {
-	sp1 *models.Share
+	sp1 *domain.Share
 	err error
 }
 
@@ -914,7 +914,7 @@ func (mmGetShare *mStorageMockGetShare) Inspect(f func(ctx context.Context, user
 }
 
 // Return sets up results that will be returned by Storage.GetShare
-func (mmGetShare *mStorageMockGetShare) Return(sp1 *models.Share, err error) *StorageMock {
+func (mmGetShare *mStorageMockGetShare) Return(sp1 *domain.Share, err error) *StorageMock {
 	if mmGetShare.mock.funcGetShare != nil {
 		mmGetShare.mock.t.Fatalf("StorageMock.GetShare mock is already set by Set")
 	}
@@ -928,7 +928,7 @@ func (mmGetShare *mStorageMockGetShare) Return(sp1 *models.Share, err error) *St
 }
 
 // Set uses given function f to mock the Storage.GetShare method
-func (mmGetShare *mStorageMockGetShare) Set(f func(ctx context.Context, userID string, shareIndex int) (sp1 *models.Share, err error)) *StorageMock {
+func (mmGetShare *mStorageMockGetShare) Set(f func(ctx context.Context, userID string, shareIndex int) (sp1 *domain.Share, err error)) *StorageMock {
 	if mmGetShare.defaultExpectation != nil {
 		mmGetShare.mock.t.Fatalf("Default expectation is already set for the Storage.GetShare method")
 	}
@@ -959,7 +959,7 @@ func (mmGetShare *mStorageMockGetShare) When(ctx context.Context, userID string,
 }
 
 // Then sets up Storage.GetShare return parameters for the expectation previously defined by the When method
-func (e *StorageMockGetShareExpectation) Then(sp1 *models.Share, err error) *StorageMock {
+func (e *StorageMockGetShareExpectation) Then(sp1 *domain.Share, err error) *StorageMock {
 	e.results = &StorageMockGetShareResults{sp1, err}
 	return e.mock
 }
@@ -986,7 +986,7 @@ func (mmGetShare *mStorageMockGetShare) invocationsDone() bool {
 }
 
 // GetShare implements mm_mpcService.Storage
-func (mmGetShare *StorageMock) GetShare(ctx context.Context, userID string, shareIndex int) (sp1 *models.Share, err error) {
+func (mmGetShare *StorageMock) GetShare(ctx context.Context, userID string, shareIndex int) (sp1 *domain.Share, err error) {
 	mm_atomic.AddUint64(&mmGetShare.beforeGetShareCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetShare.afterGetShareCounter, 1)
 

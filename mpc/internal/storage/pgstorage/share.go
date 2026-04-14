@@ -8,11 +8,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 )
 
 // CreateShare inserts a new encrypted share into PostgreSQL.
-func (ps *PGStorage) CreateShare(ctx context.Context, share *models.Share) error {
+func (ps *PGStorage) CreateShare(ctx context.Context, share *domain.Share) error {
 	_, err := ps.pool.Exec(ctx,
 		`INSERT INTO shares (id, user_id, share_index, encrypted_data, nonce, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -21,7 +21,7 @@ func (ps *PGStorage) CreateShare(ctx context.Context, share *models.Share) error
 	)
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
-			return models.ErrDuplicateShare
+			return domain.ErrDuplicateShare
 		}
 		return fmt.Errorf("create share: %w", err)
 	}
@@ -29,17 +29,17 @@ func (ps *PGStorage) CreateShare(ctx context.Context, share *models.Share) error
 }
 
 // GetShare retrieves a single share by user_id and share_index.
-func (ps *PGStorage) GetShare(ctx context.Context, userID string, shareIndex int) (*models.Share, error) {
+func (ps *PGStorage) GetShare(ctx context.Context, userID string, shareIndex int) (*domain.Share, error) {
 	row := ps.pool.QueryRow(ctx,
 		`SELECT id, user_id, share_index, encrypted_data, nonce, created_at
 		 FROM shares WHERE user_id = $1 AND share_index = $2`,
 		userID, shareIndex,
 	)
-	var s models.Share
+	var s domain.Share
 	err := row.Scan(&s.ID, &s.UserID, &s.ShareIndex, &s.EncryptedData, &s.Nonce, &s.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, models.ErrShareNotFound
+			return nil, domain.ErrShareNotFound
 		}
 		return nil, fmt.Errorf("get share: %w", err)
 	}

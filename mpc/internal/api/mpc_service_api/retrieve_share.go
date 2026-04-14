@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 	pb "github.com/vbncursed/vkr/mpc/internal/pb/mpc_api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,7 +21,7 @@ func (api *MPCServiceAPI) RetrieveShare(ctx context.Context, req *pb.RetrieveSha
 
 	shareData, err := api.service.RetrieveShare(ctx, req.GetUserId(), int(req.GetShareIndex()))
 	if err != nil {
-		if errors.Is(err, models.ErrShareNotFound) {
+		if errors.Is(err, domain.ErrShareNotFound) {
 			return nil, status.Error(codes.NotFound, "share not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to retrieve share")

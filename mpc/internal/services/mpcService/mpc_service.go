@@ -4,15 +4,15 @@ package mpcService
 import (
 	"context"
 
-	"github.com/vbncursed/vkr/mpc/internal/models"
+	"github.com/vbncursed/vkr/mpc/internal/domain"
 )
 
 //go:generate minimock -i Storage -o ./mocks -g -s _mock.go
 
 // Storage defines the interface for share persistent data access.
 type Storage interface {
-	CreateShare(ctx context.Context, share *models.Share) error
-	GetShare(ctx context.Context, userID string, shareIndex int) (*models.Share, error)
+	CreateShare(ctx context.Context, share *domain.Share) error
+	GetShare(ctx context.Context, userID string, shareIndex int) (*domain.Share, error)
 	DeleteSharesByUserID(ctx context.Context, userID string) (int64, error)
 }
 
