@@ -1,3 +1,4 @@
+// Package totp implements RFC 6238 Time-Based One-Time Password generation and validation.
 package totp
 
 import (
@@ -7,14 +8,12 @@ import (
 	"crypto/subtle"
 	"encoding/base32"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"time"
-)
 
-// ErrSecretGeneration is returned when crypto/rand fails to generate random bytes.
-var ErrSecretGeneration = errors.New("totp: failed to generate random secret")
+	"github.com/vbncursed/vkr/twofa/internal/domain"
+)
 
 // GenerateSecret creates a new 20-byte cryptographically random TOTP secret.
 // Returns raw bytes and base32-encoded bytes (no padding).
@@ -23,7 +22,7 @@ var ErrSecretGeneration = errors.New("totp: failed to generate random secret")
 func GenerateSecret() ([]byte, []byte, error) {
 	secret := make([]byte, 20)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", ErrSecretGeneration, err)
+		return nil, nil, fmt.Errorf("%w: %v", domain.ErrSecretGeneration, err)
 	}
 
 	encoded := []byte(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret))

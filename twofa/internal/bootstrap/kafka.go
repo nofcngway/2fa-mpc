@@ -1,3 +1,4 @@
+// Package bootstrap provides dependency injection factories for the TwoFA service.
 package bootstrap
 
 import (
@@ -9,6 +10,11 @@ import (
 	"github.com/segmentio/kafka-go"
 
 	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
+)
+
+var (
+	_ twofaService.EventProducer = (*KafkaProducer)(nil)
+	_ twofaService.EventProducer = (*NoOpProducer)(nil)
 )
 
 // KafkaProducer implements EventProducer using kafka-go Writer.
@@ -31,7 +37,7 @@ func NewKafkaProducer(brokers []string, topic string) twofaService.EventProducer
 			BatchSize:    100,
 			BatchTimeout: 10 * time.Millisecond,
 			MaxAttempts:  3,
-			Async:        true,
+			Async:        false,
 		},
 	}
 }

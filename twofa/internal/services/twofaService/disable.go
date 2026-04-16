@@ -29,7 +29,16 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 		return domain.ErrNotEnabled
 	}
 
-	// 2. Verify OTP (inline, not via s.Verify to avoid side effects like enable-on-first)
+	// 2. Rate limit check (same pattern as Verify, per D-05, D-06)
+	rateLimitKey := fmt.Sprintf("rate_limit:verify:%s", userID)
+	count, rlErr := s.sessionStorage.IncrementRateLimit(ctx, rateLimitKey, rateLimitWindow)
+	if rlErr != nil {
+		slog.Warn("rate limit check failed, proceeding", "user_id", userID, "error", rlErr)
+	} else if count > int64(rateLimitMaxAttempts) {
+		return domain.ErrRateLimitExceeded
+	}
+
+	// 3. Verify OTP (inline, not via s.Verify to avoid side effects like enable-on-first)
 	shares, err := s.retrieveShares(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("retrieve shares for disable: %w", err)
@@ -48,7 +57,7 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 
 	valid, matchedCounter := totp.ValidateOTPWithCounter(secret, otpCode)
 	if !valid {
-		return fmt.Errorf("disable 2fa: invalid OTP code")
+		return domain.ErrInvalidOTP
 	}
 
 	// Check OTP reuse (unified pattern with Verify, per D-10, M-13)
@@ -61,7 +70,9 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 	}
 
 	// Store the used counter to prevent replay
-	_ = s.sessionStorage.SetUsedOTPCounter(ctx, userID, matchedCounter, otpCounterTTL)
+	if err := s.sessionStorage.SetUsedOTPCounter(ctx, userID, matchedCounter, otpCounterTTL); err != nil {
+		slog.Warn("store used OTP counter failed", "user_id", userID, "error", err)
+	}
 
 	// 3. Delete shares from ALL 3 MPC nodes in parallel (per D-12, D-13)
 	if err := s.deleteSharesAll(ctx, userID); err != nil {
@@ -79,7 +90,6 @@ func (s *TwoFAService) Disable(ctx context.Context, userID, otpCode string) erro
 	}
 
 	// 6. Cleanup Redis keys (per D-14)
-	rateLimitKey := fmt.Sprintf("rate_limit:verify:%s", userID)
 	otpUsedKey := fmt.Sprintf("otp_used:%s", userID)
 	if err := s.sessionStorage.DeleteKeys(ctx, rateLimitKey, otpUsedKey); err != nil {
 		slog.Warn("failed to cleanup redis keys on disable", "user_id", userID, "error", err)

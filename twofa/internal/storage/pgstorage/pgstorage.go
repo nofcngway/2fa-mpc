@@ -1,3 +1,4 @@
+// Package pgstorage provides PostgreSQL persistence for 2FA records and backup codes.
 package pgstorage
 
 import (
@@ -7,7 +8,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 )
+
+var _ twofaService.Storage = (*PGStorage)(nil)
 
 // PGStorage provides PostgreSQL persistence for the TwoFA service.
 type PGStorage struct {
@@ -65,6 +69,8 @@ func (ps *PGStorage) initTables(ctx context.Context) error {
 			code_hash VARCHAR(255) NOT NULL,
 			is_used BOOLEAN NOT NULL DEFAULT FALSE
 		);
+
+		CREATE INDEX IF NOT EXISTS idx_backup_codes_user_id ON backup_codes (user_id);
 	`
 
 	_, err := ps.pool.Exec(ctx, query)

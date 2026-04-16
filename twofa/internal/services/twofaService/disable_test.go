@@ -43,7 +43,7 @@ func newDisableSuite(t *testing.T) *disableSuite {
 	eventProducer.CloseMock.Optional().Return(nil)
 
 	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcInterfaces, eventProducer, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcInterfaces, eventProducer, 5*time.Second,
 	)
 
 	return &disableSuite{
@@ -65,7 +65,7 @@ func (ds *disableSuite) makeAllMocksOptional() {
 	ds.storage.DeleteBackupCodesMock.Optional()
 	ds.storage.GetUnusedBackupCodeHashesMock.Optional()
 	ds.storage.MarkBackupCodeUsedMock.Optional()
-	ds.sessionStorage.IncrementRateLimitMock.Optional()
+	ds.sessionStorage.IncrementRateLimitMock.Optional().Return(1, nil)
 	ds.sessionStorage.GetRateLimitMock.Optional()
 	ds.sessionStorage.GetUsedOTPCounterMock.Optional()
 	ds.sessionStorage.SetUsedOTPCounterMock.Optional()

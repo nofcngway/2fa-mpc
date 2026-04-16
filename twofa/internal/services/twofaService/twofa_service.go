@@ -1,3 +1,5 @@
+// Package twofaService implements 2FA orchestration with Shamir secret sharing,
+// TOTP verification, backup codes, and MPC node coordination.
 package twofaService
 
 import (
@@ -46,7 +48,6 @@ type TwoFAService struct {
 	sessionStorage SessionStorage
 	mpcClients     []MPCClient
 	eventProducer  EventProducer
-	sharedSecret   string
 	mpcTimeout     time.Duration
 }
 
@@ -56,7 +57,6 @@ func NewTwoFAService(
 	sessionStorage SessionStorage,
 	mpcClients []MPCClient,
 	eventProducer EventProducer,
-	sharedSecret string,
 	mpcTimeout time.Duration,
 ) *TwoFAService {
 	return &TwoFAService{
@@ -64,7 +64,6 @@ func NewTwoFAService(
 		sessionStorage: sessionStorage,
 		mpcClients:     mpcClients,
 		eventProducer:  eventProducer,
-		sharedSecret:   sharedSecret,
 		mpcTimeout:     mpcTimeout,
 	}
 }

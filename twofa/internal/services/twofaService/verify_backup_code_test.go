@@ -47,7 +47,7 @@ func newBackupCodeService(t *testing.T) (*twofaService.TwoFAService, *mocks.Stor
 	sessionStorage.DeleteKeysMock.Optional()
 
 	svc := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, ep, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcClients, ep, 5*time.Second,
 	)
 	return svc, storage, sessionStorage
 }

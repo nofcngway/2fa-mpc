@@ -44,7 +44,7 @@ func newVerifySuite(t *testing.T) *verifySuite {
 	eventProducer.CloseMock.Optional().Return(nil)
 
 	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcInterfaces, eventProducer, "test-secret", 5*time.Second,
+		storage, sessionStorage, mpcInterfaces, eventProducer, 5*time.Second,
 	)
 
 	return &verifySuite{

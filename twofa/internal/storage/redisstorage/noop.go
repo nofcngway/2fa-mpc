@@ -5,7 +5,10 @@ import (
 	"time"
 
 	"github.com/vbncursed/vkr/twofa/internal/domain"
+	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 )
+
+var _ twofaService.SessionStorage = (*NoOpSessionStorage)(nil)
 
 // NoOpSessionStorage is a no-op implementation of twofaService.SessionStorage.
 // Used as fallback when Redis is unavailable — rate limiting and OTP reuse

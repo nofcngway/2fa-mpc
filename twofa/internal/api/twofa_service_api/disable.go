@@ -32,6 +32,12 @@ func (api *TwoFAServiceAPI) Disable2FA(ctx context.Context, req *pb.Disable2FARe
 			return nil, status.Error(codes.FailedPrecondition, "2FA not set up")
 		case errors.Is(err, domain.ErrNotEnabled):
 			return nil, status.Error(codes.FailedPrecondition, "2FA not enabled")
+		case errors.Is(err, domain.ErrRateLimitExceeded):
+			return nil, status.Error(codes.ResourceExhausted, "too many verification attempts")
+		case errors.Is(err, domain.ErrOTPReused):
+			return nil, status.Error(codes.InvalidArgument, "OTP code already used")
+		case errors.Is(err, domain.ErrInvalidOTP):
+			return nil, status.Error(codes.InvalidArgument, "invalid OTP code")
 		default:
 			slog.Error("disable 2fa failed", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.Internal, "disable failed")

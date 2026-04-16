@@ -1,3 +1,4 @@
+// Package crypto provides cryptographic utilities for secure memory handling.
 package crypto
 
 import "runtime"

@@ -1,3 +1,4 @@
+// Package domain defines shared types and sentinel errors for the TwoFA service.
 package domain
 
 import "errors"
@@ -13,8 +14,14 @@ var (
 var (
 	ErrRateLimitExceeded  = errors.New("2fa: rate limit exceeded")
 	ErrOTPReused          = errors.New("2fa: OTP code already used")
+	ErrInvalidOTP         = errors.New("2fa: invalid OTP code")
 	ErrInsufficientShares = errors.New("2fa: insufficient shares retrieved (need 2)")
 	ErrInvalidBackupCode  = errors.New("2fa: invalid backup code")
+)
+
+// Crypto errors.
+var (
+	ErrSecretGeneration = errors.New("totp: failed to generate random secret")
 )
 
 // Storage errors.

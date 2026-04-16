@@ -54,6 +54,8 @@ func authMetadataInterceptor(secret string) grpc.UnaryClientInterceptor {
 	}
 }
 
+var _ twofaService.MPCClient = (*mpcClientAdapter)(nil)
+
 // mpcClientAdapter wraps a generated gRPC MPCNodeServiceClient to implement
 // the domain-level twofaService.MPCClient interface.
 type mpcClientAdapter struct {

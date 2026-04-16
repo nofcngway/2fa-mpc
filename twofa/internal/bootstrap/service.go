@@ -18,7 +18,6 @@ func NewTwoFAService(
 		sessionStorage,
 		mpcClients,
 		eventProducer,
-		cfg.SharedSecret,
 		cfg.GetMPCTimeout(),
 	)
 }

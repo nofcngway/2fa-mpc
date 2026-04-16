@@ -1,3 +1,4 @@
+// Package twofa_service_api provides gRPC handlers for TwoFA operations.
 package twofa_service_api
 
 import (

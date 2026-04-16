@@ -1,3 +1,4 @@
+// Package middleware provides gRPC server interceptors for logging, metrics, and panic recovery.
 package middleware
 
 import (
