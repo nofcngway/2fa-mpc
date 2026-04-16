@@ -9,14 +9,14 @@ import (
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
-// MIN_PASSWORD_LENGTH is the minimum required password length.
-const MIN_PASSWORD_LENGTH = 12
+// minPasswordLength is the minimum required password length.
+const minPasswordLength = 12
 
-// MAX_PASSWORD_LENGTH caps input to prevent bcrypt truncation (72 bytes) and CPU DoS.
-const MAX_PASSWORD_LENGTH = 128
+// maxPasswordLength caps input to prevent bcrypt truncation (72 bytes) and CPU DoS.
+const maxPasswordLength = 128
 
-// SEQUENCE_THRESHOLD is the minimum number of sequential or repeated characters to trigger rejection.
-const SEQUENCE_THRESHOLD = 4
+// sequenceThreshold is the minimum number of sequential or repeated characters to trigger rejection.
+const sequenceThreshold = 4
 
 // sequences defines character sequences to check against (ASCII, QWERTY rows, numpad).
 var sequences = []string{
@@ -34,10 +34,10 @@ func ValidatePassword(password string) error {
 	var violations []error
 
 	runeCount := utf8.RuneCountInString(password)
-	if runeCount < MIN_PASSWORD_LENGTH {
+	if runeCount < minPasswordLength {
 		violations = append(violations, domain.ErrPasswordTooShort)
 	}
-	if runeCount > MAX_PASSWORD_LENGTH {
+	if runeCount > maxPasswordLength {
 		violations = append(violations, domain.ErrPasswordTooLong)
 	}
 
@@ -68,11 +68,11 @@ func ValidatePassword(password string) error {
 		violations = append(violations, domain.ErrMissingSpecialChar)
 	}
 
-	if containsSequential(password, SEQUENCE_THRESHOLD) {
+	if containsSequential(password, sequenceThreshold) {
 		violations = append(violations, domain.ErrSequentialChars)
 	}
 
-	if containsRepeated(password, SEQUENCE_THRESHOLD) {
+	if containsRepeated(password, sequenceThreshold) {
 		violations = append(violations, domain.ErrRepeatedChars)
 	}
 

@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
@@ -15,7 +16,7 @@ func (s *AuthService) Logout(ctx context.Context, refreshTokenStr string) error 
 	}
 
 	if err := s.sessionStorage.DeleteRefreshToken(ctx, claims.ID); err != nil {
-		return err
+		return fmt.Errorf("delete refresh token: %w", err)
 	}
 
 	// Fire-and-forget audit event

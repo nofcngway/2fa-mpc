@@ -12,6 +12,12 @@ import (
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
+// Compile-time checks: KafkaProducer and NoOpProducer must implement domain.EventProducer.
+var (
+	_ domain.EventProducer = (*KafkaProducer)(nil)
+	_ domain.EventProducer = (*NoOpProducer)(nil)
+)
+
 // KafkaProducer implements EventProducer using kafka-go Writer.
 type KafkaProducer struct {
 	writer *kafka.Writer
@@ -44,12 +50,15 @@ func NewKafkaProducer(brokers []string, topic string) domain.EventProducer {
 func (p *KafkaProducer) PublishEvent(ctx context.Context, event domain.AuditEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal audit event: %w", err)
 	}
-	return p.writer.WriteMessages(ctx, kafka.Message{
+	if err := p.writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(event.UserID),
 		Value: data,
-	})
+	}); err != nil {
+		return fmt.Errorf("write kafka message: %w", err)
+	}
+	return nil
 }
 
 // Close flushes pending messages and closes the Kafka writer.

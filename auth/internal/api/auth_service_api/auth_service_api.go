@@ -1,3 +1,4 @@
+// Package auth_service_api provides the gRPC transport layer for authentication operations.
 package auth_service_api
 
 import (
@@ -17,6 +18,9 @@ type Service interface {
 	RefreshToken(ctx context.Context, refreshTokenStr string) (string, string, error)
 	ValidateToken(ctx context.Context, accessTokenStr string) (string, string, error)
 }
+
+// Compile-time check: AuthServiceAPI must implement pb.AuthServiceServer.
+var _ pb.AuthServiceServer = (*AuthServiceAPI)(nil)
 
 // AuthServiceAPI implements the gRPC AuthService interface.
 type AuthServiceAPI struct {

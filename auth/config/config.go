@@ -1,3 +1,4 @@
+// Package config loads and validates Auth service configuration from YAML and environment variables.
 package config
 
 import (

@@ -1,3 +1,4 @@
+// Package domain defines core business models and errors for the Auth service.
 package domain
 
 import (

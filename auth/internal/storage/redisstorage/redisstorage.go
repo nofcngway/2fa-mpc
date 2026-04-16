@@ -1,7 +1,9 @@
+// Package redisstorage implements Redis-backed session and cache storage for the Auth service.
 package redisstorage
 
 import (
 	"context"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -12,11 +14,15 @@ type RedisStorage struct {
 }
 
 // New creates a new RedisStorage with the given connection parameters.
+// Timeouts prevent indefinite blocking on unresponsive Redis instances.
 func New(addr, password string, db int) *RedisStorage {
 	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       db,
+		Addr:         addr,
+		Password:     password,
+		DB:           db,
+		DialTimeout:  5 * time.Second,
+		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 3 * time.Second,
 	})
 
 	return &RedisStorage{client: client}

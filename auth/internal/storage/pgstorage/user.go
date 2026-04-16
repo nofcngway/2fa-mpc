@@ -3,6 +3,7 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -20,7 +21,7 @@ func (ps *PGStorage) CreateUser(ctx context.Context, user *domain.User) error {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 			return domain.ErrDuplicateEmail
 		}
-		return err
+		return fmt.Errorf("insert user: %w", err)
 	}
 	return nil
 }
@@ -36,7 +37,7 @@ func (ps *PGStorage) GetUserByEmail(ctx context.Context, email string) (*domain.
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("query user by email: %w", err)
 	}
 	return &user, nil
 }

@@ -16,7 +16,16 @@ import (
 
 // dummyHash is a pre-computed bcrypt hash used for timing-safe comparison when user is not found.
 // This prevents user enumeration via response time differences.
-var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("timing-safe-dummy"), COST_BCRYPT)
+// Panic on failure: bcrypt with a constant input must succeed; failure indicates a broken runtime.
+var dummyHash = mustGenerateDummyHash()
+
+func mustGenerateDummyHash() []byte {
+	h, err := bcrypt.GenerateFromPassword([]byte("timing-safe-dummy"), costBcrypt)
+	if err != nil {
+		panic("bcrypt dummy hash generation failed: " + err.Error())
+	}
+	return h
+}
 
 // Login authenticates a user by email and password, returning JWT tokens on success.
 func (s *AuthService) Login(ctx context.Context, email, password string) (*domain.User, string, string, error) {

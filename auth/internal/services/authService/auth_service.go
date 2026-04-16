@@ -1,3 +1,5 @@
+// Package authService implements authentication business logic including
+// registration, login, JWT token management, and session lifecycle.
 package authService
 
 import (

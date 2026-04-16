@@ -1,3 +1,4 @@
+// Package middleware provides gRPC unary interceptors for logging, metrics, and panic recovery.
 package middleware
 
 import (
@@ -40,14 +41,26 @@ func MetricsInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo
 	return resp, err
 }
 
-// LoggingInterceptor logs gRPC calls with method, duration, and error (if any).
+// LoggingInterceptor logs gRPC calls with method, duration, and status code.
+// Raw errors are not logged to avoid leaking sensitive data (tokens, passwords).
 func LoggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	start := time.Now()
 	resp, err := handler(ctx, req)
-	slog.Info("gRPC call",
+
+	st, _ := status.FromError(err)
+	attrs := []any{
 		"method", info.FullMethod,
 		"duration", time.Since(start).String(),
-		"error", err,
-	)
+		"code", st.Code().String(),
+	}
+	if err != nil {
+		// Log only the gRPC status message, which is controlled by our handlers
+		// and never contains raw internal errors or sensitive data.
+		attrs = append(attrs, "status_msg", st.Message())
+		slog.Warn("gRPC call failed", attrs...)
+	} else {
+		slog.Info("gRPC call", attrs...)
+	}
+
 	return resp, err
 }

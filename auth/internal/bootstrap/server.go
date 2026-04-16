@@ -1,3 +1,4 @@
+// Package bootstrap wires application dependencies and constructs the gRPC server.
 package bootstrap
 
 import (
@@ -13,6 +14,8 @@ import (
 // NewGRPCServer creates and configures a gRPC server with interceptors and health check.
 func NewGRPCServer(api *auth_service_api.AuthServiceAPI) *grpc.Server {
 	server := grpc.NewServer(
+		grpc.MaxRecvMsgSize(4*1024*1024), // 4 MB — auth payloads are small
+		grpc.MaxSendMsgSize(4*1024*1024),
 		grpc.ChainUnaryInterceptor(
 			middleware.RecoveryInterceptor,
 			middleware.MetricsInterceptor,

@@ -1,3 +1,4 @@
+// Package pgstorage implements PostgreSQL-backed persistence for the Auth service.
 package pgstorage
 
 import (

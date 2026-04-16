@@ -206,8 +206,10 @@ func passwordValidationSuite() []passwordValidationCase {
 }
 
 func TestValidatePassword(t *testing.T) {
+	t.Parallel()
 	for _, tt := range passwordValidationSuite() {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := ValidatePassword(tt.password)
 
 			if !tt.wantErr {

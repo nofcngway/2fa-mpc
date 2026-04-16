@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,8 +16,8 @@ import (
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
-// COST_BCRYPT is the bcrypt hashing cost factor.
-const COST_BCRYPT = 12
+// costBcrypt is the bcrypt hashing cost factor.
+const costBcrypt = 12
 
 // Register creates a new user account with the given email and password.
 // Returns the created user and JWT tokens for auto-login.
@@ -44,7 +45,7 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*do
 	}
 
 	// 5. Hash password with bcrypt cost=12
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), COST_BCRYPT)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), costBcrypt)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("hash password: %w", err)
 	}
@@ -92,24 +93,34 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*do
 	return user, accessToken, refreshToken, nil
 }
 
-// validateEmail performs basic email format validation.
+// emailRegex validates email format per a practical subset of RFC 5321.
+// Local part: alphanumeric plus . _ % + -
+// Domain: alphanumeric with hyphens, TLD at least 2 characters.
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+// validateEmail checks email format, length limits, and structure.
 func validateEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
 		return domain.ErrInvalidEmail
 	}
-	if strings.Contains(email, " ") {
+
+	// RFC 5321: max 254 characters total, local part max 64
+	if len(email) > 254 {
 		return domain.ErrInvalidEmail
 	}
+
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
 		return domain.ErrInvalidEmail
 	}
-	if parts[0] == "" || parts[1] == "" {
+	if len(parts[0]) > 64 || parts[0] == "" {
 		return domain.ErrInvalidEmail
 	}
-	if !strings.Contains(parts[1], ".") {
+
+	if !emailRegex.MatchString(email) {
 		return domain.ErrInvalidEmail
 	}
+
 	return nil
 }
