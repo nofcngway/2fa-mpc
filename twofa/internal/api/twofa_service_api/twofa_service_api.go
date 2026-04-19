@@ -8,8 +8,8 @@ import (
 	pb "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api"
 )
 
-// Service defines the contract the API layer requires from the TwoFA service.
-type Service interface {
+// twofaService defines the contract the API layer requires from the TwoFA service.
+type twofaService interface {
 	Setup(ctx context.Context, userID, email string) (string, []string, error)
 	Verify(ctx context.Context, userID, otpCode string) (bool, bool, error)
 	Disable(ctx context.Context, userID, otpCode string) error
@@ -19,11 +19,11 @@ type Service interface {
 // TwoFAServiceAPI implements the gRPC TwoFAServiceServer interface.
 type TwoFAServiceAPI struct {
 	pb.UnimplementedTwoFAServiceServer
-	service Service
+	service twofaService
 }
 
 // NewTwoFAServiceAPI creates a new TwoFAServiceAPI instance.
-func NewTwoFAServiceAPI(service Service) *TwoFAServiceAPI {
+func NewTwoFAServiceAPI(service twofaService) *TwoFAServiceAPI {
 	return &TwoFAServiceAPI{
 		service: service,
 	}

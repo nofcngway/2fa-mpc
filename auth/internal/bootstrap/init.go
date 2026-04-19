@@ -2,12 +2,14 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/vbncursed/vkr/auth/config"
 	"github.com/vbncursed/vkr/auth/internal/api/auth_service_api"
+	"github.com/vbncursed/vkr/auth/internal/services/authService"
 )
 
 // InitServices wires all application dependencies and returns the gRPC API handler
@@ -34,14 +36,28 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*auth_service_api.Au
 	kafkaProducer := NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 
 	// 4. Auth service
-	authSvc, err := NewAuthService(cfg, pgStorage, redisStorage, kafkaProducer)
+	privateKey, publicKey, err := authService.LoadRSAKeys(cfg.JWT.PrivateKeyPath, cfg.JWT.PublicKeyPath)
+	if err != nil {
+		logger.Error("failed to load RSA keys", "error", fmt.Errorf("load RSA keys: %w", err))
+		os.Exit(1)
+	}
+
+	authSvc, err := authService.NewAuthService(authService.Deps{
+		Storage:         pgStorage,
+		SessionStorage:  redisStorage,
+		EventProducer:   kafkaProducer,
+		PrivateKey:      privateKey,
+		PublicKey:        publicKey,
+		AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
+		RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
+	})
 	if err != nil {
 		logger.Error("failed to create auth service", "error", err)
 		os.Exit(1)
 	}
 
 	// 5. API
-	api := NewAuthServiceAPI(authSvc)
+	api := auth_service_api.NewAuthServiceAPI(authSvc)
 
 	cleanup := func() {
 		if err := kafkaProducer.Close(); err != nil {

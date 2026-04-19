@@ -8,6 +8,7 @@ import (
 
 	"github.com/vbncursed/vkr/twofa/config"
 	"github.com/vbncursed/vkr/twofa/internal/api/twofa_service_api"
+	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 )
 
 // InitServices wires all application dependencies and returns the gRPC API handler
@@ -37,14 +38,20 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*twofa_service_api.T
 	kafkaProducer := NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 
 	// 5. TwoFA service
-	service, err := NewTwoFAService(pgStorage, sessionStorage, mpcClients, kafkaProducer, cfg)
+	service, err := twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        pgStorage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcClients,
+		EventProducer:  kafkaProducer,
+		MPCTimeout:     cfg.GetMPCTimeout(),
+	})
 	if err != nil {
 		logger.Error("failed to create TwoFA service", "error", err)
 		os.Exit(1)
 	}
 
 	// 6. API
-	api := NewTwoFAServiceAPI(service)
+	api := twofa_service_api.NewTwoFAServiceAPI(service)
 
 	cleanup := func() {
 		if err := kafkaProducer.Close(); err != nil {

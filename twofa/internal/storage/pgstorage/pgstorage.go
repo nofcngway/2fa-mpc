@@ -8,10 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 )
-
-var _ twofaService.Storage = (*PGStorage)(nil)
 
 // PGStorage provides PostgreSQL persistence for the TwoFA service.
 type PGStorage struct {

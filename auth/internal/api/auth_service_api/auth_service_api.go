@@ -9,8 +9,8 @@ import (
 	pb "github.com/vbncursed/vkr/auth/internal/pb/auth_api"
 )
 
-// Service defines the contract the API layer requires from the auth service.
-type Service interface {
+// authService defines the contract the API layer requires from the auth service.
+type authService interface {
 	Register(ctx context.Context, email, password string) (*domain.User, string, string, error)
 	Login(ctx context.Context, email, password string) (*domain.User, string, string, error)
 	Logout(ctx context.Context, refreshTokenStr string) error
@@ -19,16 +19,13 @@ type Service interface {
 	ValidateToken(ctx context.Context, accessTokenStr string) (string, string, error)
 }
 
-// Compile-time check: AuthServiceAPI must implement pb.AuthServiceServer.
-var _ pb.AuthServiceServer = (*AuthServiceAPI)(nil)
-
 // AuthServiceAPI implements the gRPC AuthService interface.
 type AuthServiceAPI struct {
 	pb.UnimplementedAuthServiceServer
-	service Service
+	service authService
 }
 
 // NewAuthServiceAPI creates a new AuthServiceAPI.
-func NewAuthServiceAPI(service Service) *AuthServiceAPI {
+func NewAuthServiceAPI(service authService) *AuthServiceAPI {
 	return &AuthServiceAPI{service: service}
 }

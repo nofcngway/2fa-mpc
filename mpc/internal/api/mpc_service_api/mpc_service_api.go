@@ -7,8 +7,8 @@ import (
 	pb "github.com/vbncursed/vkr/mpc/internal/pb/mpc_api"
 )
 
-// Service defines the contract the API layer requires from the MPC service.
-type Service interface {
+// mpcService defines the contract the API layer requires from the MPC service.
+type mpcService interface {
 	StoreShare(ctx context.Context, userID string, shareIndex int, shareData []byte) (string, error)
 	RetrieveShare(ctx context.Context, userID string, shareIndex int) ([]byte, error)
 	DeleteShare(ctx context.Context, userID string) (int64, error)
@@ -17,11 +17,11 @@ type Service interface {
 // MPCServiceAPI implements the gRPC MPCNodeServiceServer interface.
 type MPCServiceAPI struct {
 	pb.UnimplementedMPCNodeServiceServer
-	service Service
+	service mpcService
 }
 
 // NewMPCServiceAPI creates a new MPCServiceAPI instance.
-func NewMPCServiceAPI(service Service) *MPCServiceAPI {
+func NewMPCServiceAPI(service mpcService) *MPCServiceAPI {
 	return &MPCServiceAPI{
 		service: service,
 	}

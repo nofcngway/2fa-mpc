@@ -8,10 +8,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/vbncursed/vkr/twofa/internal/services/twofaService"
 )
-
-var _ twofaService.SessionStorage = (*RedisStorage)(nil)
 
 // RedisStorage provides Redis persistence for the TwoFA service (rate limiting).
 type RedisStorage struct {
