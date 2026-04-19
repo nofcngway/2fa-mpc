@@ -1,0 +1,29 @@
+server:
+  port: 8080
+  metrics_port: 9103
+  log_level: info
+  read_timeout: 10s
+  write_timeout: 15s
+
+auth_service:
+  addr: "localhost:50051"
+
+twofa_service:
+  addr: "localhost:50052"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+rate_limit:
+  requests_per_minute: 60
+  burst: 10
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"
+
+swagger:
+  auth: "internal/pb/auth_api"
+  twofa: "internal/pb/twofa_api"
