@@ -38,11 +38,15 @@ func newRefreshSuite(t *testing.T) *refreshSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service, err := authService.NewAuthService(
-		storage, sessionStorage, eventProducer,
-		privateKey, &privateKey.PublicKey,
-		15*time.Minute, 168*time.Hour,
-	)
+	service, err := authService.NewAuthService(authService.Deps{
+		Storage:         storage,
+		SessionStorage:  sessionStorage,
+		EventProducer:   eventProducer,
+		PrivateKey:      privateKey,
+		PublicKey:        &privateKey.PublicKey,
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 168 * time.Hour,
+	})
 	assert.NilError(t, err, "failed to create auth service")
 	return &refreshSuite{
 		mc:             mc,
@@ -129,11 +133,15 @@ func TestRefreshToken_ExpiredJWT(t *testing.T) {
 	shortEventProducer := mocks.NewEventProducerMock(s.mc)
 	shortEventProducer.PublishEventMock.Optional().Return(nil)
 	shortEventProducer.CloseMock.Optional().Return(nil)
-	shortService, err := authService.NewAuthService(
-		s.storage, s.sessionStorage, shortEventProducer,
-		s.privateKey, &s.privateKey.PublicKey,
-		15*time.Minute, 1*time.Nanosecond,
-	)
+	shortService, err := authService.NewAuthService(authService.Deps{
+		Storage:         s.storage,
+		SessionStorage:  s.sessionStorage,
+		EventProducer:   shortEventProducer,
+		PrivateKey:      s.privateKey,
+		PublicKey:        &s.privateKey.PublicKey,
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 1 * time.Nanosecond,
+	})
 	assert.NilError(t, err, "failed to create auth service")
 
 	refreshToken, _, err := shortService.GenerateRefreshToken("user-123", "test@example.com", "family-abc")

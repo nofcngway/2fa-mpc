@@ -29,6 +29,17 @@ type SessionStorage interface {
 	DeleteAllUserTokens(ctx context.Context, userID string) error
 }
 
+// Deps groups all dependencies required by AuthService.
+type Deps struct {
+	Storage         Storage
+	SessionStorage  SessionStorage
+	EventProducer   EventProducer
+	PrivateKey      *rsa.PrivateKey
+	PublicKey       *rsa.PublicKey
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+}
+
 // AuthService implements authentication business logic.
 type AuthService struct {
 	storage         Storage
@@ -41,41 +52,33 @@ type AuthService struct {
 }
 
 // NewAuthService creates a new AuthService instance. Returns an error if any required dependency is nil.
-func NewAuthService(
-	storage Storage,
-	sessionStorage SessionStorage,
-	eventProducer EventProducer,
-	privateKey *rsa.PrivateKey,
-	publicKey *rsa.PublicKey,
-	accessTokenTTL time.Duration,
-	refreshTokenTTL time.Duration,
-) (*AuthService, error) {
+func NewAuthService(d Deps) (*AuthService, error) {
 	var errs []error
-	if storage == nil {
+	if d.Storage == nil {
 		errs = append(errs, errors.New("storage is required"))
 	}
-	if sessionStorage == nil {
+	if d.SessionStorage == nil {
 		errs = append(errs, errors.New("session storage is required"))
 	}
-	if eventProducer == nil {
+	if d.EventProducer == nil {
 		errs = append(errs, errors.New("event producer is required"))
 	}
-	if privateKey == nil {
+	if d.PrivateKey == nil {
 		errs = append(errs, errors.New("private key is required"))
 	}
-	if publicKey == nil {
+	if d.PublicKey == nil {
 		errs = append(errs, errors.New("public key is required"))
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
 	return &AuthService{
-		storage:         storage,
-		sessionStorage:  sessionStorage,
-		eventProducer:   eventProducer,
-		privateKey:      privateKey,
-		publicKey:       publicKey,
-		accessTokenTTL:  accessTokenTTL,
-		refreshTokenTTL: refreshTokenTTL,
+		storage:         d.Storage,
+		sessionStorage:  d.SessionStorage,
+		eventProducer:   d.EventProducer,
+		privateKey:      d.PrivateKey,
+		publicKey:       d.PublicKey,
+		accessTokenTTL:  d.AccessTokenTTL,
+		refreshTokenTTL: d.RefreshTokenTTL,
 	}, nil
 }

@@ -4,6 +4,7 @@ package twofaService
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/vbncursed/vkr/twofa/internal/domain"
@@ -51,19 +52,38 @@ type TwoFAService struct {
 	mpcTimeout     time.Duration
 }
 
-// NewTwoFAService creates a new TwoFAService instance.
-func NewTwoFAService(
-	storage Storage,
-	sessionStorage SessionStorage,
-	mpcClients []MPCClient,
-	eventProducer EventProducer,
-	mpcTimeout time.Duration,
-) *TwoFAService {
-	return &TwoFAService{
-		storage:        storage,
-		sessionStorage: sessionStorage,
-		mpcClients:     mpcClients,
-		eventProducer:  eventProducer,
-		mpcTimeout:     mpcTimeout,
+// Deps groups all dependencies required by TwoFAService.
+type Deps struct {
+	Storage        Storage
+	SessionStorage SessionStorage
+	MPCClients     []MPCClient
+	EventProducer  EventProducer
+	MPCTimeout     time.Duration
+}
+
+// NewTwoFAService creates a new TwoFAService instance. Returns an error if any required dependency is nil.
+func NewTwoFAService(d Deps) (*TwoFAService, error) {
+	var errs []error
+	if d.Storage == nil {
+		errs = append(errs, errors.New("storage is required"))
 	}
+	if d.SessionStorage == nil {
+		errs = append(errs, errors.New("session storage is required"))
+	}
+	if len(d.MPCClients) == 0 {
+		errs = append(errs, errors.New("mpc clients are required"))
+	}
+	if d.EventProducer == nil {
+		errs = append(errs, errors.New("event producer is required"))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return &TwoFAService{
+		storage:        d.Storage,
+		sessionStorage: d.SessionStorage,
+		mpcClients:     d.MPCClients,
+		eventProducer:  d.EventProducer,
+		mpcTimeout:     d.MPCTimeout,
+	}, nil
 }

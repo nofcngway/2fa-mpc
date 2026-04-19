@@ -1,14 +1,21 @@
+// Package bootstrap provides dependency injection factories for the MPC Node service.
 package bootstrap
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 
 	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
+)
+
+var (
+	_ mpcService.EventProducer = (*KafkaProducer)(nil)
+	_ mpcService.EventProducer = (*NoOpProducer)(nil)
 )
 
 // KafkaProducer implements EventProducer using kafka-go Writer.
@@ -32,6 +39,9 @@ func NewKafkaProducer(brokers []string, topic string) mpcService.EventProducer {
 			BatchTimeout: 10 * time.Millisecond,
 			MaxAttempts:  3,
 			Async:        true,
+			ErrorLogger: kafka.LoggerFunc(func(msg string, args ...any) {
+				slog.Error("kafka writer error", "message", fmt.Sprintf(msg, args...))
+			}),
 		},
 	}
 }
@@ -40,12 +50,15 @@ func NewKafkaProducer(brokers []string, topic string) mpcService.EventProducer {
 func (p *KafkaProducer) PublishEvent(ctx context.Context, event mpcService.AuditEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal audit event: %w", err)
 	}
-	return p.writer.WriteMessages(ctx, kafka.Message{
+	if err := p.writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(event.UserID),
 		Value: data,
-	})
+	}); err != nil {
+		return fmt.Errorf("write kafka message: %w", err)
+	}
+	return nil
 }
 
 // Close flushes pending messages and closes the Kafka writer.

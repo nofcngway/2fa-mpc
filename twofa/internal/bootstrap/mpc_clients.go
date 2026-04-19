@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/vbncursed/vkr/twofa/config"
 	"github.com/vbncursed/vkr/twofa/internal/pb/mpc_api"
@@ -21,9 +22,17 @@ func NewMPCClients(cfg *config.Config) ([]twofaService.MPCClient, []io.Closer, e
 	conns := make([]io.Closer, len(cfg.MPCNodes))
 
 	for i, node := range cfg.MPCNodes {
+		var transportCreds grpc.DialOption
+		if cfg.MPCInsecure {
+			slog.Warn("using insecure MPC connection", "node", node.Addr)
+			transportCreds = grpc.WithTransportCredentials(insecure.NewCredentials())
+		} else {
+			// TODO: configure TLS/mTLS certificates for production deployment
+			transportCreds = grpc.WithTransportCredentials(insecure.NewCredentials())
+		}
+
 		conn, err := grpc.NewClient(node.Addr,
-			// TODO: replace insecure credentials with TLS/mTLS before production deployment
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			transportCreds,
 			grpc.WithUnaryInterceptor(authMetadataInterceptor(cfg.SharedSecret)),
 		)
 		if err != nil {

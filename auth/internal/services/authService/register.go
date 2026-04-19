@@ -100,7 +100,6 @@ var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-
 
 // validateEmail checks email format, length limits, and structure.
 func validateEmail(email string) error {
-	email = strings.TrimSpace(email)
 	if email == "" {
 		return domain.ErrInvalidEmail
 	}
@@ -110,11 +109,11 @@ func validateEmail(email string) error {
 		return domain.ErrInvalidEmail
 	}
 
-	parts := strings.Split(email, "@")
-	if len(parts) != 2 {
+	local, _, ok := strings.Cut(email, "@")
+	if !ok {
 		return domain.ErrInvalidEmail
 	}
-	if len(parts[0]) > 64 || parts[0] == "" {
+	if len(local) > 64 || local == "" {
 		return domain.ErrInvalidEmail
 	}
 

@@ -27,10 +27,15 @@ func newJWTTestService(t *testing.T) *authService.AuthService {
 	t.Helper()
 	mc := minimock.NewController(t)
 	privateKey, publicKey := generateTestKeyPair(t)
-	svc, err := authService.NewAuthService(
-		mocks.NewStorageMock(mc), mocks.NewSessionStorageMock(mc), &bootstrap.NoOpProducer{},
-		privateKey, publicKey, 15*time.Minute, 168*time.Hour,
-	)
+	svc, err := authService.NewAuthService(authService.Deps{
+		Storage:         mocks.NewStorageMock(mc),
+		SessionStorage:  mocks.NewSessionStorageMock(mc),
+		EventProducer:   &bootstrap.NoOpProducer{},
+		PrivateKey:      privateKey,
+		PublicKey:        publicKey,
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 168 * time.Hour,
+	})
 	assert.NilError(t, err, "failed to create auth service")
 	return svc
 }
@@ -121,10 +126,15 @@ func TestJWT_ParseToken_ExpiredToken(t *testing.T) {
 	privateKey, publicKey := generateTestKeyPair(t)
 	// Create service with very short TTL
 	mc := minimock.NewController(t)
-	svc, err := authService.NewAuthService(
-		mocks.NewStorageMock(mc), mocks.NewSessionStorageMock(mc), &bootstrap.NoOpProducer{},
-		privateKey, publicKey, 1*time.Millisecond, 168*time.Hour,
-	)
+	svc, err := authService.NewAuthService(authService.Deps{
+		Storage:         mocks.NewStorageMock(mc),
+		SessionStorage:  mocks.NewSessionStorageMock(mc),
+		EventProducer:   &bootstrap.NoOpProducer{},
+		PrivateKey:      privateKey,
+		PublicKey:        publicKey,
+		AccessTokenTTL:  1 * time.Millisecond,
+		RefreshTokenTTL: 168 * time.Hour,
+	})
 	assert.NilError(t, err)
 
 	tokenStr, _, err := svc.GenerateAccessToken("user-789", "expired@test.com")

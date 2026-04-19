@@ -19,9 +19,13 @@ func NewAuthService(
 		return nil, fmt.Errorf("load RSA keys: %w", err)
 	}
 
-	return authService.NewAuthService(
-		storage, sessionStorage, eventProducer,
-		privateKey, publicKey,
-		cfg.JWT.AccessTokenTTL, cfg.JWT.RefreshTokenTTL,
-	)
+	return authService.NewAuthService(authService.Deps{
+		Storage:         storage,
+		SessionStorage:  sessionStorage,
+		EventProducer:   eventProducer,
+		PrivateKey:      privateKey,
+		PublicKey:        publicKey,
+		AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
+		RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
+	})
 }

@@ -46,9 +46,14 @@ func newBackupCodeService(t *testing.T) (*twofaService.TwoFAService, *mocks.Stor
 	sessionStorage.SetUsedOTPCounterMock.Optional()
 	sessionStorage.DeleteKeysMock.Optional()
 
-	svc := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, ep, 5*time.Second,
-	)
+	svc, err := twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        storage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcClients,
+		EventProducer:  ep,
+		MPCTimeout:     5 * time.Second,
+	})
+	assert.NilError(t, err, "failed to create TwoFA service")
 	return svc, storage, sessionStorage
 }
 

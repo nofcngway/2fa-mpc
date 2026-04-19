@@ -14,10 +14,10 @@ func NewMPCService(storage mpcService.Storage, cfg *config.Config, eventProducer
 	if len(key) != 32 {
 		return nil, fmt.Errorf("encryption key must be exactly 32 bytes, got %d", len(key))
 	}
-	return mpcService.NewMPCService(
-		storage,
-		key,
-		cfg.Node.ID,
-		eventProducer,
-	), nil
+	return mpcService.NewMPCService(mpcService.Deps{
+		Storage:       storage,
+		EncryptionKey: key,
+		NodeID:        cfg.Node.ID,
+		EventProducer: eventProducer,
+	})
 }

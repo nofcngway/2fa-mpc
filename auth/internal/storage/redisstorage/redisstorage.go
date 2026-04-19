@@ -6,7 +6,12 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/vbncursed/vkr/auth/internal/services/authService"
 )
+
+// Compile-time interface compliance check.
+var _ authService.SessionStorage = (*RedisStorage)(nil)
 
 // RedisStorage provides Redis data access for session and cache operations.
 type RedisStorage struct {

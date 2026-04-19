@@ -8,6 +8,7 @@ import (
 	"crypto/subtle"
 	"encoding/base32"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -22,7 +23,7 @@ import (
 func GenerateSecret() ([]byte, []byte, error) {
 	secret := make([]byte, 20)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", domain.ErrSecretGeneration, err)
+		return nil, nil, fmt.Errorf("generate secret: %w", errors.Join(domain.ErrSecretGeneration, err))
 	}
 
 	encoded := []byte(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret))

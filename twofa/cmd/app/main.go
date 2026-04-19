@@ -1,3 +1,4 @@
+// Package main is the entry point for the TwoFA service.
 package main
 
 import (
@@ -47,7 +48,11 @@ func main() {
 
 	kafkaProducer := bootstrap.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 
-	service := bootstrap.NewTwoFAService(pgStorage, sessionStorage, mpcClients, kafkaProducer, cfg)
+	service, err := bootstrap.NewTwoFAService(pgStorage, sessionStorage, mpcClients, kafkaProducer, cfg)
+	if err != nil {
+		slog.Error("failed to create TwoFA service", "error", err)
+		os.Exit(1)
+	}
 	api := bootstrap.NewTwoFAServiceAPI(service)
 	grpcServer := bootstrap.NewGRPCServer(api)
 
@@ -128,7 +133,6 @@ func main() {
 	// 5. Close PostgreSQL
 	pgStorage.Close()
 	slog.Info("PostgreSQL connection closed")
-
 
 	// 6. Shutdown metrics HTTP server
 	if err := metricsServer.Shutdown(shutdownCtx); err != nil {

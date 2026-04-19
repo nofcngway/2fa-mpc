@@ -43,9 +43,14 @@ func newVerifySuite(t *testing.T) *verifySuite {
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 
-	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcInterfaces, eventProducer, 5*time.Second,
-	)
+	service, err := twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        storage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcInterfaces,
+		EventProducer:  eventProducer,
+		MPCTimeout:     5 * time.Second,
+	})
+	assert.NilError(t, err, "failed to create TwoFA service")
 
 	return &verifySuite{
 		mc:             mc,

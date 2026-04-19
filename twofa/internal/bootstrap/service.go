@@ -12,12 +12,12 @@ func NewTwoFAService(
 	mpcClients []twofaService.MPCClient,
 	eventProducer twofaService.EventProducer,
 	cfg *config.Config,
-) *twofaService.TwoFAService {
-	return twofaService.NewTwoFAService(
-		storage,
-		sessionStorage,
-		mpcClients,
-		eventProducer,
-		cfg.GetMPCTimeout(),
-	)
+) (*twofaService.TwoFAService, error) {
+	return twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        storage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcClients,
+		EventProducer:  eventProducer,
+		MPCTimeout:     cfg.GetMPCTimeout(),
+	})
 }

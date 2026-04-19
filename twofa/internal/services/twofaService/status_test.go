@@ -32,9 +32,14 @@ func TestGetStatus_Found(t *testing.T) {
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 
-	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, eventProducer, 5*time.Second,
-	)
+	service, err := twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        storage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcClients,
+		EventProducer:  eventProducer,
+		MPCTimeout:     5 * time.Second,
+	})
+	assert.NilError(t, err, "failed to create TwoFA service")
 
 	// Make all optional
 	storage.CreateTwoFARecordMock.Optional()
@@ -83,9 +88,14 @@ func TestGetStatus_NotFound(t *testing.T) {
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 
-	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, eventProducer, 5*time.Second,
-	)
+	service, err := twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        storage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcClients,
+		EventProducer:  eventProducer,
+		MPCTimeout:     5 * time.Second,
+	})
+	assert.NilError(t, err, "failed to create TwoFA service")
 
 	storage.CreateTwoFARecordMock.Optional()
 	storage.EnableTwoFAMock.Optional()
@@ -123,9 +133,14 @@ func TestGetStatus_Error(t *testing.T) {
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 
-	service := twofaService.NewTwoFAService(
-		storage, sessionStorage, mpcClients, eventProducer, 5*time.Second,
-	)
+	service, err := twofaService.NewTwoFAService(twofaService.Deps{
+		Storage:        storage,
+		SessionStorage: sessionStorage,
+		MPCClients:     mpcClients,
+		EventProducer:  eventProducer,
+		MPCTimeout:     5 * time.Second,
+	})
+	assert.NilError(t, err, "failed to create TwoFA service")
 
 	storage.CreateTwoFARecordMock.Optional()
 	storage.EnableTwoFAMock.Optional()

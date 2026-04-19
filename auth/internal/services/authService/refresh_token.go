@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
@@ -23,7 +24,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	// 2. Look up JTI in Redis
 	tokenData, err := s.sessionStorage.GetRefreshToken(ctx, claims.ID)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("get refresh token: %w", err)
 	}
 
 	// 3. Theft detection: valid JWT but JTI not in Redis
@@ -44,20 +45,20 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	// 4. Generate new access token
 	newAccess, _, err := s.GenerateAccessToken(tokenData.UserID, claims.Email)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("generate access token: %w", err)
 	}
 
 	// 5. Generate new refresh token with same family
 	newRefresh, newJTI, err := s.GenerateRefreshToken(tokenData.UserID, claims.Email, tokenData.TokenFamily)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("generate refresh token: %w", err)
 	}
 
 	// 6. Store new token BEFORE deleting old — safer failure mode:
 	// if store fails, old token remains valid and user can retry;
 	// if delete fails after store, old token expires naturally at TTL.
 	if err := s.sessionStorage.StoreRefreshToken(ctx, newJTI, tokenData.UserID, tokenData.TokenFamily, s.refreshTokenTTL); err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("store refresh token: %w", err)
 	}
 
 	// 7. Delete old JTI (best-effort — it will expire naturally on TTL if this fails)

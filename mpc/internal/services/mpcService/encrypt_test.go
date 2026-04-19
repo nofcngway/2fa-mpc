@@ -14,7 +14,7 @@ func testKey() []byte {
 }
 
 func newEncryptService() *MPCService {
-	return NewMPCService(nil, testKey(), 1, nil)
+	return &MPCService{encryptionKey: testKey(), nodeID: 1}
 }
 
 func TestEncryptDecryptRoundtrip(t *testing.T) {
@@ -71,7 +71,7 @@ func TestDecryptWrongKey(t *testing.T) {
 	wrongKey := make([]byte, 32)
 	_, err = rand.Read(wrongKey)
 	assert.NilError(t, err)
-	wrongSvc := NewMPCService(nil, wrongKey, 1, nil)
+	wrongSvc := &MPCService{encryptionKey: wrongKey, nodeID: 1}
 
 	_, err = wrongSvc.decrypt(ciphertext, nonce)
 	assert.Assert(t, err != nil, "decrypt with wrong key should fail")

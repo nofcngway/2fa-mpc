@@ -38,11 +38,15 @@ func newLogoutSuite(t *testing.T) *logoutSuite {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service, err := authService.NewAuthService(
-		storage, sessionStorage, eventProducer,
-		privateKey, &privateKey.PublicKey,
-		15*time.Minute, 168*time.Hour,
-	)
+	service, err := authService.NewAuthService(authService.Deps{
+		Storage:         storage,
+		SessionStorage:  sessionStorage,
+		EventProducer:   eventProducer,
+		PrivateKey:      privateKey,
+		PublicKey:        &privateKey.PublicKey,
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 168 * time.Hour,
+	})
 	assert.NilError(t, err, "failed to create auth service")
 	return &logoutSuite{
 		mc:             mc,

@@ -1,3 +1,4 @@
+// Package config handles loading and validation of the TwoFA service configuration.
 package config
 
 import (
@@ -24,6 +25,7 @@ type Config struct {
 	MPCNodes     []MPCNodeConfig `yaml:"mpc_nodes"`
 	SharedSecret string          `yaml:"shared_secret"`
 	MPCTimeout   time.Duration   `yaml:"mpc_timeout"`
+	MPCInsecure  bool            `yaml:"mpc_insecure"`
 }
 
 // GetMPCTimeout returns the configured MPC timeout or the default (5s).
@@ -98,6 +100,12 @@ func envInt(key string, target *int) {
 	}
 }
 
+func envBool(key string, target *bool) {
+	if v := os.Getenv(key); v != "" {
+		*target = v == "true" || v == "1"
+	}
+}
+
 func envDuration(key string, target *time.Duration) {
 	if v := os.Getenv(key); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
@@ -136,6 +144,7 @@ func applyEnvOverrides(cfg *Config) {
 	envMPCNodes("TWOFA_MPC_NODES", &cfg.MPCNodes)
 	envString("TWOFA_SHARED_SECRET", &cfg.SharedSecret)
 	envDuration("TWOFA_MPC_TIMEOUT", &cfg.MPCTimeout)
+	envBool("TWOFA_MPC_INSECURE", &cfg.MPCInsecure)
 }
 
 // Load reads and parses the configuration file at the given path.

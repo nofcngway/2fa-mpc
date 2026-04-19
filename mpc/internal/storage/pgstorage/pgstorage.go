@@ -7,7 +7,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/vbncursed/vkr/mpc/internal/services/mpcService"
 )
+
+var _ mpcService.Storage = (*PGStorage)(nil)
 
 // PGStorage implements PostgreSQL-based share storage.
 type PGStorage struct {

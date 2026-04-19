@@ -21,12 +21,7 @@ func (s *MPCService) RetrieveShare(ctx context.Context, userID string, shareInde
 
 	plaintext, err := s.decrypt(share.EncryptedData, share.Nonce)
 	if err != nil {
-		slog.Error("share decryption failed",
-			"user_id", userID,
-			"share_index", shareIndex,
-			"node_id", s.nodeID,
-		)
-		return nil, fmt.Errorf("decrypt share: %w", err)
+		return nil, fmt.Errorf("decrypt share (user_id=%s, share_index=%d, node_id=%d): %w", userID, shareIndex, s.nodeID, err)
 	}
 
 	// Fire-and-forget audit event

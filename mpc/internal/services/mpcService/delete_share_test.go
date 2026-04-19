@@ -25,7 +25,13 @@ func newDeleteSuite(t *testing.T) *deleteSuite {
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 	key := []byte("01234567890123456789012345678901") // exactly 32 bytes
-	service := mpcService.NewMPCService(storage, key, 1, eventProducer)
+	service, err := mpcService.NewMPCService(mpcService.Deps{
+		Storage:       storage,
+		EncryptionKey: key,
+		NodeID:        1,
+		EventProducer: eventProducer,
+	})
+	assert.NilError(t, err, "failed to create MPC service")
 	return &deleteSuite{mc: mc, storage: storage, service: service}
 }
 
