@@ -7,8 +7,9 @@ import (
 	"github.com/vbncursed/vkr/auth/config"
 )
 
-// NewLogger creates a JSON slog.Logger with the log level from config.
-func NewLogger(cfg *config.Config) *slog.Logger {
+// SetupLogger creates a JSON slog.Logger with the log level from config,
+// sets it as the default logger, and returns it.
+func SetupLogger(cfg *config.Config) *slog.Logger {
 	logLevel := slog.LevelInfo
 	switch cfg.Server.LogLevel {
 	case "debug":
@@ -22,5 +23,7 @@ func NewLogger(cfg *config.Config) *slog.Logger {
 	default:
 		slog.Warn("unknown log level, defaulting to info", "level", cfg.Server.LogLevel)
 	}
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+	slog.SetDefault(logger)
+	return logger
 }
