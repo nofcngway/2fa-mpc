@@ -1,5 +1,5 @@
 server:
-  port: 9100
+  port: 9200
   metrics_port: 9102
   log_level: "info"
 
@@ -8,7 +8,7 @@ database:
 
 kafka:
   brokers:
-    - "localhost:9094"
+    - "localhost:9092"
   topic: "mpc-events"
 
 node:
