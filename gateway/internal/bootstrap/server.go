@@ -1,64 +1,64 @@
 package bootstrap
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/vbncursed/vkr/gateway/config"
-	"github.com/vbncursed/vkr/gateway/internal/middleware"
-	authpb "github.com/vbncursed/vkr/gateway/internal/pb/auth_api"
-	twofapb "github.com/vbncursed/vkr/gateway/internal/pb/twofa_api"
 )
 
-func NewHTTPServer(ctx context.Context, cfg *config.Config, clients *GRPCClients, rdb *redis.Client) (*http.Server, error) {
-	gwMux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-
-	if err := authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, gwMux, cfg.AuthService.Addr, opts); err != nil {
-		return nil, fmt.Errorf("register auth gateway: %w", err)
-	}
-	if err := twofapb.RegisterTwoFAServiceHandlerFromEndpoint(ctx, gwMux, cfg.TwoFAService.Addr, opts); err != nil {
-		return nil, fmt.Errorf("register twofa gateway: %w", err)
-	}
-
-	router := http.NewServeMux()
-	router.HandleFunc("GET /docs", DocsHandler())
-	router.HandleFunc("GET /openapi/auth.json", SwaggerFileHandler(cfg.Swagger.Auth))
-	router.HandleFunc("GET /openapi/twofa.json", SwaggerFileHandler(cfg.Swagger.TwoFA))
-	router.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
-	router.Handle("/", gwMux)
-
-	// Middleware chain: Recovery → Metrics → Logging → CORS → RateLimit → Auth → Router
-	var handler http.Handler = router
-	handler = middleware.Auth(clients.Auth)(handler)
-	handler = middleware.RateLimit(rdb, cfg.RateLimit.RequestsPerMinute, cfg.RateLimit.Burst)(handler)
-	handler = middleware.CORS(cfg.CORS.AllowedOrigins)(handler)
-	handler = middleware.Logging(handler)
-	handler = middleware.Metrics(handler)
-	handler = middleware.Recovery(handler)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      handler,
-		ReadTimeout:  cfg.Server.GetReadTimeout(),
-		WriteTimeout: cfg.Server.GetWriteTimeout(),
+// AppRun starts the HTTP and metrics servers, then blocks until a termination
+// signal is received and performs graceful shutdown.
+func AppRun(httpServer *http.Server, cfg *config.Config) {
+	metricsPort := cmp.Or(cfg.Server.MetricsPort, 9103)
+	metricsServer := &http.Server{
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      promhttp.Handler(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
-	slog.Info("HTTP server configured",
-		"port", cfg.Server.Port,
-		"auth_service", cfg.AuthService.Addr,
-		"twofa_service", cfg.TwoFAService.Addr,
-	)
+	go func() {
+		slog.Info("metrics server started", "port", metricsPort)
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("metrics server error", "error", err)
+		}
+	}()
 
-	return srv, nil
+	go func() {
+		slog.Info("gateway started", "port", cfg.Server.Port)
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("HTTP server error", "error", err)
+		}
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+	slog.Info("shutting down gateway")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		slog.Error("failed to shutdown HTTP server", "error", err)
+	}
+	slog.Info("HTTP server stopped")
+
+	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+		slog.Error("failed to shutdown metrics server", "error", err)
+	}
+	slog.Info("metrics server stopped")
+
+	slog.Info("gateway shutdown complete")
 }

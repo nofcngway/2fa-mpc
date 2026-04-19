@@ -8,7 +8,8 @@ import (
 	"github.com/vbncursed/vkr/gateway/config"
 )
 
-func NewLogger(cfg *config.Config) *slog.Logger {
+// SetupLogger creates and sets the default structured logger based on config.
+func SetupLogger(cfg *config.Config) *slog.Logger {
 	var level slog.Level
 	switch cfg.Server.LogLevel {
 	case "debug":
