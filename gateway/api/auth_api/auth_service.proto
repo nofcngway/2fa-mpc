@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package auth_api;
+
+option go_package = "github.com/vbncursed/vkr/gateway/internal/pb/auth_api";
+
+import "google/api/annotations.proto";
+import "models/models.proto";
+
+service AuthService {
+    rpc Register(RegisterRequest) returns (RegisterResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/auth/register"
+            body: "*"
+        };
+    }
+
+    rpc Login(LoginRequest) returns (LoginResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/auth/login"
+            body: "*"
+        };
+    }
+
+    rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/auth/refresh"
+            body: "*"
+        };
+    }
+
+    rpc Logout(LogoutRequest) returns (LogoutResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/auth/logout"
+            body: "*"
+        };
+    }
+
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/auth/validate"
+            body: "*"
+        };
+    }
+
+    rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/auth/logout-all"
+            body: "*"
+        };
+    }
+}
+
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message RegisterResponse {
+    auth_models.TokenPair tokens = 1;
+    auth_models.User user = 2;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    auth_models.TokenPair tokens = 1;
+    auth_models.User user = 2;
+}
+
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+    auth_models.TokenPair tokens = 1;
+}
+
+message LogoutRequest {
+    string refresh_token = 1;
+}
+
+message LogoutResponse {}
+
+message ValidateTokenRequest {
+    string access_token = 1;
+}
+
+message ValidateTokenResponse {
+    string user_id = 1;
+    string email = 2;
+}
+
+message LogoutAllRequest {
+    string user_id = 1;
+}
+
+message LogoutAllResponse {}

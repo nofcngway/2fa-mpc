@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package twofa_api;
+
+option go_package = "github.com/vbncursed/vkr/gateway/internal/pb/twofa_api";
+
+import "google/api/annotations.proto";
+
+service TwoFAService {
+    rpc Setup2FA(Setup2FARequest) returns (Setup2FAResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/2fa/setup"
+            body: "*"
+        };
+    }
+
+    rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/2fa/verify"
+            body: "*"
+        };
+    }
+
+    rpc Disable2FA(Disable2FARequest) returns (Disable2FAResponse) {
+        option (google.api.http) = {
+            post: "/api/v1/2fa/disable"
+            body: "*"
+        };
+    }
+
+    rpc Get2FAStatus(Get2FAStatusRequest) returns (Get2FAStatusResponse) {
+        option (google.api.http) = {
+            get: "/api/v1/2fa/status"
+        };
+    }
+}
+
+message Setup2FARequest {
+    string user_id = 1;
+    string email = 2;
+}
+
+message Setup2FAResponse {
+    string provisioning_uri = 1;
+    repeated string backup_codes = 2;
+}
+
+message Verify2FARequest {
+    string user_id = 1;
+    string otp_code = 2;
+}
+
+message Verify2FAResponse {
+    bool valid = 1;
+    bool is_newly_enabled = 2;
+}
+
+message Disable2FARequest {
+    string user_id = 1;
+    string otp_code = 2;
+}
+
+message Disable2FAResponse {}
+
+message Get2FAStatusRequest {
+    string user_id = 1;
+}
+
+message Get2FAStatusResponse {
+    bool is_enabled = 1;
+    string created_at = 2;
+}

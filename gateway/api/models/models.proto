@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package auth_models;
+
+option go_package = "github.com/vbncursed/vkr/gateway/internal/pb/models";
+
+message User {
+    string id = 1;
+    string email = 2;
+    string password_hash = 3;
+    string created_at = 4;
+    string updated_at = 5;
+}
+
+message TokenPair {
+    string access_token = 1;
+    string refresh_token = 2;
+}
