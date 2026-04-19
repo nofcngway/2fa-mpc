@@ -1,0 +1,248 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "twofa_api/twofa_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "TwoFAService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/2fa/disable": {
+      "post": {
+        "operationId": "TwoFAService_Disable2FA",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/twofa_apiDisable2FAResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/twofa_apiDisable2FARequest"
+            }
+          }
+        ],
+        "tags": [
+          "TwoFAService"
+        ]
+      }
+    },
+    "/api/v1/2fa/setup": {
+      "post": {
+        "operationId": "TwoFAService_Setup2FA",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/twofa_apiSetup2FAResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/twofa_apiSetup2FARequest"
+            }
+          }
+        ],
+        "tags": [
+          "TwoFAService"
+        ]
+      }
+    },
+    "/api/v1/2fa/status": {
+      "get": {
+        "operationId": "TwoFAService_Get2FAStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/twofa_apiGet2FAStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TwoFAService"
+        ]
+      }
+    },
+    "/api/v1/2fa/verify": {
+      "post": {
+        "operationId": "TwoFAService_Verify2FA",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/twofa_apiVerify2FAResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/twofa_apiVerify2FARequest"
+            }
+          }
+        ],
+        "tags": [
+          "TwoFAService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "twofa_apiDisable2FARequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "otpCode": {
+          "type": "string"
+        }
+      }
+    },
+    "twofa_apiDisable2FAResponse": {
+      "type": "object"
+    },
+    "twofa_apiGet2FAStatusResponse": {
+      "type": "object",
+      "properties": {
+        "isEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      }
+    },
+    "twofa_apiSetup2FARequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "twofa_apiSetup2FAResponse": {
+      "type": "object",
+      "properties": {
+        "provisioningUri": {
+          "type": "string"
+        },
+        "backupCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "twofa_apiVerify2FARequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "otpCode": {
+          "type": "string"
+        }
+      }
+    },
+    "twofa_apiVerify2FAResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "isNewlyEnabled": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
