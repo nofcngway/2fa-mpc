@@ -25,5 +25,5 @@ cors:
     - "http://localhost:3000"
 
 swagger:
-  auth: "internal/pb/auth_api"
-  twofa: "internal/pb/twofa_api"
+  auth: "internal/pb/swagger/auth_api"
+  twofa: "internal/pb/swagger/twofa_api"
