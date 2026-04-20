@@ -6,7 +6,6 @@ services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
