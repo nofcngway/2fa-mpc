@@ -1,45 +1,21 @@
 # Development-only configuration. Do NOT use these credentials in production.
 
 services:
-  # --- Infrastructure ---
+  # ── Infrastructure ──────────────────────────────────────────
 
-  kafka:
-    image: bitnami/kafka:4.1
-    environment:
-      KAFKA_CFG_NODE_ID: 1
-      KAFKA_CFG_PROCESS_ROLES: broker,controller
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-
-  auth-postgres:
+  postgres:
     image: postgres:17
     environment:
       POSTGRES_DB: auth_db
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
-      - auth-pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
-      timeout: 5s
-      retries: 5
-
-  twofa-postgres:
-    image: postgres:17
-    environment:
-      POSTGRES_DB: twofa_db
-      POSTGRES_USER: twofa_user
-      POSTGRES_PASSWORD: twofa_pass
-    volumes:
-      - twofa-pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U twofa_user -d twofa_db"]
-      interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
 
   mpc-postgres:
@@ -50,11 +26,11 @@ services:
       POSTGRES_PASSWORD: mpc_pass
     volumes:
       - mpc-pg-data:/var/lib/postgresql/data
-      - ./scripts/init-mpc-dbs.sql:/docker-entrypoint-initdb.d/init-mpc-dbs.sql
+      - ./scripts/init-mpc-dbs.sql:/docker-entrypoint-initdb.d/init-mpc-dbs.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mpc_user -d mpc_db_1"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
 
   redis:
@@ -63,14 +39,32 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
+
+  kafka:
+    image: apache/kafka:4.1.2
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: "mpc-2fa-dev-cluster-001"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   kafka-ui:
     image: kafbat/kafka-ui:latest
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
     environment:
       KAFKA_CLUSTERS_0_NAME: mpc-2fa
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -78,24 +72,50 @@ services:
     ports:
       - "8090:8080"
 
-  # --- Application Services ---
+  # ── Monitoring ──────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    ports:
+      - "9190:9090"
+    volumes:
+      - ./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - kafka
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  # ── Application Services ────────────────────────────────────
 
   auth:
     build:
       context: ./auth
       dockerfile: Dockerfile
     depends_on:
-      auth-postgres:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
     environment:
       - AUTH_SERVER_PORT=9090
       - AUTH_SERVER_METRICS_PORT=9100
       - AUTH_SERVER_LOG_LEVEL=info
-      - AUTH_DATABASE_DSN=postgres://auth_user:auth_pass@auth-postgres:5432/auth_db?sslmode=disable
+      - AUTH_DATABASE_DSN=postgres://auth_user:auth_pass@postgres:5432/auth_db?sslmode=disable
       - AUTH_REDIS_ADDR=redis:6379
       - AUTH_REDIS_PASSWORD=
       - AUTH_REDIS_DB=0
@@ -116,12 +136,12 @@ services:
       context: .
       dockerfile: twofa/Dockerfile
     depends_on:
-      twofa-postgres:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
       mpc-node-1:
         condition: service_started
       mpc-node-2:
@@ -132,7 +152,7 @@ services:
       - TWOFA_SERVER_PORT=9091
       - TWOFA_SERVER_METRICS_PORT=9101
       - TWOFA_SERVER_LOG_LEVEL=info
-      - TWOFA_DATABASE_DSN=postgres://twofa_user:twofa_pass@twofa-postgres:5432/twofa_db?sslmode=disable
+      - TWOFA_DATABASE_DSN=postgres://twofa_user:twofa_pass@postgres:5432/twofa_db?sslmode=disable
       - TWOFA_REDIS_ADDR=redis:6379
       - TWOFA_REDIS_PASSWORD=
       - TWOFA_REDIS_DB=1
@@ -141,6 +161,7 @@ services:
       - TWOFA_MPC_NODES=mpc-node-1:9200,mpc-node-2:9201,mpc-node-3:9202
       - TWOFA_SHARED_SECRET=dev-shared-secret-change-in-production
       - TWOFA_MPC_TIMEOUT=5s
+      - TWOFA_MPC_INSECURE=true
     ports:
       - "9091:9091"
       - "9101:9101"
@@ -153,7 +174,7 @@ services:
       mpc-postgres:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
     environment:
       - MPC_SERVER_PORT=9200
       - MPC_SERVER_METRICS_PORT=9210
@@ -164,9 +185,6 @@ services:
       - MPC_NODE_ID=1
       - MPC_NODE_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
       - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
-    ports:
-      - "9200:9200"
-      - "9210:9210"
 
   mpc-node-2:
     build:
@@ -176,7 +194,7 @@ services:
       mpc-postgres:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
     environment:
       - MPC_SERVER_PORT=9201
       - MPC_SERVER_METRICS_PORT=9211
@@ -187,9 +205,6 @@ services:
       - MPC_NODE_ID=2
       - MPC_NODE_ENCRYPTION_KEY=abcdef0123456789abcdef0123456789
       - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
-    ports:
-      - "9201:9201"
-      - "9211:9211"
 
   mpc-node-3:
     build:
@@ -199,7 +214,7 @@ services:
       mpc-postgres:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
     environment:
       - MPC_SERVER_PORT=9202
       - MPC_SERVER_METRICS_PORT=9212
@@ -210,11 +225,31 @@ services:
       - MPC_NODE_ID=3
       - MPC_NODE_ENCRYPTION_KEY=56789abcdef012345678abcdef012345
       - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    depends_on:
+      auth:
+        condition: service_started
+      twofa:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      - GATEWAY_SERVER_PORT=8080
+      - GATEWAY_SERVER_METRICS_PORT=9103
+      - GATEWAY_SERVER_LOG_LEVEL=info
+      - GATEWAY_AUTH_SERVICE_ADDR=auth:9090
+      - GATEWAY_TWOFA_SERVICE_ADDR=twofa:9091
+      - GATEWAY_REDIS_ADDR=redis:6379
+      - GATEWAY_REDIS_DB=2
     ports:
-      - "9202:9202"
-      - "9212:9212"
+      - "8080:8080"
+      - "9103:9103"
 
 volumes:
-  auth-pg-data:
-  twofa-pg-data:
+  pg-data:
   mpc-pg-data:
+  grafana-data:
