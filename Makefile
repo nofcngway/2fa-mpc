@@ -13,6 +13,9 @@ up-build: ## Start full system via docker-compose with build
 down: ## Stop full system and remove containers
 	docker compose down
 
+down-v: ## Stop full system and remove containers and volumes
+	docker compose down -v
+
 build-all: ## Build all service Docker images
 	docker build -t mpc-2fa-auth -f auth/Dockerfile auth/
 	docker build -t mpc-2fa-mpc -f mpc/Dockerfile mpc/
