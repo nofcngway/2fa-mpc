@@ -5,6 +5,9 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 up: ## Start full system via docker-compose
+	docker compose up -d
+
+up-build: ## Start full system via docker-compose with build
 	docker compose up -d --build
 
 down: ## Stop full system and remove containers
