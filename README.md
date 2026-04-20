@@ -33,6 +33,7 @@
 
 | Сервис | Директория | Назначение |
 |--------|-----------|------------|
+| Frontend | `frontend/` | Web-интерфейс (Next.js 16, HeroUI, Liquid Glass) |
 | API Gateway | `gateway/` | REST -> gRPC, rate limiting, CORS, ScalarUI docs |
 | Auth Service | `auth/` | Регистрация, логин, JWT (RS256), сессии |
 | TwoFA Service | `twofa/` | Оркестрация 2FA, Shamir split/combine, TOTP |
@@ -64,6 +65,7 @@ make up-build
 
 | Сервис | URL |
 |--------|-----|
+| Frontend | http://localhost:3000 |
 | Gateway API | http://localhost:8080 |
 | API Docs (ScalarUI) | http://localhost:8080/docs |
 | Kafka UI | http://localhost:8090 |
@@ -86,6 +88,7 @@ make test           # запустить тесты
 
 ```
 .
+├── frontend/           # Frontend (Next.js 16, HeroUI, Liquid Glass)
 ├── auth/               # Auth Service
 ├── twofa/              # TwoFA Service
 ├── mpc/                # MPC Node Service
@@ -99,6 +102,7 @@ make test           # запустить тесты
 
 ## Документация сервисов
 
+- [Frontend](frontend/README.md)
 - [Auth Service](auth/README.md)
 - [TwoFA Service](twofa/README.md)
 - [MPC Node Service](mpc/README.md)

@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+/* ============================================
+   LIQUID GLASS DESIGN SYSTEM
+   Apple-inspired translucent glass surfaces
+   ============================================ */
+
+:root,
+.light,
+[data-theme="light"] {
+  /* Glass surfaces */
+  --glass-bg: oklch(100% 0 0 / 60%);
+  --glass-bg-elevated: oklch(100% 0 0 / 75%);
+  --glass-bg-solid: oklch(100% 0 0 / 90%);
+  --glass-border: oklch(100% 0 0 / 40%);
+  --glass-border-subtle: oklch(0% 0 0 / 6%);
+  --glass-highlight: oklch(100% 0 0 / 50%);
+  --glass-shadow: oklch(0% 0 0 / 8%);
+  --glass-shadow-lg: oklch(0% 0 0 / 12%);
+
+  /* Blur levels */
+  --glass-blur-sm: 8px;
+  --glass-blur-md: 16px;
+  --glass-blur-lg: 24px;
+  --glass-blur-xl: 40px;
+
+  /* Environment gradients */
+  --env-gradient-1: oklch(92% 0.04 285);
+  --env-gradient-2: oklch(95% 0.03 250);
+  --env-gradient-3: oklch(90% 0.05 310);
+
+  /* Accent — purple */
+  --accent: oklch(0.58 0.19 285);
+  --accent-foreground: oklch(100% 0 0);
+  --accent-glow: oklch(0.58 0.19 285 / 25%);
+  --accent-subtle: oklch(0.58 0.19 285 / 10%);
+
+  /* Semantic status */
+  --glass-success: oklch(0.72 0.17 155);
+  --glass-danger: oklch(0.63 0.24 25);
+  --glass-warning: oklch(0.80 0.16 80);
+}
+
+html.dark,
+html[data-theme="dark"] {
+  /* Glass surfaces */
+  --glass-bg: oklch(18% 0.01 260 / 50%);
+  --glass-bg-elevated: oklch(22% 0.01 260 / 60%);
+  --glass-bg-solid: oklch(16% 0.01 260 / 85%);
+  --glass-border: oklch(40% 0.02 260 / 20%);
+  --glass-border-subtle: oklch(100% 0 0 / 8%);
+  --glass-highlight: oklch(100% 0 0 / 6%);
+  --glass-shadow: oklch(0% 0 0 / 30%);
+  --glass-shadow-lg: oklch(0% 0 0 / 40%);
+
+  /* Environment gradients */
+  --env-gradient-1: oklch(14% 0.04 285);
+  --env-gradient-2: oklch(12% 0.03 250);
+  --env-gradient-3: oklch(16% 0.05 310);
+
+  /* Accent — brighter purple in dark mode */
+  --accent: oklch(0.72 0.16 285);
+  --accent-foreground: oklch(12% 0 0);
+  --accent-glow: oklch(0.72 0.16 285 / 20%);
+  --accent-subtle: oklch(0.72 0.16 285 / 12%);
+
+  /* Semantic status */
+  --glass-success: oklch(0.72 0.17 155);
+  --glass-danger: oklch(0.65 0.22 25);
+  --glass-warning: oklch(0.80 0.16 80);
+}
+
+/* ============================================
+   GLASS COMPONENT STYLES
+   ============================================ */
+
+@layer components {
+  /* Auth page ambient background */
+  .auth-background {
+    background:
+      radial-gradient(ellipse at 20% 40%, var(--env-gradient-1) 0%, transparent 50%),
+      radial-gradient(ellipse at 75% 20%, var(--env-gradient-2) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, var(--env-gradient-3) 0%, transparent 50%),
+      var(--background);
+    min-height: 100vh;
+  }
+
+  /* Glass card base */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur-lg));
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    box-shadow:
+      0 8px 32px var(--glass-shadow),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+
+  .glass-card-elevated {
+    background: var(--glass-bg-elevated);
+    backdrop-filter: blur(var(--glass-blur-xl));
+    -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    box-shadow:
+      0 16px 48px var(--glass-shadow-lg),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+
+  .glass-card-flat {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur-md));
+    -webkit-backdrop-filter: blur(var(--glass-blur-md));
+    border: 1px solid var(--glass-border-subtle);
+    border-radius: 1.5rem;
+  }
+
+  /* Glass input override */
+  .glass-input {
+    background: var(--glass-bg-elevated) !important;
+    backdrop-filter: blur(var(--glass-blur-sm));
+    -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+    border: 1px solid var(--glass-border-subtle) !important;
+    border-radius: 0.75rem !important;
+    transition: all 200ms ease;
+  }
+
+  .glass-input:focus-within {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important;
+  }
+
+  /* Glass navbar */
+  .glass-navbar {
+    background: var(--glass-bg-solid);
+    backdrop-filter: blur(var(--glass-blur-xl));
+    -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+    border-bottom: 1px solid var(--glass-border-subtle);
+    box-shadow: 0 1px 3px var(--glass-shadow);
+  }
+
+  /* OTP slots glass override */
+  .glass-otp-slot {
+    background: var(--glass-bg-elevated) !important;
+    border: 1px solid var(--glass-border-subtle) !important;
+    border-radius: 0.75rem !important;
+    transition: all 200ms ease;
+  }
+
+  .glass-otp-slot[data-active="true"] {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important;
+  }
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
