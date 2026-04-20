@@ -15,8 +15,3 @@ bin/
 frontend/node_modules/
 frontend/.next/
 frontend/.env.local
-
-# Temp
-TZ.md
-*.png
-123.md
