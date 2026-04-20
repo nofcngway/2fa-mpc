@@ -6,15 +6,15 @@ server:
   write_timeout: 15s
 
 auth_service:
-  addr: "localhost:50051"
+  addr: "localhost:9090"
 
 twofa_service:
-  addr: "localhost:50052"
+  addr: "localhost:9091"
 
 redis:
   addr: "localhost:6379"
   password: ""
-  db: 0
+  db: 2
 
 rate_limit:
   requests_per_minute: 60

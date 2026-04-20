@@ -4,12 +4,12 @@ server:
   log_level: "info"
 
 database:
-  dsn: "postgres://twofa_user:twofa_pass@localhost:5434/twofa_db?sslmode=disable"
+  dsn: "postgres://twofa_user:twofa_pass@localhost:5432/twofa_db?sslmode=disable"
 
 redis:
-  addr: "localhost:6381"
+  addr: "localhost:6379"
   password: ""
-  db: 0
+  db: 1
 
 kafka:
   brokers:

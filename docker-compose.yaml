@@ -1,33 +1,18 @@
 services:
   # ── PostgreSQL ────────────────────────────────────────────
-  auth-postgres:
+  postgres:
     image: postgres:17
     environment:
       POSTGRES_DB: auth_db
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - auth-pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  twofa-postgres:
-    image: postgres:17
-    environment:
-      POSTGRES_DB: twofa_db
-      POSTGRES_USER: twofa_user
-      POSTGRES_PASSWORD: twofa_pass
-    ports:
-      - "5434:5432"
-    volumes:
-      - twofa-pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U twofa_user -d twofa_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -49,29 +34,7 @@ services:
       retries: 5
 
   # ── Redis ─────────────────────────────────────────────────
-  auth-redis:
-    image: redis:8
-    ports:
-      - "6380:6379"
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  twofa-redis:
-    image: redis:8
-    ports:
-      - "6381:6379"
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  gateway-redis:
+  redis:
     image: redis:8
     ports:
       - "6379:6379"
@@ -135,7 +98,6 @@ services:
       - grafana-data:/var/lib/grafana
 
 volumes:
-  auth-pg-data:
-  twofa-pg-data:
+  pg-data:
   mpc-pg-data:
   grafana-data:

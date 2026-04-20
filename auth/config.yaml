@@ -4,10 +4,10 @@ server:
   log_level: "info"
 
 database:
-  dsn: "postgres://auth_user:auth_pass@localhost:5433/auth_db?sslmode=disable"
+  dsn: "postgres://auth_user:auth_pass@localhost:5432/auth_db?sslmode=disable"
 
 redis:
-  addr: "localhost:6380"
+  addr: "localhost:6379"
   password: ""
   db: 0
 
