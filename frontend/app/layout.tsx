@@ -5,6 +5,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "MPC-2FA",
   description: "Two-factor authentication with distributed secret storage",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
