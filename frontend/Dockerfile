@@ -14,7 +14,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+ARG INTERNAL_API_URL=http://gateway:8080
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV INTERNAL_API_URL=${INTERNAL_API_URL}
 RUN yarn build
 
 # --- Production ---

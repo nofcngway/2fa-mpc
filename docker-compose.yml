@@ -270,7 +270,7 @@ services:
       gateway:
         condition: service_started
     environment:
-      - NEXT_PUBLIC_API_URL=http://gateway:8080
+      - INTERNAL_API_URL=http://gateway:8080
     ports:
       - "3000:3000"
 
