@@ -2,12 +2,15 @@
 
 import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LocaleToggle } from "@/components/ui/locale-toggle";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslations } from "@/lib/i18n";
 import { LogOut } from "lucide-react";
 
 export function Navbar() {
   const { user, logout } = useAuth();
+  const t = useTranslations();
 
   return (
     <header className="glass-navbar sticky top-0 z-50">
@@ -20,15 +23,16 @@ export function Navbar() {
               {user.email}
             </span>
           )}
+          <LocaleToggle size="sm" />
           <ThemeToggle size="sm" />
           <GlassButton
             variant="ghost"
             size="sm"
             onPress={logout}
             icon={<LogOut size={16} />}
-            aria-label="Logout"
+            aria-label={t.navbar.logout}
           >
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline">{t.navbar.logout}</span>
           </GlassButton>
         </div>
       </div>

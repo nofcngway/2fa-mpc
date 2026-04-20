@@ -1,5 +1,8 @@
+"use client";
+
 import { Chip } from "@heroui/react";
 import { ShieldCheck, ShieldOff, Loader } from "lucide-react";
+import { useTranslations } from "@/lib/i18n";
 
 type Status = "enabled" | "disabled" | "pending";
 type Size = "sm" | "md";
@@ -9,41 +12,34 @@ interface StatusBadgeProps {
   size?: Size;
 }
 
-const statusConfig: Record<
-  Status,
-  { label: string; color: string; icon: typeof ShieldCheck }
-> = {
-  enabled: {
-    label: "Enabled",
-    color: "text-[var(--glass-success)]",
-    icon: ShieldCheck,
-  },
-  disabled: {
-    label: "Disabled",
-    color: "text-muted",
-    icon: ShieldOff,
-  },
-  pending: {
-    label: "Pending",
-    color: "text-[var(--glass-warning)]",
-    icon: Loader,
-  },
+const statusIcons: Record<Status, typeof ShieldCheck> = {
+  enabled: ShieldCheck,
+  disabled: ShieldOff,
+  pending: Loader,
+};
+
+const statusColors: Record<Status, string> = {
+  enabled: "text-[var(--glass-success)]",
+  disabled: "text-muted",
+  pending: "text-[var(--glass-warning)]",
 };
 
 export function StatusBadge({ status, size = "md" }: StatusBadgeProps) {
-  const cfg = statusConfig[status];
-  const Icon = cfg.icon;
+  const t = useTranslations();
+  const Icon = statusIcons[status];
+  const color = statusColors[status];
+  const label = t.twofa[status];
   const iconSize = size === "sm" ? 14 : 16;
 
   return (
     <Chip
       className={`
         bg-[var(--glass-bg-elevated)] border border-[var(--glass-border-subtle)]
-        ${cfg.color} ${size === "sm" ? "text-xs" : "text-sm"}
+        ${color} ${size === "sm" ? "text-xs" : "text-sm"}
       `}
     >
       <Icon size={iconSize} className="inline mr-1" />
-      {cfg.label}
+      {label}
     </Chip>
   );
 }

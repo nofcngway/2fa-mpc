@@ -4,11 +4,13 @@ import { useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslations } from "@/lib/i18n";
 import { toast } from "@heroui/react";
 import { User, LogOut } from "lucide-react";
 
 export function UserInfoCard() {
   const { user, logoutAll } = useAuth();
+  const t = useTranslations();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogoutAll = async () => {
@@ -16,7 +18,7 @@ export function UserInfoCard() {
     try {
       await logoutAll();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to logout", {
+      toast(err instanceof Error ? err.message : t.dashboard.logoutAllFailed, {
         variant: "danger",
       });
     } finally {
@@ -34,7 +36,7 @@ export function UserInfoCard() {
             <User size={24} className="text-[var(--accent)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Account</h2>
+            <h2 className="text-lg font-semibold">{t.dashboard.account}</h2>
             <p className="text-sm text-muted">{user.email}</p>
           </div>
         </div>
@@ -46,7 +48,7 @@ export function UserInfoCard() {
           onPress={handleLogoutAll}
           icon={<LogOut size={14} />}
         >
-          Logout all devices
+          {t.dashboard.logoutAll}
         </GlassButton>
       </div>
     </GlassCard>

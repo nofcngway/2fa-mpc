@@ -1,3 +1,5 @@
+import type { Translations } from "@/lib/i18n/ru";
+
 export function copyToClipboard(text: string): Promise<void> {
   return navigator.clipboard.writeText(text);
 }
@@ -12,9 +14,9 @@ export function downloadAsFile(content: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string, locale: string = "ru"): string {
   try {
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -28,9 +30,9 @@ export function formatDate(dateStr: string): string {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function validateEmail(email: string): string | null {
-  if (!email.trim()) return "Email is required";
-  if (!EMAIL_REGEX.test(email)) return "Invalid email format";
+export function validateEmail(email: string, t: Translations): string | null {
+  if (!email.trim()) return t.validation.emailRequired;
+  if (!EMAIL_REGEX.test(email)) return t.validation.emailInvalid;
   return null;
 }
 
@@ -72,9 +74,9 @@ export function isPasswordValid(password: string): boolean {
   return Object.values(checks).every(Boolean);
 }
 
-export function validatePassword(password: string): string | null {
-  if (!password) return "Password is required";
-  if (!isPasswordValid(password)) return "Password does not meet requirements";
+export function validatePassword(password: string, t: Translations): string | null {
+  if (!password) return t.validation.passwordRequired;
+  if (!isPasswordValid(password)) return t.validation.passwordInvalid;
   return null;
 }
 
@@ -85,19 +87,13 @@ export function getPasswordStrength(password: string): number {
   return Math.round((passed / 6) * 100);
 }
 
-export function mapApiErrorMessage(code: number, fallback: string): string {
+export function mapApiErrorCode(code: number, t: Translations): string {
   switch (code) {
-    case 3:
-      return "Invalid input. Please check your data.";
-    case 5:
-      return "Account not found.";
-    case 6:
-      return "This email is already registered.";
-    case 9:
-      return "Action not allowed. Please try again later.";
-    case 16:
-      return "Invalid credentials.";
-    default:
-      return fallback;
+    case 3: return t.apiErrors.invalidInput;
+    case 5: return t.apiErrors.notFound;
+    case 6: return t.apiErrors.alreadyExists;
+    case 9: return t.apiErrors.preconditionFailed;
+    case 16: return t.apiErrors.unauthenticated;
+    default: return t.apiErrors.generic;
   }
 }

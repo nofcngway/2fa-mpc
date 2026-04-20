@@ -8,10 +8,12 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiRequestError } from "@/lib/api";
-import { validateEmail, mapApiErrorMessage } from "@/lib/utils";
+import { validateEmail, mapApiErrorCode } from "@/lib/utils";
+import { useTranslations } from "@/lib/i18n";
 
 export function LoginForm() {
   const { login } = useAuth();
+  const t = useTranslations();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -23,8 +25,8 @@ export function LoginForm() {
     e.preventDefault();
     setServerError(null);
 
-    const eErr = validateEmail(email);
-    const pErr = !password ? "Password is required" : null;
+    const eErr = validateEmail(email, t);
+    const pErr = !password ? t.validation.passwordRequired : null;
     setEmailError(eErr);
     setPasswordError(pErr);
 
@@ -35,9 +37,9 @@ export function LoginForm() {
       await login(email, password);
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        setServerError(mapApiErrorMessage(err.code, err.message));
+        setServerError(mapApiErrorCode(err.code, t));
       } else {
-        setServerError("Something went wrong. Please try again.");
+        setServerError(t.apiErrors.generic);
       }
     } finally {
       setIsSubmitting(false);
@@ -48,10 +50,8 @@ export function LoginForm() {
     <GlassCard variant="elevated" className="p-8">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div className="text-center mb-2">
-          <h1 className="text-2xl font-semibold">Welcome back</h1>
-          <p className="text-sm text-muted mt-1">
-            Sign in to your account
-          </p>
+          <h1 className="text-2xl font-semibold">{t.auth.welcomeBack}</h1>
+          <p className="text-sm text-muted mt-1">{t.auth.signInSubtitle}</p>
         </div>
 
         {serverError && (
@@ -61,47 +61,34 @@ export function LoginForm() {
         )}
 
         <GlassInput
-          label="Email"
+          label={t.auth.email}
           type="email"
-          placeholder="you@example.com"
+          placeholder={t.auth.emailPlaceholder}
           value={email}
-          onChange={(v) => {
-            setEmail(v as unknown as string);
-            setEmailError(null);
-          }}
+          onChange={(v) => { setEmail(v); setEmailError(null); }}
           error={emailError ?? undefined}
           isDisabled={isSubmitting}
           autoComplete="email"
         />
 
         <PasswordInput
+          label={t.auth.password}
+          placeholder={t.auth.passwordPlaceholder}
           value={password}
-          onChange={(v) => {
-            setPassword(v);
-            setPasswordError(null);
-          }}
+          onChange={(v) => { setPassword(v); setPasswordError(null); }}
           error={passwordError ?? undefined}
           isDisabled={isSubmitting}
           autoComplete="current-password"
         />
 
-        <GlassButton
-          type="submit"
-          variant="primary"
-          size="lg"
-          isLoading={isSubmitting}
-          className="w-full mt-1"
-        >
-          Sign in
+        <GlassButton type="submit" variant="primary" size="lg" isLoading={isSubmitting} className="w-full mt-1">
+          {t.auth.signIn}
         </GlassButton>
 
         <p className="text-center text-sm text-muted">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="text-[var(--accent)] hover:underline font-medium"
-          >
-            Create one
+          {t.auth.noAccount}{" "}
+          <Link href="/register" className="text-[var(--accent)] hover:underline font-medium">
+            {t.auth.createOne}
           </Link>
         </p>
       </form>

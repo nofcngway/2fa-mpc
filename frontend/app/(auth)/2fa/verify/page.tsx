@@ -7,11 +7,13 @@ import { OTPVerifyForm } from "@/components/widgets/otp-verify-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getStoredUser, getPending2FA, setPending2FA } from "@/lib/auth";
 import { apiRequest, ApiRequestError } from "@/lib/api";
-import { mapApiErrorMessage } from "@/lib/utils";
+import { mapApiErrorCode } from "@/lib/utils";
+import { useTranslations } from "@/lib/i18n";
 import type { Verify2FAResponse } from "@/lib/types";
 
 export default function TwoFAVerifyPage() {
   const router = useRouter();
+  const t = useTranslations();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [ready, setReady] = useState(false);
@@ -26,10 +28,7 @@ export default function TwoFAVerifyPage() {
 
   const handleVerify = async (code: string) => {
     const user = getStoredUser();
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
+    if (!user) { router.replace("/login"); return; }
 
     setIsLoading(true);
     setError(null);
@@ -38,35 +37,30 @@ export default function TwoFAVerifyPage() {
         method: "POST",
         body: { userId: user.id, otpCode: code },
       });
-
       if (result.valid) {
         setPending2FA(false);
         router.replace("/dashboard");
       } else {
-        setError("Invalid code. Please try again.");
+        setError(t.setup.invalidCode);
       }
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        setError(mapApiErrorMessage(err.code, err.message));
+        setError(mapApiErrorCode(err.code, t));
       } else {
-        setError("Verification failed. Try again.");
+        setError(t.setup.verificationFailed);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!ready) {
-    return <LoadingSpinner fullPage />;
-  }
+  if (!ready) return <LoadingSpinner fullPage />;
 
   return (
     <GlassCard variant="elevated" className="p-8">
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-semibold">Two-Factor Verification</h1>
-        <p className="text-sm text-muted mt-1">
-          Your account has 2FA enabled. Enter the code to continue.
-        </p>
+        <h1 className="text-2xl font-semibold">{t.verifyLogin.title}</h1>
+        <p className="text-sm text-muted mt-1">{t.verifyLogin.subtitle}</p>
       </div>
       <OTPVerifyForm
         onVerify={handleVerify}
@@ -74,7 +68,7 @@ export default function TwoFAVerifyPage() {
         error={error}
         showModeToggle
         title=""
-        description="Enter the 6-digit code from your authenticator app"
+        description={t.verifyLogin.description}
       />
     </GlassCard>
   );

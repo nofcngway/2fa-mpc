@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { apiRequest, ApiRequestError } from "@/lib/api";
-import { mapApiErrorMessage } from "@/lib/utils";
+// Error mapping moved to components that have access to translations
 import type {
   Setup2FAResponse,
   Verify2FAResponse,
@@ -31,7 +31,7 @@ export function use2FA(): Use2FAReturn {
       setStatus(data);
     } catch (e) {
       if (e instanceof ApiRequestError) {
-        throw new Error(mapApiErrorMessage(e.code, e.message));
+        throw new Error(e.message);
       }
       throw e;
     } finally {

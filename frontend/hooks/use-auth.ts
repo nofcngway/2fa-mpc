@@ -13,7 +13,7 @@ import {
   initAuth,
   setPending2FA,
 } from "@/lib/auth";
-import { mapApiErrorMessage } from "@/lib/utils";
+import { mapApiErrorCode } from "@/lib/utils";
 import type { User, LoginResponse, RegisterResponse, Get2FAStatusResponse } from "@/lib/types";
 
 interface UseAuthReturn {
@@ -124,7 +124,7 @@ export function useAuth(): UseAuthReturn {
       });
     } catch (e) {
       if (e instanceof ApiRequestError) {
-        throw new Error(mapApiErrorMessage(e.code, e.message));
+        throw new Error(e.message);
       }
       throw e;
     }

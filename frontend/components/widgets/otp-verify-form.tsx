@@ -4,6 +4,7 @@ import { useState } from "react";
 import { OTPInput } from "@/components/ui/otp-input";
 import { BackupCodeInput } from "@/components/ui/backup-code-input";
 import { GlassButton } from "@/components/ui/glass-button";
+import { useTranslations } from "@/lib/i18n";
 import { ShieldCheck } from "lucide-react";
 
 type Mode = "otp" | "backup";
@@ -22,12 +23,18 @@ export function OTPVerifyForm({
   isLoading,
   error,
   showModeToggle = false,
-  title = "Verify your code",
-  description = "Enter the 6-digit code from your authenticator app",
+  title,
+  description,
 }: OTPVerifyFormProps) {
+  const t = useTranslations();
   const [mode, setMode] = useState<Mode>("otp");
   const [otpValue, setOtpValue] = useState("");
   const [backupValue, setBackupValue] = useState("");
+
+  const resolvedTitle = title ?? t.setup.verifyTitle;
+  const resolvedDesc = mode === "otp"
+    ? (description ?? t.setup.verifyDescription)
+    : t.verifyLogin.backupDescription;
 
   const handleSubmit = () => {
     const code = mode === "otp" ? otpValue : backupValue.trim();
@@ -41,17 +48,21 @@ export function OTPVerifyForm({
 
   return (
     <div className="flex flex-col gap-6 items-center">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-[var(--accent-subtle)] flex items-center justify-center">
-          <ShieldCheck size={20} className="text-[var(--accent)]" />
+      {resolvedTitle && (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[var(--accent-subtle)] flex items-center justify-center">
+            <ShieldCheck size={20} className="text-[var(--accent)]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">{resolvedTitle}</h2>
+            <p className="text-sm text-muted">{resolvedDesc}</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <p className="text-sm text-muted">
-            {mode === "otp" ? description : "Enter one of your backup codes"}
-          </p>
-        </div>
-      </div>
+      )}
+
+      {!resolvedTitle && (
+        <p className="text-sm text-muted text-center">{resolvedDesc}</p>
+      )}
 
       {mode === "otp" ? (
         <OTPInput
@@ -72,35 +83,23 @@ export function OTPVerifyForm({
         </div>
       )}
 
-      <GlassButton
-        variant="primary"
-        size="lg"
-        isLoading={isLoading}
-        onPress={handleSubmit}
-        className="w-full max-w-sm"
-      >
-        Verify
+      <GlassButton variant="primary" size="lg" isLoading={isLoading} onPress={handleSubmit} className="w-full max-w-sm">
+        {t.setup.verify}
       </GlassButton>
 
       {showModeToggle && (
         <div className="text-center">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex-1 h-px bg-[var(--glass-border-subtle)]" />
-            <span className="text-xs text-muted">or</span>
+            <span className="text-xs text-muted">{t.common.or}</span>
             <div className="flex-1 h-px bg-[var(--glass-border-subtle)]" />
           </div>
           <button
             type="button"
-            onClick={() => {
-              setMode(mode === "otp" ? "backup" : "otp");
-              setOtpValue("");
-              setBackupValue("");
-            }}
+            onClick={() => { setMode(mode === "otp" ? "backup" : "otp"); setOtpValue(""); setBackupValue(""); }}
             className="text-sm text-[var(--accent)] hover:underline cursor-pointer"
           >
-            {mode === "otp"
-              ? "Use a backup code instead"
-              : "Use authenticator app"}
+            {mode === "otp" ? t.disableModal.useBackup : t.disableModal.useOtp}
           </button>
         </div>
       )}
