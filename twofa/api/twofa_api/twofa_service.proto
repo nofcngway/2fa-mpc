@@ -2,8 +2,6 @@ syntax = "proto3";
 package twofa_api;
 option go_package = "github.com/vbncursed/vkr/twofa/internal/pb/twofa_api";
 
-import "models/models.proto";
-
 service TwoFAService {
     rpc Setup2FA(Setup2FARequest) returns (Setup2FAResponse);
     rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse);

@@ -63,9 +63,6 @@ func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool
 	// 3. Backup code path — if input matches "xxxx-xxxx" format, verify as backup code
 	if backupCodePattern.MatchString(otpCode) {
 		if err := s.VerifyBackupCode(ctx, userID, otpCode); err != nil {
-			if errors.Is(err, domain.ErrInvalidBackupCode) {
-				return false, false, nil
-			}
 			return false, false, fmt.Errorf("verify backup code: %w", err)
 		}
 		return true, false, nil

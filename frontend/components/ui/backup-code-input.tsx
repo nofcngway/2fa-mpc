@@ -14,7 +14,7 @@ export function BackupCodeInput({
   value,
   onChange,
   error,
-  placeholder = "e.g. a1b2c3d4",
+  placeholder = "0000-0000",
   isDisabled = false,
 }: BackupCodeInputProps) {
   return (

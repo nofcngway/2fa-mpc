@@ -62,7 +62,7 @@ export function DisableTwoFAModal({ isOpen, onClose, userId, onDisabled }: Disab
     <Modal isOpen={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <Modal.Backdrop>
         <Modal.Container size="md">
-          <Modal.Dialog className="glass-card-elevated overflow-hidden">
+          <Modal.Dialog className="glass-card-elevated overflow-visible">
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading>{t.disableModal.title}</Modal.Heading>
@@ -84,15 +84,17 @@ export function DisableTwoFAModal({ isOpen, onClose, userId, onDisabled }: Disab
                     />
                   </div>
                 ) : (
-                  <BackupCodeInput
-                    value={backupValue}
-                    onChange={(v) => { setBackupValue(v); setError(null); }}
-                    error={error ?? undefined}
-                    isDisabled={isSubmitting}
-                  />
+                  <div className="px-1">
+                    <BackupCodeInput
+                      value={backupValue}
+                      onChange={(v) => { setBackupValue(v); setError(null); }}
+                      error={error ?? undefined}
+                      isDisabled={isSubmitting}
+                    />
+                  </div>
                 )}
 
-                <GlassButton variant="danger" size="md" isLoading={isSubmitting} onPress={handleSubmit} className="w-full">
+                <GlassButton variant="danger" size="md" isLoading={isSubmitting} onPress={() => handleSubmit()} className="w-full">
                   {t.disableModal.disableButton}
                 </GlassButton>
 

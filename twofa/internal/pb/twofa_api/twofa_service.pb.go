@@ -7,7 +7,6 @@
 package twofa_api
 
 import (
-	_ "github.com/vbncursed/vkr/twofa/internal/pb/models"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -418,7 +417,7 @@ var File_twofa_api_twofa_service_proto protoreflect.FileDescriptor
 
 const file_twofa_api_twofa_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1dtwofa_api/twofa_service.proto\x12\ttwofa_api\x1a\x13models/models.proto\"@\n" +
+	"\x1dtwofa_api/twofa_service.proto\x12\ttwofa_api\"@\n" +
 	"\x0fSetup2FARequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\"`\n" +

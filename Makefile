@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build-all test-all lint-all
+.PHONY: help up down build-all test-all lint-all generate-api
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -30,3 +30,9 @@ lint-all: ## Run linters for all services
 	cd auth && go vet ./...
 	cd twofa && go vet ./...
 	cd mpc && go vet ./...
+
+generate-api: ## Generate protobuf code for all services
+	@bash auth/scripts/generate.sh
+	@bash twofa/scripts/generate.sh
+	@bash mpc/scripts/generate.sh
+	@bash gateway/scripts/generate.sh

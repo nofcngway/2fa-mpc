@@ -38,6 +38,8 @@ func (api *TwoFAServiceAPI) Disable2FA(ctx context.Context, req *pb.Disable2FARe
 			return nil, status.Error(codes.InvalidArgument, "OTP code already used")
 		case errors.Is(err, domain.ErrInvalidOTP):
 			return nil, status.Error(codes.InvalidArgument, "invalid OTP code")
+		case errors.Is(err, domain.ErrInvalidBackupCode):
+			return nil, status.Error(codes.InvalidArgument, "invalid backup code")
 		default:
 			slog.Error("disable 2fa failed", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.Internal, "disable failed")
