@@ -33,9 +33,9 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="auth-background relative min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-20 pb-8">
         {children}
       </main>
     </div>

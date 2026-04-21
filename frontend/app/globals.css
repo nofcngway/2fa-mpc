@@ -2,6 +2,22 @@
 @import "@heroui/styles";
 
 /* ============================================
+   FONT CONFIGURATION
+   Manrope (headings) + Inter (body) + JetBrains Mono (code)
+   ============================================ */
+
+@theme {
+  --font-sans: "Golos Text", "Golos Text Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Onest", "Onest Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace, monospace;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+/* ============================================
    LIQUID GLASS DESIGN SYSTEM
    Apple-inspired translucent glass surfaces
    ============================================ */
