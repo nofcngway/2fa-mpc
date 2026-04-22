@@ -9,7 +9,8 @@ import (
 
 	"github.com/vbncursed/vkr/auth/config"
 	"github.com/vbncursed/vkr/auth/internal/api/auth_service_api"
-	"github.com/vbncursed/vkr/auth/internal/services/authService"
+	"github.com/vbncursed/vkr/auth/internal/producer"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service"
 )
 
 // InitServices wires all application dependencies and returns the gRPC API handler
@@ -33,19 +34,19 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*auth_service_api.Au
 	}
 
 	// 3. Kafka
-	kafkaProducer := NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
+	eventPublisher := producer.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 
 	// 4. Auth service
-	privateKey, publicKey, err := authService.LoadRSAKeys(cfg.JWT.PrivateKeyPath, cfg.JWT.PublicKeyPath)
+	privateKey, publicKey, err := auth_service.LoadRSAKeys(cfg.JWT.PrivateKeyPath, cfg.JWT.PublicKeyPath)
 	if err != nil {
 		logger.Error("failed to load RSA keys", "error", fmt.Errorf("load RSA keys: %w", err))
 		os.Exit(1)
 	}
 
-	authSvc, err := authService.NewAuthService(authService.Deps{
+	authSvc, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         pgStorage,
 		SessionStorage:  redisStorage,
-		EventProducer:   kafkaProducer,
+		EventPublisher:  eventPublisher,
 		PrivateKey:      privateKey,
 		PublicKey:        publicKey,
 		AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
@@ -60,7 +61,7 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*auth_service_api.Au
 	api := auth_service_api.NewAuthServiceAPI(authSvc)
 
 	cleanup := func() {
-		if err := kafkaProducer.Close(); err != nil {
+		if err := eventPublisher.Close(); err != nil {
 			logger.Error("failed to close Kafka producer", "error", err)
 		}
 		logger.Info("Kafka producer closed")

@@ -2,7 +2,7 @@
 
 package mocks
 
-//go:generate minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.SessionStorage -o session_storage_mock.go -n SessionStorageMock -p mocks
+//go:generate minimock -i github.com/vbncursed/vkr/auth/internal/services/auth_service.SessionStorage -o session_storage_mock.go -n SessionStorageMock -p mocks
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
-// SessionStorageMock implements mm_authService.SessionStorage
+// SessionStorageMock implements mm_auth_service.SessionStorage
 type SessionStorageMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
@@ -56,7 +56,7 @@ type SessionStorageMock struct {
 	StoreRefreshTokenMock          mSessionStorageMockStoreRefreshToken
 }
 
-// NewSessionStorageMock returns a mock for mm_authService.SessionStorage
+// NewSessionStorageMock returns a mock for mm_auth_service.SessionStorage
 func NewSessionStorageMock(t minimock.Tester) *SessionStorageMock {
 	m := &SessionStorageMock{t: t}
 
@@ -296,7 +296,7 @@ func (mmDeleteAllUserTokens *mSessionStorageMockDeleteAllUserTokens) invocations
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// DeleteAllUserTokens implements mm_authService.SessionStorage
+// DeleteAllUserTokens implements mm_auth_service.SessionStorage
 func (mmDeleteAllUserTokens *SessionStorageMock) DeleteAllUserTokens(ctx context.Context, userID string) (err error) {
 	mm_atomic.AddUint64(&mmDeleteAllUserTokens.beforeDeleteAllUserTokensCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteAllUserTokens.afterDeleteAllUserTokensCounter, 1)
@@ -638,7 +638,7 @@ func (mmDeleteRefreshToken *mSessionStorageMockDeleteRefreshToken) invocationsDo
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// DeleteRefreshToken implements mm_authService.SessionStorage
+// DeleteRefreshToken implements mm_auth_service.SessionStorage
 func (mmDeleteRefreshToken *SessionStorageMock) DeleteRefreshToken(ctx context.Context, jti string) (err error) {
 	mm_atomic.AddUint64(&mmDeleteRefreshToken.beforeDeleteRefreshTokenCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteRefreshToken.afterDeleteRefreshTokenCounter, 1)
@@ -1006,7 +1006,7 @@ func (mmDeleteTokenFamily *mSessionStorageMockDeleteTokenFamily) invocationsDone
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// DeleteTokenFamily implements mm_authService.SessionStorage
+// DeleteTokenFamily implements mm_auth_service.SessionStorage
 func (mmDeleteTokenFamily *SessionStorageMock) DeleteTokenFamily(ctx context.Context, family string, userID string) (err error) {
 	mm_atomic.AddUint64(&mmDeleteTokenFamily.beforeDeleteTokenFamilyCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteTokenFamily.afterDeleteTokenFamilyCounter, 1)
@@ -1354,7 +1354,7 @@ func (mmGetRefreshToken *mSessionStorageMockGetRefreshToken) invocationsDone() b
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// GetRefreshToken implements mm_authService.SessionStorage
+// GetRefreshToken implements mm_auth_service.SessionStorage
 func (mmGetRefreshToken *SessionStorageMock) GetRefreshToken(ctx context.Context, jti string) (rp1 *domain.RefreshTokenData, err error) {
 	mm_atomic.AddUint64(&mmGetRefreshToken.beforeGetRefreshTokenCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetRefreshToken.afterGetRefreshTokenCounter, 1)
@@ -1774,7 +1774,7 @@ func (mmStoreRefreshToken *mSessionStorageMockStoreRefreshToken) invocationsDone
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// StoreRefreshToken implements mm_authService.SessionStorage
+// StoreRefreshToken implements mm_auth_service.SessionStorage
 func (mmStoreRefreshToken *SessionStorageMock) StoreRefreshToken(ctx context.Context, jti string, userID string, tokenFamily string, ttl time.Duration) (err error) {
 	mm_atomic.AddUint64(&mmStoreRefreshToken.beforeStoreRefreshTokenCounter, 1)
 	defer mm_atomic.AddUint64(&mmStoreRefreshToken.afterStoreRefreshTokenCounter, 1)

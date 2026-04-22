@@ -1,14 +1,14 @@
-package authService
+// Package publisher defines the event publishing contract and event types
+// used across the auth service for audit trail and observability.
+package publisher
 
 import (
 	"context"
 	"time"
 )
 
-//go:generate minimock -i EventProducer -o ./mocks/ -s _mock.go
-
-// EventProducer publishes audit events to a message broker.
-type EventProducer interface {
+// EventPublisher publishes audit events to a message broker.
+type EventPublisher interface {
 	PublishEvent(ctx context.Context, event AuditEvent) error
 	Close() error
 }

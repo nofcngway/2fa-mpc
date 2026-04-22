@@ -8,9 +8,9 @@ generate: ## Generate protobuf code
 	bash scripts/generate.sh
 
 mock: ## Generate mock files (minimock)
-	minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.Storage -o internal/services/authService/mocks/ -s "_mock.go"
-	minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.SessionStorage -o internal/services/authService/mocks/ -s "_mock.go"
-	minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.EventProducer -o internal/services/authService/mocks/ -s "_mock.go"
+	minimock -i github.com/vbncursed/vkr/auth/internal/services/auth_service.Storage -o internal/services/auth_service/mocks/ -s "_mock.go"
+	minimock -i github.com/vbncursed/vkr/auth/internal/services/auth_service.SessionStorage -o internal/services/auth_service/mocks/ -s "_mock.go"
+	minimock -i github.com/vbncursed/vkr/auth/internal/services/auth_service.EventProducer -o internal/services/auth_service/mocks/ -s "_mock.go"
 
 build: generate ## Build the service binary
 	go build -o bin/auth ./cmd/app

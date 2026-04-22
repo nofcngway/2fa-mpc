@@ -1,4 +1,4 @@
-package authService_test
+package auth_service_test
 
 import (
 	"crypto/rand"
@@ -12,8 +12,8 @@ import (
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/services/authService"
-	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service/mocks"
 )
 
 // validateSuite holds shared setup for validate token tests.
@@ -21,7 +21,7 @@ type validateSuite struct {
 	mc             *minimock.Controller
 	storage        *mocks.StorageMock
 	sessionStorage *mocks.SessionStorageMock
-	service        *authService.AuthService
+	service        *auth_service.AuthService
 	privateKey     *rsa.PrivateKey
 }
 
@@ -30,17 +30,17 @@ func newValidateSuite(t *testing.T) *validateSuite {
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
 	sessionStorage := mocks.NewSessionStorageMock(mc)
-	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer := mocks.NewEventPublisherMock(mc)
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service, err := authService.NewAuthService(authService.Deps{
+	service, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         storage,
 		SessionStorage:  sessionStorage,
-		EventProducer:   eventProducer,
+		EventPublisher:   eventProducer,
 		PrivateKey:      privateKey,
 		PublicKey:        &privateKey.PublicKey,
 		AccessTokenTTL:  15 * time.Minute,
@@ -73,13 +73,13 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 	s := newValidateSuite(t)
 
 	// Create service with very short access TTL
-	shortEventProducer := mocks.NewEventProducerMock(s.mc)
+	shortEventProducer := mocks.NewEventPublisherMock(s.mc)
 	shortEventProducer.PublishEventMock.Optional().Return(nil)
 	shortEventProducer.CloseMock.Optional().Return(nil)
-	shortService, err := authService.NewAuthService(authService.Deps{
+	shortService, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         s.storage,
 		SessionStorage:  s.sessionStorage,
-		EventProducer:   shortEventProducer,
+		EventPublisher:   shortEventProducer,
 		PrivateKey:      s.privateKey,
 		PublicKey:        &s.privateKey.PublicKey,
 		AccessTokenTTL:  1 * time.Nanosecond,

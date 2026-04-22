@@ -1,4 +1,4 @@
-package authService
+package auth_service
 
 import (
 	"slices"

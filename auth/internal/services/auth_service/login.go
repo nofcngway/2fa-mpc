@@ -1,4 +1,4 @@
-package authService
+package auth_service
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
+	"github.com/vbncursed/vkr/auth/internal/publisher"
 )
 
 // dummyHash is a pre-computed bcrypt hash used for timing-safe comparison when user is not found.
@@ -40,7 +41,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 			_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 
 			// Audit failed attempt (fire-and-forget)
-			if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(email, "user.login_failed", "failure")); err != nil {
+			if err := s.eventPublisher.PublishEvent(ctx, publisher.NewAuditEvent(email, "user.login_failed", "failure")); err != nil {
 				slog.Warn("failed to publish audit event", "operation", "user.login_failed", "error", err)
 			}
 			return nil, "", "", domain.ErrInvalidCredentials
@@ -51,7 +52,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 	// 3. Verify password with bcrypt (same error for wrong password -- no credential enumeration)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		// Audit failed attempt (fire-and-forget)
-		if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(user.ID, "user.login_failed", "failure")); err != nil {
+		if err := s.eventPublisher.PublishEvent(ctx, publisher.NewAuditEvent(user.ID, "user.login_failed", "failure")); err != nil {
 			slog.Warn("failed to publish audit event", "operation", "user.login_failed", "error", err)
 		}
 		return nil, "", "", domain.ErrInvalidCredentials
@@ -78,7 +79,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 	}
 
 	// Fire-and-forget audit event
-	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(user.ID, "user.logged_in", "success")); err != nil {
+	if err := s.eventPublisher.PublishEvent(ctx, publisher.NewAuditEvent(user.ID, "user.logged_in", "success")); err != nil {
 		slog.Warn("failed to publish audit event", "operation", "user.logged_in", "error", err)
 	}
 

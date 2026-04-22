@@ -1,4 +1,4 @@
-package authService
+package auth_service
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
+	"github.com/vbncursed/vkr/auth/internal/publisher"
 )
 
 // RefreshToken performs token rotation with theft detection.
@@ -35,7 +36,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 		}
 
 		// Fire-and-forget audit event for reuse detection
-		if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(claims.Subject, "token.refresh_reuse_detected", "alert")); err != nil {
+		if err := s.eventPublisher.PublishEvent(ctx, publisher.NewAuditEvent(claims.Subject, "token.refresh_reuse_detected", "alert")); err != nil {
 			slog.Warn("failed to publish audit event", "operation", "token.refresh_reuse_detected", "error", err)
 		}
 
@@ -65,7 +66,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) 
 	_ = s.sessionStorage.DeleteRefreshToken(ctx, claims.ID)
 
 	// Fire-and-forget audit event
-	if err := s.eventProducer.PublishEvent(ctx, NewAuditEvent(tokenData.UserID, "token.refreshed", "success")); err != nil {
+	if err := s.eventPublisher.PublishEvent(ctx, publisher.NewAuditEvent(tokenData.UserID, "token.refreshed", "success")); err != nil {
 		slog.Warn("failed to publish audit event", "operation", "token.refreshed", "error", err)
 	}
 

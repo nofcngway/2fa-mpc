@@ -1,4 +1,4 @@
-package authService_test
+package auth_service_test
 
 import (
 	"crypto/rand"
@@ -10,10 +10,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 
-	"github.com/vbncursed/vkr/auth/internal/bootstrap"
+	"github.com/vbncursed/vkr/auth/internal/producer"
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/services/authService"
-	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service/mocks"
 )
 
 func generateTestKeyPair(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
@@ -23,14 +23,14 @@ func generateTestKeyPair(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
 	return privateKey, &privateKey.PublicKey
 }
 
-func newJWTTestService(t *testing.T) *authService.AuthService {
+func newJWTTestService(t *testing.T) *auth_service.AuthService {
 	t.Helper()
 	mc := minimock.NewController(t)
 	privateKey, publicKey := generateTestKeyPair(t)
-	svc, err := authService.NewAuthService(authService.Deps{
+	svc, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         mocks.NewStorageMock(mc),
 		SessionStorage:  mocks.NewSessionStorageMock(mc),
-		EventProducer:   &bootstrap.NoOpProducer{},
+		EventPublisher:   &producer.NoOpProducer{},
 		PrivateKey:      privateKey,
 		PublicKey:        publicKey,
 		AccessTokenTTL:  15 * time.Minute,
@@ -126,10 +126,10 @@ func TestJWT_ParseToken_ExpiredToken(t *testing.T) {
 	privateKey, publicKey := generateTestKeyPair(t)
 	// Create service with very short TTL
 	mc := minimock.NewController(t)
-	svc, err := authService.NewAuthService(authService.Deps{
+	svc, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         mocks.NewStorageMock(mc),
 		SessionStorage:  mocks.NewSessionStorageMock(mc),
-		EventProducer:   &bootstrap.NoOpProducer{},
+		EventPublisher:   &producer.NoOpProducer{},
 		PrivateKey:      privateKey,
 		PublicKey:        publicKey,
 		AccessTokenTTL:  1 * time.Millisecond,

@@ -1,6 +1,6 @@
-// Package authService implements authentication business logic including
+// Package auth_service implements authentication business logic including
 // registration, login, JWT token management, and session lifecycle.
-package authService
+package auth_service
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
+	"github.com/vbncursed/vkr/auth/internal/publisher"
 )
 
 //go:generate minimock -i Storage -o ./mocks/ -s _mock.go
@@ -33,7 +34,7 @@ type SessionStorage interface {
 type Deps struct {
 	Storage         Storage
 	SessionStorage  SessionStorage
-	EventProducer   EventProducer
+	EventPublisher  publisher.EventPublisher
 	PrivateKey      *rsa.PrivateKey
 	PublicKey       *rsa.PublicKey
 	AccessTokenTTL  time.Duration
@@ -44,7 +45,7 @@ type Deps struct {
 type AuthService struct {
 	storage         Storage
 	sessionStorage  SessionStorage
-	eventProducer   EventProducer
+	eventPublisher  publisher.EventPublisher
 	privateKey      *rsa.PrivateKey
 	publicKey       *rsa.PublicKey
 	accessTokenTTL  time.Duration
@@ -60,8 +61,8 @@ func NewAuthService(d Deps) (*AuthService, error) {
 	if d.SessionStorage == nil {
 		errs = append(errs, errors.New("session storage is required"))
 	}
-	if d.EventProducer == nil {
-		errs = append(errs, errors.New("event producer is required"))
+	if d.EventPublisher == nil {
+		errs = append(errs, errors.New("event publisher is required"))
 	}
 	if d.PrivateKey == nil {
 		errs = append(errs, errors.New("private key is required"))
@@ -75,7 +76,7 @@ func NewAuthService(d Deps) (*AuthService, error) {
 	return &AuthService{
 		storage:         d.Storage,
 		sessionStorage:  d.SessionStorage,
-		eventProducer:   d.EventProducer,
+		eventPublisher:  d.EventPublisher,
 		privateKey:      d.PrivateKey,
 		publicKey:       d.PublicKey,
 		accessTokenTTL:  d.AccessTokenTTL,

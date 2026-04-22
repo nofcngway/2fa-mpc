@@ -2,7 +2,7 @@
 
 package mocks
 
-//go:generate minimock -i github.com/vbncursed/vkr/auth/internal/services/authService.Storage -o storage_mock.go -n StorageMock -p mocks
+//go:generate minimock -i github.com/vbncursed/vkr/auth/internal/services/auth_service.Storage -o storage_mock.go -n StorageMock -p mocks
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/vbncursed/vkr/auth/internal/domain"
 )
 
-// StorageMock implements mm_authService.Storage
+// StorageMock implements mm_auth_service.Storage
 type StorageMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
@@ -34,7 +34,7 @@ type StorageMock struct {
 	GetUserByEmailMock          mStorageMockGetUserByEmail
 }
 
-// NewStorageMock returns a mock for mm_authService.Storage
+// NewStorageMock returns a mock for mm_auth_service.Storage
 func NewStorageMock(t minimock.Tester) *StorageMock {
 	m := &StorageMock{t: t}
 
@@ -265,7 +265,7 @@ func (mmCreateUser *mStorageMockCreateUser) invocationsDone() bool {
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// CreateUser implements mm_authService.Storage
+// CreateUser implements mm_auth_service.Storage
 func (mmCreateUser *StorageMock) CreateUser(ctx context.Context, user *domain.User) (err error) {
 	mm_atomic.AddUint64(&mmCreateUser.beforeCreateUserCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateUser.afterCreateUserCounter, 1)
@@ -608,7 +608,7 @@ func (mmGetUserByEmail *mStorageMockGetUserByEmail) invocationsDone() bool {
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// GetUserByEmail implements mm_authService.Storage
+// GetUserByEmail implements mm_auth_service.Storage
 func (mmGetUserByEmail *StorageMock) GetUserByEmail(ctx context.Context, email string) (up1 *domain.User, err error) {
 	mm_atomic.AddUint64(&mmGetUserByEmail.beforeGetUserByEmailCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetUserByEmail.afterGetUserByEmailCounter, 1)

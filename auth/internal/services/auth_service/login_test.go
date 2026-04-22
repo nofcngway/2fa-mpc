@@ -1,4 +1,4 @@
-package authService_test
+package auth_service_test
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/vbncursed/vkr/auth/internal/domain"
-	"github.com/vbncursed/vkr/auth/internal/services/authService"
-	"github.com/vbncursed/vkr/auth/internal/services/authService/mocks"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service"
+	"github.com/vbncursed/vkr/auth/internal/services/auth_service/mocks"
 )
 
 // loginSuite holds shared setup for login tests.
@@ -23,7 +23,7 @@ type loginSuite struct {
 	mc             *minimock.Controller
 	storage        *mocks.StorageMock
 	sessionStorage *mocks.SessionStorageMock
-	service        *authService.AuthService
+	service        *auth_service.AuthService
 }
 
 func newLoginSuite(t *testing.T) *loginSuite {
@@ -31,17 +31,17 @@ func newLoginSuite(t *testing.T) *loginSuite {
 	mc := minimock.NewController(t)
 	storage := mocks.NewStorageMock(mc)
 	sessionStorage := mocks.NewSessionStorageMock(mc)
-	eventProducer := mocks.NewEventProducerMock(mc)
+	eventProducer := mocks.NewEventPublisherMock(mc)
 	eventProducer.PublishEventMock.Optional().Return(nil)
 	eventProducer.CloseMock.Optional().Return(nil)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NilError(t, err, "failed to generate RSA key pair for test")
 
-	service, err := authService.NewAuthService(authService.Deps{
+	service, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         storage,
 		SessionStorage:  sessionStorage,
-		EventProducer:   eventProducer,
+		EventPublisher:   eventProducer,
 		PrivateKey:      privateKey,
 		PublicKey:        &privateKey.PublicKey,
 		AccessTokenTTL:  15 * time.Minute,
