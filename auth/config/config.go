@@ -19,6 +19,17 @@ type Config struct {
 	Redis    RedisConfig    `yaml:"redis"`
 	Kafka    KafkaConfig    `yaml:"kafka"`
 	JWT      JWTConfig      `yaml:"jwt"`
+	TLS      TLSConfig      `yaml:"tls"`
+}
+
+// TLSConfig configures mTLS for the gRPC server. When Enabled, the server
+// presents CertFile/KeyFile and requires every incoming connection to
+// present a client cert signed by CAFile.
+type TLSConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+	CAFile   string `yaml:"ca_file"`
 }
 
 // ServerConfig holds gRPC server settings.
@@ -109,6 +120,12 @@ func envStringSlice(key string, target *[]string) {
 	}
 }
 
+func envBool(key string, target *bool) {
+	if v := os.Getenv(key); v != "" {
+		*target = v == "true" || v == "1"
+	}
+}
+
 func applyEnvOverrides(cfg *Config) {
 	envInt("AUTH_SERVER_PORT", &cfg.Server.Port)
 	envInt("AUTH_SERVER_METRICS_PORT", &cfg.Server.MetricsPort)
@@ -123,6 +140,10 @@ func applyEnvOverrides(cfg *Config) {
 	envString("AUTH_JWT_PUBLIC_KEY_PATH", &cfg.JWT.PublicKeyPath)
 	envDuration("AUTH_JWT_ACCESS_TOKEN_TTL", &cfg.JWT.AccessTokenTTL)
 	envDuration("AUTH_JWT_REFRESH_TOKEN_TTL", &cfg.JWT.RefreshTokenTTL)
+	envBool("AUTH_TLS_ENABLED", &cfg.TLS.Enabled)
+	envString("AUTH_TLS_CERT_FILE", &cfg.TLS.CertFile)
+	envString("AUTH_TLS_KEY_FILE", &cfg.TLS.KeyFile)
+	envString("AUTH_TLS_CA_FILE", &cfg.TLS.CAFile)
 }
 
 // Load reads and parses the config file at the given path.

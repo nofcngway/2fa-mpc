@@ -4,6 +4,7 @@ package pgstorage
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,8 +21,11 @@ func New(ctx context.Context, dsn string) (*PGStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
-	poolCfg.MaxConns = 25
-	poolCfg.MinConns = 2
+	// Sized to ≈4× available cores so concurrent bcrypt/JWT workers do not
+	// queue on a connection. MinConns keeps a small warm pool so the first
+	// requests after idle do not pay the dial latency.
+	poolCfg.MaxConns = int32(max(8, runtime.NumCPU()*4))
+	poolCfg.MinConns = int32(max(2, runtime.NumCPU()/2))
 	poolCfg.MaxConnLifetime = 5 * time.Minute
 	poolCfg.MaxConnIdleTime = 1 * time.Minute
 

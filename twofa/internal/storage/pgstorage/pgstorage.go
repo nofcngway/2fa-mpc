@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,8 +22,10 @@ func NewPGStorage(ctx context.Context, dsn string) (*PGStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
-	poolCfg.MaxConns = 25
-	poolCfg.MinConns = 2
+	// Sized to ≈4× available cores so concurrent bcrypt/MPC workers do not
+	// queue on a connection.
+	poolCfg.MaxConns = int32(max(8, runtime.NumCPU()*4))
+	poolCfg.MinConns = int32(max(2, runtime.NumCPU()/2))
 	poolCfg.MaxConnLifetime = 5 * time.Minute
 	poolCfg.MaxConnIdleTime = 1 * time.Minute
 

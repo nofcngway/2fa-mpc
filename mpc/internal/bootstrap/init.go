@@ -18,11 +18,18 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*mpc_service_api.MPC
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// fatalf releases the bootstrap context before exiting so deferred
+	// cleanups (cancel()) actually run — `os.Exit` skips defers.
+	fatalf := func(msg string, err error) {
+		logger.Error(msg, "error", err)
+		cancel()
+		os.Exit(1)
+	}
+
 	// 1. PostgreSQL
 	storage, err := NewPGStorage(ctx, cfg)
 	if err != nil {
-		logger.Error("failed to connect to PostgreSQL", "error", err)
-		os.Exit(1)
+		fatalf("failed to connect to PostgreSQL", err)
 	}
 
 	// 2. Kafka
@@ -31,8 +38,7 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*mpc_service_api.MPC
 	// 3. MPC service
 	key := []byte(cfg.Node.EncryptionKey)
 	if len(key) != 32 {
-		logger.Error("invalid encryption key", "error", fmt.Errorf("encryption key must be exactly 32 bytes, got %d", len(key)))
-		os.Exit(1)
+		fatalf("invalid encryption key", fmt.Errorf("encryption key must be exactly 32 bytes, got %d", len(key)))
 	}
 
 	service, err := mpcService.NewMPCService(mpcService.Deps{
@@ -42,8 +48,7 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*mpc_service_api.MPC
 		EventProducer: kafkaProducer,
 	})
 	if err != nil {
-		logger.Error("failed to create MPC service", "error", err)
-		os.Exit(1)
+		fatalf("failed to create MPC service", err)
 	}
 
 	// 4. API

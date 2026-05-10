@@ -135,6 +135,40 @@ export const en: Translations = {
     backupDescription: "Enter one of your backup codes",
   },
 
+  monitoring: {
+    title: "Monitoring",
+    subtitle: "Live service health and metrics from Prometheus",
+    refresh: "Refresh",
+    loading: "Loading metrics...",
+    errorLoading: "Failed to load metrics",
+    noData: "No data",
+    updatedAt: "Updated at",
+
+    totalRps: "Total throughput",
+    avgLatency: "Average p95 latency",
+    errorRate: "Error rate",
+    unitRps: "RPS",
+    unitMs: "ms",
+    unitPercent: "%",
+
+    servicesTitle: "Service health",
+    servicesSubtitle: "Health, throughput, latency and error rate per service",
+    colService: "Service",
+    colRps: "RPS",
+    colP95: "p95",
+    colErrors: "Errors",
+    statusUp: "Up",
+    statusDown: "Down",
+
+    mpcTitle: "MPC nodes",
+    mpcSubtitle: "Shamir share holders (2-of-3 threshold)",
+    mpcAllHealthy: "All 3 nodes healthy",
+    mpcThresholdOk: "2 of 3 — threshold met, only Verify is available",
+    mpcThresholdLost: "Below 2 nodes — Verify unavailable",
+  },
+
+  navMonitoring: "Monitoring",
+
   theme: {
     light: "Switch to light mode",
     dark: "Switch to dark mode",

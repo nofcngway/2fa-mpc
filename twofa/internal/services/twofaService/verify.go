@@ -19,7 +19,7 @@ var backupCodePattern = regexp.MustCompile(`^\d{4}-\d{4}$`)
 
 const (
 	rateLimitMaxAttempts = 5
-	rateLimitWindow      = 5 * time.Minute // 300 seconds (per D-05)
+	rateLimitWindow      = 5 * time.Minute  // 300 seconds (per D-05)
 	otpCounterTTL        = 90 * time.Second // covers 3 TOTP windows (per D-09)
 )
 
@@ -40,6 +40,12 @@ const (
 //  6. TOTP validation
 //  7. Store used counter
 //  8. Enable on first successful verification
+//
+// (rate limit, backup-code branch, share retrieval, Shamir combine, TOTP,
+// OTP-reuse, counter persistence, first-verify enablement). Splitting would
+// scatter the linear flow across helpers and obscure the spec mapping.
+//
+//nolint:gocyclo // 8-step orchestrator: complexity mirrors the domain spec
 func (s *TwoFAService) Verify(ctx context.Context, userID, otpCode string) (bool, bool, error) {
 	// 1. Check TwoFARecord exists
 	record, err := s.storage.GetTwoFARecord(ctx, userID)

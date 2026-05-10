@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/sync/errgroup"
 	"gotest.tools/v3/assert"
 
 	"github.com/gojuno/minimock/v3"
@@ -45,11 +46,12 @@ func newSetupSuite(t *testing.T) *setupSuite {
 
 	sessionStorage := mocks.NewSessionStorageMock(mc)
 	service, err := twofaService.NewTwoFAService(twofaService.Deps{
-		Storage:        storage,
-		SessionStorage: sessionStorage,
-		MPCClients:     mpcInterfaces,
-		EventProducer:  eventProducer,
-		MPCTimeout:     5 * time.Second,
+		Storage:              storage,
+		SessionStorage:       sessionStorage,
+		MPCClients:           mpcInterfaces,
+		EventProducer:        eventProducer,
+		MPCTimeout:           5 * time.Second,
+		BackupCodeBcryptCost: bcrypt.MinCost,
 	})
 	assert.NilError(t, err, "failed to create TwoFA service")
 
@@ -62,6 +64,7 @@ func newSetupSuite(t *testing.T) *setupSuite {
 }
 
 func TestSetup_Success(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -88,6 +91,7 @@ func TestSetup_Success(t *testing.T) {
 }
 
 func TestSetup_DuplicateEnabled(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(
@@ -102,6 +106,7 @@ func TestSetup_DuplicateEnabled(t *testing.T) {
 }
 
 func TestSetup_DuplicateDisabled(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(
@@ -127,6 +132,7 @@ func TestSetup_DuplicateDisabled(t *testing.T) {
 }
 
 func TestSetup_NewUserNoExistingRecord(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -149,6 +155,7 @@ func TestSetup_NewUserNoExistingRecord(t *testing.T) {
 }
 
 func TestSetup_PartialMPCFailure_Node2Fails(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -181,6 +188,7 @@ func TestSetup_PartialMPCFailure_Node2Fails(t *testing.T) {
 }
 
 func TestSetup_PartialMPCFailure_Node0Fails(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -211,6 +219,7 @@ func TestSetup_PartialMPCFailure_Node0Fails(t *testing.T) {
 }
 
 func TestSetup_AllMPCNodesFail(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -234,6 +243,7 @@ func TestSetup_AllMPCNodesFail(t *testing.T) {
 }
 
 func TestSetup_BackupCodeFormat(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -259,6 +269,7 @@ func TestSetup_BackupCodeFormat(t *testing.T) {
 }
 
 func TestSetup_BackupCodeUniqueness(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -284,6 +295,7 @@ func TestSetup_BackupCodeUniqueness(t *testing.T) {
 }
 
 func TestSetup_BackupCodeHashing(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	var capturedHashes []string
@@ -305,13 +317,25 @@ func TestSetup_BackupCodeHashing(t *testing.T) {
 
 	assert.NilError(t, err)
 	assert.Equal(t, len(capturedHashes), 10)
+	// Parallel verify: 10 sequential bcrypt.Compare at cost=12 takes ~2.5s
+	// (~25s under -race). Running them in an errgroup keeps the test as a
+	// single bcrypt operation in wall time.
+	cmpErrs := make([]error, len(capturedHashes))
+	var cmpG errgroup.Group
 	for i, hash := range capturedHashes {
-		err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(codes[i]))
+		cmpG.Go(func() error {
+			cmpErrs[i] = bcrypt.CompareHashAndPassword([]byte(hash), []byte(codes[i]))
+			return nil
+		})
+	}
+	_ = cmpG.Wait()
+	for i, err := range cmpErrs {
 		assert.NilError(t, err, "bcrypt hash %d does not match plaintext code", i)
 	}
 }
 
 func TestSetup_ProvisioningURIContainsEmail(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -334,6 +358,7 @@ func TestSetup_ProvisioningURIContainsEmail(t *testing.T) {
 }
 
 func TestSetup_StoreShareReceivesCorrectData(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -378,6 +403,7 @@ func TestSetup_StoreShareReceivesCorrectData(t *testing.T) {
 }
 
 func TestSetup_CreateTwoFARecordFails(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -397,6 +423,7 @@ func TestSetup_CreateTwoFARecordFails(t *testing.T) {
 }
 
 func TestSetup_StoreBatchBackupCodesFails(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -419,6 +446,7 @@ func TestSetup_StoreBatchBackupCodesFails(t *testing.T) {
 }
 
 func TestSetup_GetTwoFARecordFails(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, errors.New("db error"))
@@ -431,6 +459,7 @@ func TestSetup_GetTwoFARecordFails(t *testing.T) {
 }
 
 func TestSetup_CompensatingDeleteUsesFreshContext(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -463,6 +492,7 @@ func TestSetup_CompensatingDeleteUsesFreshContext(t *testing.T) {
 }
 
 func TestSetup_SharesZeroized(t *testing.T) {
+	t.Parallel()
 	s := newSetupSuite(t)
 
 	s.storage.GetTwoFARecordMock.Expect(minimock.AnyContext, "test-user-id").Return(nil, nil)
@@ -525,4 +555,3 @@ func TestSetup_SecretZeroized(t *testing.T) {
 		assert.Equal(t, byte(0), b, "raw secret byte at index %d should be zero after Setup, got %d", i, b)
 	}
 }
-

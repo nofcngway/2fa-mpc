@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gotest.tools/v3/assert"
 
 	"github.com/gojuno/minimock/v3"
@@ -44,11 +45,12 @@ func newVerifySuite(t *testing.T) *verifySuite {
 	eventProducer.CloseMock.Optional().Return(nil)
 
 	service, err := twofaService.NewTwoFAService(twofaService.Deps{
-		Storage:        storage,
-		SessionStorage: sessionStorage,
-		MPCClients:     mpcInterfaces,
-		EventProducer:  eventProducer,
-		MPCTimeout:     5 * time.Second,
+		Storage:              storage,
+		SessionStorage:       sessionStorage,
+		MPCClients:           mpcInterfaces,
+		EventProducer:        eventProducer,
+		MPCTimeout:           5 * time.Second,
+		BackupCodeBcryptCost: bcrypt.MinCost,
 	})
 	assert.NilError(t, err, "failed to create TwoFA service")
 

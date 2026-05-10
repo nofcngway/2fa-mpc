@@ -10,8 +10,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 
-	"github.com/vbncursed/vkr/auth/internal/producer"
 	"github.com/vbncursed/vkr/auth/internal/domain"
+	"github.com/vbncursed/vkr/auth/internal/producer"
 	"github.com/vbncursed/vkr/auth/internal/services/auth_service"
 	"github.com/vbncursed/vkr/auth/internal/services/auth_service/mocks"
 )
@@ -30,9 +30,9 @@ func newJWTTestService(t *testing.T) *auth_service.AuthService {
 	svc, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         mocks.NewStorageMock(mc),
 		SessionStorage:  mocks.NewSessionStorageMock(mc),
-		EventPublisher:   &producer.NoOpProducer{},
+		EventPublisher:  &producer.NoOpProducer{},
 		PrivateKey:      privateKey,
-		PublicKey:        publicKey,
+		PublicKey:       publicKey,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 168 * time.Hour,
 	})
@@ -129,9 +129,9 @@ func TestJWT_ParseToken_ExpiredToken(t *testing.T) {
 	svc, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         mocks.NewStorageMock(mc),
 		SessionStorage:  mocks.NewSessionStorageMock(mc),
-		EventPublisher:   &producer.NoOpProducer{},
+		EventPublisher:  &producer.NoOpProducer{},
 		PrivateKey:      privateKey,
-		PublicKey:        publicKey,
+		PublicKey:       publicKey,
 		AccessTokenTTL:  1 * time.Millisecond,
 		RefreshTokenTTL: 168 * time.Hour,
 	})

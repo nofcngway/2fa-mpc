@@ -157,6 +157,12 @@ html[data-theme="dark"] {
     box-shadow: 0 1px 3px var(--glass-shadow);
   }
 
+  /* Subtle pulse for service-status-dot in "down" state */
+  @keyframes service-status-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    50%      { box-shadow: 0 0 0 6px transparent;  opacity: 0.65; }
+  }
+
   /* OTP slots glass override */
   .glass-otp-slot {
     background: var(--glass-bg-elevated) !important;

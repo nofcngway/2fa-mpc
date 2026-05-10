@@ -1,0 +1,34 @@
+# Load-testing harness — extends docker-compose.yml with a k6 runner.
+# Usage:
+#   docker compose -f docker-compose.yml -f loadtest/docker-compose.loadtest.yaml \
+#     run --rm k6 run /scripts/<scenario>.js
+#
+# k6 attaches to the default project network, dialing gateway:8080 directly so
+# requests skip the host's loopback. JSON summary lands in
+# loadtest/results/<scenario>.json for benchstat-style comparison.
+
+services:
+  # Override gateway env to lift the 60 req/min IP rate limit during load
+  # tests. Otherwise k6 from a single container hits the cap immediately and
+  # the experiment measures the rate limiter, not the upstream services.
+  gateway:
+    environment:
+      - GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE=100000
+      - GATEWAY_RATE_LIMIT_BURST=1000
+
+  k6:
+    image: grafana/k6:0.55.0
+    profiles: ["loadtest"]
+    networks:
+      - default
+    volumes:
+      # Paths resolve from the directory of the first -f compose file
+      # (project root when invoked via the Makefile target).
+      - ./loadtest/k6:/scripts:ro
+      - ./loadtest/results:/results
+    environment:
+      - BASE_URL=http://gateway:8080
+      - K6_SUMMARY_EXPORT=/results/summary.json
+    depends_on:
+      gateway:
+        condition: service_started

@@ -18,6 +18,17 @@ type Config struct {
 	Kafka        KafkaConfig    `yaml:"kafka"`
 	Node         NodeConfig     `yaml:"node"`
 	SharedSecret string         `yaml:"shared_secret"`
+	TLS          TLSConfig      `yaml:"tls"`
+}
+
+// TLSConfig configures mTLS for the gRPC server. When Enabled, the server
+// presents CertFile/KeyFile and requires every incoming connection (TwoFA)
+// to present a client cert signed by CAFile.
+type TLSConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+	CAFile   string `yaml:"ca_file"`
 }
 
 // ServerConfig holds gRPC server settings.
@@ -82,6 +93,12 @@ func envStringSlice(key string, target *[]string) {
 	}
 }
 
+func envBool(key string, target *bool) {
+	if v := os.Getenv(key); v != "" {
+		*target = v == "true" || v == "1"
+	}
+}
+
 func applyEnvOverrides(cfg *Config) {
 	envInt("MPC_SERVER_PORT", &cfg.Server.Port)
 	envInt("MPC_SERVER_METRICS_PORT", &cfg.Server.MetricsPort)
@@ -92,6 +109,10 @@ func applyEnvOverrides(cfg *Config) {
 	envInt("MPC_NODE_ID", &cfg.Node.ID)
 	envString("MPC_NODE_ENCRYPTION_KEY", &cfg.Node.EncryptionKey)
 	envString("MPC_SHARED_SECRET", &cfg.SharedSecret)
+	envBool("MPC_TLS_ENABLED", &cfg.TLS.Enabled)
+	envString("MPC_TLS_CERT_FILE", &cfg.TLS.CertFile)
+	envString("MPC_TLS_KEY_FILE", &cfg.TLS.KeyFile)
+	envString("MPC_TLS_CA_FILE", &cfg.TLS.CAFile)
 }
 
 // Load reads and parses the configuration file at the given path.

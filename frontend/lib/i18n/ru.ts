@@ -147,6 +147,44 @@ export const ru = {
     backupDescription: "Введите один из резервных кодов",
   },
 
+  // --- Monitoring ---
+  monitoring: {
+    title: "Мониторинг",
+    subtitle: "Состояние сервисов и метрики из Prometheus в реальном времени",
+    refresh: "Обновить",
+    loading: "Загрузка метрик...",
+    errorLoading: "Не удалось загрузить метрики",
+    noData: "Нет данных",
+    updatedAt: "Обновлено в",
+
+    // Top-row metrics
+    totalRps: "Общая нагрузка",
+    avgLatency: "Средняя задержка p95",
+    errorRate: "Доля ошибок",
+    unitRps: "RPS",
+    unitMs: "мс",
+    unitPercent: "%",
+
+    // Service grid
+    servicesTitle: "Состояние сервисов",
+    servicesSubtitle: "Health, throughput, latency и error rate по каждому сервису",
+    colService: "Сервис",
+    colRps: "RPS",
+    colP95: "p95",
+    colErrors: "Ошибки",
+    statusUp: "Работает",
+    statusDown: "Недоступен",
+
+    // MPC nodes
+    mpcTitle: "MPC-ноды",
+    mpcSubtitle: "Хранилища долей секрета (Shamir 2-of-3)",
+    mpcAllHealthy: "Все 3 ноды работают",
+    mpcThresholdOk: "2 из 3 — порог соблюдён, доступен только Verify",
+    mpcThresholdLost: "Меньше 2 нод — Verify недоступен",
+  },
+
+  navMonitoring: "Мониторинг",
+
   // --- Theme ---
   theme: {
     light: "Переключить на светлую тему",

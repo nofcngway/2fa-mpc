@@ -35,6 +35,11 @@ jwt:
   public_key_path: keys/public.pem
   access_token_ttl: 15m
   refresh_token_ttl: 168h   # 7 дней
+tls:
+  enabled: true
+  cert_file: /certs/auth.crt
+  key_file: /certs/auth.key
+  ca_file: /certs/ca.crt
 ```
 
 Переменные окружения с префиксом `AUTH_` переопределяют config.yaml.
@@ -57,3 +62,4 @@ jwt:
 - **JWT:** RS256 (асимметричная подпись), access 15 мин, refresh 7 дней
 - **Token families:** обнаружение повторного использования refresh-токенов -- при детекции инвалидируется вся семья
 - **Timing-safe:** логин возвращает одинаковую ошибку для несуществующего email и неверного пароля
+- **mTLS:** gRPC-сервер требует client cert (TLS 1.3, RequireAndVerifyClientCert). Только Gateway с валидным сертификатом может вызвать internal RPC. См. [`docs/03 - Security/mTLS.md`](../docs/03%20-%20Security/mTLS.md)

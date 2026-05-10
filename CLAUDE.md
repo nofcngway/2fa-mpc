@@ -259,37 +259,37 @@ otp_counter:{user_id}             → counter (otp_counter.go)
 
 НИКОГДА не включать: passwords, TOTP secrets, share data, encryption keys.
 
-## Obsidian (workspace/)
+## Документация проекта (`docs/`)
 
-Корень проекта — Obsidian vault (`.obsidian/` в корне). Все заметки в `workspace/`.
+Каталог `docs/` — публичная документация проекта (commit'ится в репозиторий, в отличие от gitignored `.obsidian/`). Структура:
 
-### Структура vault
 ```
-workspace/
-├── 00 - Index.md                  # Главная навигация (хаб всех ссылок)
+docs/
+├── README.md                      # Хаб навигации (заменяет старый "00 - Index.md")
 ├── 01 - Architecture/             # Архитектура, потоки данных
 ├── 02 - Services/                 # Документация по каждому сервису + аудиты
-├── 03 - Security/                 # Протоколы безопасности (Shamir, TOTP, AES, JWT, пароли)
+├── 03 - Security/                 # Протоколы безопасности (Shamir, TOTP, AES, JWT, mTLS)
 ├── 04 - Decisions/                # ADR — архитектурные решения
-├── 05 - Progress/                 # TODO, Changelog
-└── conference/                    # Доклады и презентации
+└── 05 - Progress/                 # TODO, Changelog
 ```
+
+Markdown-ссылки используют относительные пути с URL-encoding (`[name](path%20with%20spaces.md)`) — рендерятся корректно в GitHub. Wikilink-стиль `[[X]]` НЕ используется (несовместимо с GitHub).
 
 ### Обязательные действия после каждой работы (Post-Work Checklist)
 
-После **каждого** завершённого блока работы (коммит, фикс, рефакторинг, новая фича) — обновить workspace:
+После **каждого** завершённого блока работы (коммит, фикс, рефакторинг, новая фича) — обновить документацию:
 
 | После какой работы | Что обновить | Где |
 |---|---|---|
-| Любой код-коммит | Changelog entry: дата, категория (fix/feature/refactor), описание | `05 - Progress/Changelog.md` |
-| Баг-фикс / рефакторинг | Отметка `[x]` в TODO + changelog entry | `05 - Progress/TODO.md` + `Changelog.md` |
-| Новый ADR или изменение подхода | ADR entry: дата, статус, контекст, решение, причина, последствия | `04 - Decisions/ADR Log.md` |
-| Изменение API сервиса (RPC, proto) | Обновить заметку сервиса: методы, зависимости, ссылки | `02 - Services/<Service>.md` |
-| Изменение security-логики | Обновить security-заметку: параметры, где используется | `03 - Security/<Topic>.md` |
-| Аудит / code review | Создать или обновить audit-заметку с планом фиксов | `02 - Services/<Service> - Audit.md` |
-| Новая заметка любого типа | Добавить wikilink в Index | `00 - Index.md` |
+| Любой код-коммит | Changelog entry: дата, категория (fix/feature/refactor), описание | `docs/05 - Progress/Changelog.md` |
+| Баг-фикс / рефакторинг | Отметка `[x]` в TODO + changelog entry | `docs/05 - Progress/TODO.md` + `Changelog.md` |
+| Новый ADR или изменение подхода | ADR entry: дата, статус, контекст, решение, причина, последствия | `docs/04 - Decisions/ADR Log.md` |
+| Изменение API сервиса (RPC, proto) | Обновить заметку сервиса: методы, зависимости, ссылки | `docs/02 - Services/<Service>.md` |
+| Изменение security-логики | Обновить security-заметку: параметры, где используется | `docs/03 - Security/<Topic>.md` |
+| Аудит / code review | Создать или обновить audit-заметку с планом фиксов | `docs/02 - Services/<Service> - Audit.md` |
+| Новая заметка любого типа | Добавить ссылку в `docs/README.md` | `docs/README.md` |
 
-**Это НЕ опционально.** Работа без обновления workspace считается незавершённой.
+**Это НЕ опционально.** Работа без обновления документации считается незавершённой.
 
 ### Правила связности графа (Graph Connectivity)
 
@@ -371,11 +371,12 @@ workspace/
 
 | Директория | Назначение | Статус |
 |-----------|------------|--------|
-| `gateway/` | API Gateway (REST→gRPC) | Пустая, не реализован |
+| `gateway/` | API Gateway (REST→gRPC) | Реализован (см. README) |
 | `migration/` | Общие миграции (если нужны cross-service) | Пустая |
-| `monitoring/` | Конфигурация Prometheus + Grafana | Пустая |
-| `workspace/` | Заметки, решения, прогресс | Активная |
-| `.planning/` | GSD planning artifacts | Активная |
+| `monitoring/` | Конфигурация Prometheus + Grafana | Активная |
+| `docs/` | ADR, security deep-dives, changelog (commit'ится в репо) | Активная |
+| `certs/` | Dev PKI (gitignored), генерируется `scripts/gen-certs.sh` | Активная |
+| `.planning/` | GSD planning artifacts (gitignored) | Локальная |
 
 ## Текущий статус реализации
 
@@ -383,18 +384,172 @@ workspace/
 - Auth Service — полностью (register, login, JWT, refresh, validate, logout, logout_all, password validation, audit)
 - TwoFA Service — полностью (setup, verify, disable, status, backup codes, rate limiting, verify_backup_code)
 - MPC Node Service — полностью (store, retrieve, delete, AES-256-GCM, shared secret auth)
+- API Gateway — полностью (grpc-gateway, REST→gRPC, middleware-стек, ScalarUI, Docker)
+- Frontend — Next.js 16 + Liquid Glass design system, light/dark, ru/en, 11 UI / 9 widgets, протекшн middleware, refresh-токены в httpOnly cookie
 - Shamir Secret Sharing — custom GF(256), 2-of-3
 - TOTP — RFC 6238, ±1 window, provisioning URI
 - Unit-тесты для всех криптографических компонентов и бизнес-логики
+- **MPC Fault Tolerance тесты (2026-05-10)** — 4 файла в `twofa/internal/services/twofaService/fault_tolerance_*_test.go`, 6 функций / 12 субтестов: 1 нода вниз → ОК, медленная нода → first-2-wins, timeout-сценарии, all-or-nothing для setup/disable
 - Kafka audit events
-- Prometheus metrics
+- Prometheus metrics + Grafana dashboard (`mpc-2fa-overview.json`)
 
 ### Не реализовано
-- API Gateway (`gateway/`) — отложен
-- Docker Compose полной системы (есть только per-service compose)
-- Prometheus scrape config + Grafana dashboards
-- Интеграционные тесты
-- Система миграций БД (таблицы создаются через initTables)
+- Система миграций БД (таблицы создаются через initTables) — отложено
+- **mTLS между сервисами** — Phase B (см. ниже)
+- **Подпись служебных запросов** — Phase B (комментарий `SECURITY(WR-03): deferred to Phase 9` в коде)
+- **Нагрузочное тестирование** (k6/wrk/Locust + отчёт + scaling recs) — Phase C
+- **Frontend monitoring page** (страница со статусами сервисов / RPS / latency / error rate из Prometheus) — Phase D
+
+##  — план закрытия отсутствующих пунктов ТЗ
+
+Контекст: -команда ( — Frontend,  — Backend) выявила недостающие пункты ТЗ. План закрытия согласован 2026-05-10.
+
+| Phase | Описание | Owner | Status |
+|-------|----------|-------|--------|
+| A | MPC fault tolerance — тесты 2-of-3 threshold модели + документация |  | ✅ Done (2026-05-10) |
+| B | mTLS между всеми сервисами + ADR-011 (Path A: shared_secret сохранён как defense-in-depth) |  | ✅ Done (2026-05-10) |
+| C | k6 нагрузочные тесты (login / setup / verify / mixed) + REPORT.md с p50/p95/p99 + рекомендации по масштабированию |  | ✅ Done (2026-05-10) |
+| D | Frontend Monitoring page — Gateway `/admin/monitoring/snapshot` + Next.js страница с виджетами (ThroughputOverview, MpcNodeStatus, ServiceHealthGrid) |  | ✅ Done (2026-05-10) |
+
+### Phase A — что использовано
+
+- **Тесты:** gotest.tools/v3/assert, minimock/v3, переиспользуются существующие suites (`verifySuite`, `setupSuite`, `disableSuite`)
+- **Helper:** `newVerifySuiteWithTimeout(t, d)` для timeout-сценариев с MPCTimeout=200ms
+- **Сценарии:** OneNodeDown_Succeeds (×3 ноды), SlowNodeIgnored_FirstTwoWins, OneNodeTimeout_OneNodeDown_Fails, AllNodesTimeout_Fails, Setup_OneNodeDown_AllOrNothing (×3), Disable_OneNodeDown_PreservesRecord (×3)
+- **Doc:** `docs/03 - Security/MPC Fault Tolerance.md` — описание threshold модели, поведения по флоу, известных ограничений
+- **Запуск:** `go test -race ./twofa/internal/services/twofaService/...` (все зелёные)
+- **Файловые правила:** все 4 новых файла ≤200 строк (78/83/62/172)
+
+### Phase A bonus — ускорение тестов и Setup-flow в проде
+
+В ходе Phase A обнаружено, что `generateBackupCodes` хеширует 10 backup-кодов **последовательно** через bcrypt cost=12 (~2.5s на каждый Setup, под `-race` ~25s × 12 setup-тестов = 270s+ по пакету).
+
+**Что сделано:**
+- `twofa/internal/services/twofaService/backup_codes.go`: bcrypt-хеширование 10 кодов вынесено в `errgroup.Group` — параллелится на всех ядрах, Setup latency падает с ~2.5s до ~250ms (×10 в проде)
+- `setup_test.go::TestSetup_BackupCodeHashing`: `bcrypt.CompareHashAndPassword` × 10 тоже распараллелено через `errgroup`
+- `setup_test.go`: добавлен `t.Parallel()` ко всем независимым setup-тестам (кроме `TestSetup_SecretZeroized` — мутирует package-level `GenerateSecretFunc`)
+
+**Результат:**
+- `go test ./twofa/internal/services/twofaService/...`: 5.5s (без race), 56s (с race) — было >270s
+- Прод: Setup пользователя занимает ~250ms вместо ~2.5s — критично для Phase C нагрузочного тестирования
+
+**Используемые библиотеки:**
+- `golang.org/x/sync/errgroup` (уже есть в проекте) — параллельный bcrypt
+- Стандартный `t.Parallel()` для независимых тестов
+
+### Phase B — что сделано / использовано
+
+**Path A:** mTLS как primary защита, `shared_secret` сохранён как defense-in-depth. Удалён комментарий `SECURITY(WR-03)` (закрыто mTLS).
+
+**PKI:**
+- `scripts/gen-certs.sh` — dev-only: 1 root CA (10y) + 6 leaf certs (auth, twofa, mpc-node-{1,2,3}, gateway, 825 days, EKU server+clientAuth, SANs под docker-compose имена + localhost)
+- `certs/` — gitignored, `chmod 0600` на keys
+
+**Конфигурация (per-service):**
+- `TLSConfig {Enabled, CertFile, KeyFile, CAFile}` секция в `auth/twofa/mpc/gateway` config.go
+- env-overrides: `<SVC>_TLS_ENABLED|CERT_FILE|KEY_FILE|CA_FILE`
+
+**Clean Architecture файловая структура (строгое разделение):**
+- `<svc>/internal/bootstrap/tls.go` — `loadServerTLSCredentials` / `loadClientTLSCredentials` (только load + validate)
+- `twofa/internal/bootstrap/mpc_transport.go` / `gateway/internal/bootstrap/transport.go` — выбор TLS vs insecure (только decision logic)
+- `<svc>/internal/bootstrap/<x>_clients.go` / `server.go` — wiring (использует helpers)
+- `twofa/internal/adapters/mpcclient/client.go` — domain-port adapter (изолирует pb от use-case-слоя)
+- `twofa/internal/middleware/client_auth.go` — client interceptor (shared_secret в metadata, defense-in-depth)
+
+**Тесты:**
+- `twofa/internal/bootstrap/tls_test.go` — `TestLoadServer/ClientTLSCredentials`, `TestMTLS_EndToEnd` (real gRPC handshake поверх loopback TCP с health-check RPC)
+- Все 4 сервиса: `go build` зелёный, `go test` зелёный
+
+**Docker:**
+- `./certs:/certs:ro` volume в auth/twofa/mpc-node-{1,2,3}/gateway
+- TLS env vars включены по умолчанию для production-like поведения
+- **init-контейнер `certgen`** (alpine + openssl, ~10MB): запускается первым, генерирует PKI идемпотентно. Все сервисы депендят через `service_completed_successfully`. `docker compose up` без предварительных шагов поднимает работающую mTLS-mesh из чистого слейта.
+- Force-regen: `rm -rf certs/ && docker compose up` или `docker compose run --rm certgen bash /work/scripts/gen-certs.sh --force`
+
+**Параметры безопасности:**
+- TLS 1.3 минимум (`MinVersion: tls.VersionTLS13`)
+- `tls.RequireAndVerifyClientCert` на серверах (mTLS)
+- `RootCAs` на клиентах
+- gRPC автоматически проверяет SAN против dial-target
+
+**Не сделано / отложено:**
+- HMAC-подпись запросов (Path B) — отвергнуто, mTLS достаточно
+- Cert rotation tooling — production concern
+- CRL/OCSP — Go stdlib не поддерживает по умолчанию
+
+### Phase C — что использовано
+
+**Каркас:** k6 0.55.0 (Grafana) в отдельном docker-compose сервисе, общая network с приложением.
+
+**Файловая структура (loadtest/):**
+- `k6/lib/config.js` — base URL + общий пароль + thresholds
+- `k6/lib/auth.js` — register/login helpers, authHeaders, uniqueEmail
+- `k6/lib/totp.js` — собственная реализация TOTP в k6 (HMAC-SHA1 через `k6/crypto`, base32 decode, RFC 6238)
+- `k6/login.js` — login throughput, ramping VUs 0→20
+- `k6/setup-2fa.js` — setup throughput, ramping VUs 0→10
+- `k6/verify-2fa.js` — verify throughput с pool 80 аккаунтов (обходит TwoFA rate limit 5/5min/user)
+- `k6/mixed.js` — 70% verify / 20% login / 10% setup, реалистичный mix
+- `docker-compose.loadtest.yaml` — оверлей: k6 контейнер + override gateway rate limit (иначе тест меряет лимитер)
+- `loadtest/README.md` — как запускать
+- `loadtest/REPORT.md` — результаты, анализ узких мест, рекомендации по масштабированию
+
+**Makefile targets:** `load-login`, `load-setup`, `load-verify`, `load-mixed`, `load-all`.
+
+**Ключевые цифры (Apple M3, single-host docker):**
+| Endpoint | Throughput | avg latency | p95 |
+|----------|------------|-------------|-----|
+| Login | 22.5 RPS, 0% errors | 377 ms | 576 ms |
+| Setup 2FA | 2.4 iter/s, 0% errors | 1.63 s | 2.87 s |
+| Verify 2FA | 21 ms avg per call | 21.8 ms | 35.8 ms |
+
+**Узкие места выявлены:**
+- bcrypt cost=12 на login (CPU-bound, ожидаемо)
+- bcrypt cost=12 на setup (10 параллельных хешей под contention)
+- TwoFA rate limit 5/5min/user — корректное поведение
+
+**Phase A улучшение валидировано под нагрузкой:** setup без parallel bcrypt был бы ~5-7s p50, измерили 1.6s.
+
+### Phase C оптимизации (после первого load-теста)
+
+После анализа REPORT.md прогнан пакет оптимизаций. Файлы:
+- `twofa/internal/services/twofaService/backup_codes.go` — `bcryptCost = 10` (было 12). Безопасность не пострадала: коды cryptorandom (26.6 бит) + rate limit 5/5min/user
+- `gateway/internal/middleware/auth_cache.go` — новый файл `TokenCache` (Redis-backed, TTL 10s, SHA-256 token hash → user_id+email)
+- `gateway/internal/middleware/auth.go` — рефакторинг: extract `resolveIdentity`, accept `*TokenCache`
+- `gateway/internal/bootstrap/init.go` — wire TokenCache в middleware chain
+- `auth/internal/storage/pgstorage/pgstorage.go`, `twofa/.../pgstorage.go`, `mpc/.../pgstorage.go` — `MaxConns = 4×CPU`, `MinConns = CPU/2` через `runtime.NumCPU()`
+
+**Эффект:**
+- Setup p95: 2.87s → **443ms** (×6.5)
+- Setup throughput: 2.4 → **5.6 iter/s** (×2.3)
+- Mixed p95: 429ms → **245ms** (×1.75)
+- Verify endpoint: 21ms (cache pattern в k6 не задействован — попадает в реалистичной browser-сессии)
+- Login: 410ms (без изменений — bcrypt cost=12 для user passwords остался)
+
+### Полировка по Clean Architecture / Modern Go / cc-skills-golang
+
+**1. golangci-lint v2** (`.golangci.yml`):
+- 33 линтера включены (correctness, code-quality, tests)
+- Все 4 сервиса проходят с **0 issues**
+- Makefile target `golangci-lint` для запуска
+
+**2. IdentityResolver interface** (`gateway/internal/middleware/identity_resolver.go`):
+- Auth middleware зависит от `IdentityResolver` interface, не от `*TokenCache`
+- Реализации: `directResolver` (always RPC), `cachedResolver` (cache + fallback)
+- Composition root собирает `cachedResolver(NewTokenCache(rdb), NewDirectResolver(authClient))`
+- Чище для тестов — можно подменить mock'ом без gRPC
+
+**3. Bcrypt cost через DI** (`twofa/.../twofa_service.go`):
+- `Deps.BackupCodeBcryptCost` — настраиваемый параметр
+- `DefaultBackupCodeBcryptCost = 10` для production
+- Тесты передают `bcrypt.MinCost` (4) — тестирование пакета `twofaService` теперь **2.3s** с race / **1.6s** без race (было 56s/5.5s, изначально 270s)
+
+**4. Бутстрап-fatalf**: вместо прямого `os.Exit(1)` после `defer cancel()` — фабрика `fatalf` с явным `cancel()` перед exit. Применено в auth, twofa, mpc init.go.
+
+**5. Мелкая чистка:**
+- `_ = conn.Close()` для best-effort cleanup
+- `int64(unixTime) → unixTime` (uneeded conversion)
+- `defer func() { _ = tx.Rollback(ctx) }()` (Rollback after Commit returns ErrTxDone, expected)
+- gofmt sweep всего проекта
 
 ## Conventions
 

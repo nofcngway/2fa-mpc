@@ -83,7 +83,7 @@ func validateOTPWithCounterAt(secret []byte, code string, unixTime int64) (bool,
 			return false, 0
 		}
 	}
-	counter := int64(unixTime) / 30
+	counter := unixTime / 30
 	codeBytes := []byte(code)
 
 	matchCurr := subtle.ConstantTimeCompare([]byte(hotp(secret, uint64(counter))), codeBytes)

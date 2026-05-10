@@ -42,9 +42,9 @@ func newRegisterSuite(t *testing.T) *registerSuite {
 	service, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         storage,
 		SessionStorage:  sessionStorage,
-		EventPublisher:   eventProducer,
+		EventPublisher:  eventProducer,
 		PrivateKey:      privateKey,
-		PublicKey:        &privateKey.PublicKey,
+		PublicKey:       &privateKey.PublicKey,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 168 * time.Hour,
 	})

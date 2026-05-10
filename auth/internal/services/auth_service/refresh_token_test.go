@@ -41,9 +41,9 @@ func newRefreshSuite(t *testing.T) *refreshSuite {
 	service, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         storage,
 		SessionStorage:  sessionStorage,
-		EventPublisher:   eventProducer,
+		EventPublisher:  eventProducer,
 		PrivateKey:      privateKey,
-		PublicKey:        &privateKey.PublicKey,
+		PublicKey:       &privateKey.PublicKey,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 168 * time.Hour,
 	})
@@ -136,9 +136,9 @@ func TestRefreshToken_ExpiredJWT(t *testing.T) {
 	shortService, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         s.storage,
 		SessionStorage:  s.sessionStorage,
-		EventPublisher:   shortEventProducer,
+		EventPublisher:  shortEventProducer,
 		PrivateKey:      s.privateKey,
-		PublicKey:        &s.privateKey.PublicKey,
+		PublicKey:       &s.privateKey.PublicKey,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 1 * time.Nanosecond,
 	})

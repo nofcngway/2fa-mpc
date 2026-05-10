@@ -45,11 +45,12 @@ type MPCClient interface {
 
 // TwoFAService implements 2FA orchestration business logic.
 type TwoFAService struct {
-	storage        Storage
-	sessionStorage SessionStorage
-	mpcClients     []MPCClient
-	eventProducer  EventProducer
-	mpcTimeout     time.Duration
+	storage              Storage
+	sessionStorage       SessionStorage
+	mpcClients           []MPCClient
+	eventProducer        EventProducer
+	mpcTimeout           time.Duration
+	backupCodeBcryptCost int
 }
 
 // Deps groups all dependencies required by TwoFAService.
@@ -59,6 +60,11 @@ type Deps struct {
 	MPCClients     []MPCClient
 	EventProducer  EventProducer
 	MPCTimeout     time.Duration
+	// BackupCodeBcryptCost overrides the cost used when hashing backup codes
+	// (see DefaultBackupCodeBcryptCost for the production default and the
+	// security rationale). Tests should set bcrypt.MinCost (4) to avoid the
+	// ~64ms-per-hash production penalty.
+	BackupCodeBcryptCost int
 }
 
 // NewTwoFAService creates a new TwoFAService instance. Returns an error if any required dependency is nil.
@@ -79,11 +85,16 @@ func NewTwoFAService(d Deps) (*TwoFAService, error) {
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
+	cost := d.BackupCodeBcryptCost
+	if cost == 0 {
+		cost = DefaultBackupCodeBcryptCost
+	}
 	return &TwoFAService{
-		storage:        d.Storage,
-		sessionStorage: d.SessionStorage,
-		mpcClients:     d.MPCClients,
-		eventProducer:  d.EventProducer,
-		mpcTimeout:     d.MPCTimeout,
+		storage:              d.Storage,
+		sessionStorage:       d.SessionStorage,
+		mpcClients:           d.MPCClients,
+		eventProducer:        d.EventProducer,
+		mpcTimeout:           d.MPCTimeout,
+		backupCodeBcryptCost: cost,
 	}, nil
 }

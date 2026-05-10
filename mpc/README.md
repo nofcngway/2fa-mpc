@@ -30,7 +30,12 @@ kafka: { brokers, topic }
 node:
   id: 1                                        # уникальный ID ноды (1, 2, 3)
   encryption_key: "0123456789abcdef..."         # 32 байта hex для AES-256
-shared_secret: "..."                            # общий секрет для авторизации входящих запросов
+shared_secret: "..."                            # defense-in-depth поверх mTLS
+tls:
+  enabled: true
+  cert_file: /certs/mpc-node-1.crt              # уникальный per-node
+  key_file: /certs/mpc-node-1.key
+  ca_file: /certs/ca.crt
 ```
 
 Каждая нода имеет свою БД и уникальный `encryption_key`.
@@ -49,8 +54,8 @@ shared_secret: "..."                            # общий секрет для
 ## Безопасность
 
 - **AES-256-GCM at-rest:** каждая доля шифруется перед записью в БД, nonce генерируется через `crypto/rand`
-- **Shared secret auth:** входящие gRPC-запросы авторизуются через shared secret в metadata (gRPC interceptor)
-- **Constant-time сравнение** shared secret для защиты от timing-атак
+- **mTLS:** gRPC-сервер требует client cert от TwoFA (TLS 1.3, RequireAndVerifyClientCert). Защищает от перехвата трафика и неавторизованных каллеров. См. [`docs/03 - Security/mTLS.md`](../docs/03%20-%20Security/mTLS.md)
+- **Shared secret auth:** дополнительный слой defense-in-depth поверх mTLS — входящие запросы валидируются через shared secret в gRPC metadata (constant-time compare)
 - **Изоляция:** каждая нода -- отдельный процесс со своей БД и ключом шифрования
 - **Без внешних crypto-библиотек:** только стандартные `crypto/aes` + `crypto/cipher`
 

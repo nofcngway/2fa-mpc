@@ -25,14 +25,27 @@ import (
 )
 
 // NewGRPCServer creates and configures a new gRPC server with auth + logging interceptors and health check.
-func NewGRPCServer(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) *grpc.Server {
-	server := grpc.NewServer(
+func NewGRPCServer(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) (*grpc.Server, error) {
+	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			middleware.MetricsInterceptor,
 			middleware.AuthInterceptor(cfg.SharedSecret),
 			middleware.LoggingInterceptor,
 		),
-	)
+	}
+
+	if cfg.TLS.Enabled {
+		creds, err := loadServerTLSCredentials(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("load tls credentials: %w", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
+		slog.Info("mTLS enabled", "service", "mpc", "cert", cfg.TLS.CertFile)
+	} else {
+		slog.Warn("mTLS DISABLED — running in insecure mode", "service", "mpc")
+	}
+
+	server := grpc.NewServer(opts...)
 
 	pb.RegisterMPCNodeServiceServer(server, api)
 
@@ -40,14 +53,18 @@ func NewGRPCServer(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) *grpc
 	healthpb.RegisterHealthServer(server, healthServer)
 	healthServer.SetServingStatus("mpc", healthpb.HealthCheckResponse_SERVING)
 
-	return server
+	return server, nil
 }
 
 // AppRun starts the gRPC and metrics servers, then blocks until a shutdown signal
 // is received. It performs graceful shutdown with a 30-second timeout.
 func AppRun(api *mpc_service_api.MPCServiceAPI, cfg *config.Config) {
 	// 1. Create gRPC server
-	grpcServer := NewGRPCServer(api, cfg)
+	grpcServer, err := NewGRPCServer(api, cfg)
+	if err != nil {
+		slog.Error("failed to create gRPC server", "error", err)
+		os.Exit(1)
+	}
 
 	// 2. Create listener
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))

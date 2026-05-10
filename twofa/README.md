@@ -30,11 +30,16 @@ database: { dsn }
 redis: { addr, password, db }
 kafka: { brokers, topic }
 mpc_nodes: ["node1:9200", "node2:9201", "node3:9202"]
-shared_secret: "..."           # авторизация на MPC-нодах
+shared_secret: "..."           # defense-in-depth поверх mTLS
 mpc_timeout: 5s
+tls:
+  enabled: true                # mTLS на server и client (MPC) сторонах
+  cert_file: /certs/twofa.crt
+  key_file: /certs/twofa.key
+  ca_file: /certs/ca.crt
 ```
 
-Env overrides: `TWOFA_SHARED_SECRET`, `TWOFA_DATABASE_DSN`, `TWOFA_MPC_NODES`.
+Env overrides: `TWOFA_SHARED_SECRET`, `TWOFA_DATABASE_DSN`, `TWOFA_MPC_NODES`, `TWOFA_TLS_*`.
 
 ## Make-команды
 
@@ -54,5 +59,7 @@ Env overrides: `TWOFA_SHARED_SECRET`, `TWOFA_DATABASE_DSN`, `TWOFA_MPC_NODES`.
 - **Shamir SSS:** собственная реализация в GF(256), порог 2-of-3 (`internal/crypto/shamir/`)
 - **TOTP:** собственная реализация RFC 6238, окно +/-1 (`internal/crypto/totp/`)
 - **Rate limiting:** максимум 5 попыток верификации за 5 минут на user_id (Redis)
-- **Backup-коды:** 10 штук, хранятся как bcrypt-хеши, constant-time сравнение
+- **Backup-коды:** 10 штук cryptorandom 8-digit, bcrypt-хеши (cost=10 — настраивается через `Deps.BackupCodeBcryptCost`), **параллельная генерация через errgroup**. Setup p95 под 10 VU: 2.87s → **443ms**. Ниже cost user-password (12) обоснованно: 26.6 бит энтропии + rate limit 5/5min/user — brute-force нереалистичен
 - **Параллельные вызовы MPC:** через `errgroup` для минимизации latency
+- **Fault tolerance:** Verify работает при падении 1 ноды (Shamir 2-of-3); Setup и Disable атомарны (all-or-nothing). Тесты: `fault_tolerance_*_test.go`. См. [`docs/03 - Security/MPC Fault Tolerance.md`](../docs/03%20-%20Security/MPC%20Fault%20Tolerance.md)
+- **mTLS:** gRPC-сервер требует client cert от Gateway; gRPC-клиенты к MPC аутентифицируются client cert. TLS 1.3 минимум. См. [`docs/03 - Security/mTLS.md`](../docs/03%20-%20Security/mTLS.md)

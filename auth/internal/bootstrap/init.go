@@ -19,18 +19,24 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*auth_service_api.Au
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// fatalf releases the bootstrap context before exiting so deferred
+	// cleanups (cancel()) actually run — `os.Exit` skips defers.
+	fatalf := func(msg string, err error) {
+		logger.Error(msg, "error", err)
+		cancel()
+		os.Exit(1)
+	}
+
 	// 1. PostgreSQL
 	pgStorage, err := NewPGStorage(ctx, cfg)
 	if err != nil {
-		logger.Error("failed to connect to PostgreSQL", "error", err)
-		os.Exit(1)
+		fatalf("failed to connect to PostgreSQL", err)
 	}
 
 	// 2. Redis
 	redisStorage, err := NewRedisStorage(ctx, cfg)
 	if err != nil {
-		logger.Error("failed to connect to Redis", "error", err)
-		os.Exit(1)
+		fatalf("failed to connect to Redis", err)
 	}
 
 	// 3. Kafka
@@ -39,8 +45,7 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*auth_service_api.Au
 	// 4. Auth service
 	privateKey, publicKey, err := auth_service.LoadRSAKeys(cfg.JWT.PrivateKeyPath, cfg.JWT.PublicKeyPath)
 	if err != nil {
-		logger.Error("failed to load RSA keys", "error", fmt.Errorf("load RSA keys: %w", err))
-		os.Exit(1)
+		fatalf("failed to load RSA keys", fmt.Errorf("load RSA keys: %w", err))
 	}
 
 	authSvc, err := auth_service.NewAuthService(auth_service.Deps{
@@ -48,13 +53,12 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*auth_service_api.Au
 		SessionStorage:  redisStorage,
 		EventPublisher:  eventPublisher,
 		PrivateKey:      privateKey,
-		PublicKey:        publicKey,
+		PublicKey:       publicKey,
 		AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
 		RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
 	})
 	if err != nil {
-		logger.Error("failed to create auth service", "error", err)
-		os.Exit(1)
+		fatalf("failed to create auth service", err)
 	}
 
 	// 5. API

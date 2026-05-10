@@ -26,16 +26,29 @@ import (
 )
 
 // NewGRPCServer creates and configures a gRPC server with interceptors and health check.
-func NewGRPCServer(api *auth_service_api.AuthServiceAPI) *grpc.Server {
-	server := grpc.NewServer(
-		grpc.MaxRecvMsgSize(4*1024*1024), // 4 MB — auth payloads are small
-		grpc.MaxSendMsgSize(4*1024*1024),
+func NewGRPCServer(api *auth_service_api.AuthServiceAPI, cfg *config.Config) (*grpc.Server, error) {
+	opts := []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(4 * 1024 * 1024), // 4 MB — auth payloads are small
+		grpc.MaxSendMsgSize(4 * 1024 * 1024),
 		grpc.ChainUnaryInterceptor(
 			middleware.RecoveryInterceptor,
 			middleware.MetricsInterceptor,
 			middleware.LoggingInterceptor,
 		),
-	)
+	}
+
+	if cfg.TLS.Enabled {
+		creds, err := loadServerTLSCredentials(cfg.TLS.CertFile, cfg.TLS.KeyFile, cfg.TLS.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("load tls credentials: %w", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
+		slog.Info("mTLS enabled", "service", "auth", "cert", cfg.TLS.CertFile)
+	} else {
+		slog.Warn("mTLS DISABLED — running in insecure mode", "service", "auth")
+	}
+
+	server := grpc.NewServer(opts...)
 
 	pb.RegisterAuthServiceServer(server, api)
 
@@ -43,14 +56,18 @@ func NewGRPCServer(api *auth_service_api.AuthServiceAPI) *grpc.Server {
 	healthServer.SetServingStatus("auth", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(server, healthServer)
 
-	return server
+	return server, nil
 }
 
 // AppRun starts the gRPC and metrics servers, then blocks until a shutdown signal
 // is received. It performs graceful shutdown with a 30-second timeout.
 func AppRun(api *auth_service_api.AuthServiceAPI, cfg *config.Config) {
 	// 1. Create gRPC server
-	grpcServer := NewGRPCServer(api)
+	grpcServer, err := NewGRPCServer(api, cfg)
+	if err != nil {
+		slog.Error("failed to create gRPC server", "error", err)
+		os.Exit(1)
+	}
 
 	// 2. Create listener
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))

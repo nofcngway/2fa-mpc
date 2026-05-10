@@ -5,17 +5,24 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/vbncursed/vkr/gateway/config"
 	"github.com/vbncursed/vkr/gateway/internal/middleware"
+	"github.com/vbncursed/vkr/gateway/internal/monitoring"
 	authpb "github.com/vbncursed/vkr/gateway/internal/pb/auth_api"
 	twofapb "github.com/vbncursed/vkr/gateway/internal/pb/twofa_api"
 )
+
+// tokenCacheTTL bounds how long a validated identity stays cached. Short
+// enough that the post-logout staleness window is negligible compared to the
+// 15-minute access-token exp claim, long enough to amortize Auth.ValidateToken
+// across a typical burst of API calls from the same client.
+const tokenCacheTTL = 10 * time.Second
 
 // InitServices wires all gateway dependencies and returns the configured HTTP
 // server together with a cleanup function that closes Redis and gRPC connections.
@@ -55,7 +62,11 @@ func InitServices(cfg *config.Config, logger *slog.Logger) (*http.Server, func()
 
 func newHTTPServer(ctx context.Context, cfg *config.Config, clients *GRPCClients, rdb *redis.Client) (*http.Server, error) {
 	gwMux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	transportCreds, err := clientTransportCreds(cfg)
+	if err != nil {
+		return nil, err
+	}
+	opts := []grpc.DialOption{transportCreds}
 
 	if err := authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, gwMux, cfg.AuthService.Addr, opts); err != nil {
 		return nil, fmt.Errorf("register auth gateway: %w", err)
@@ -72,11 +83,23 @@ func newHTTPServer(ctx context.Context, cfg *config.Config, clients *GRPCClients
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	if cfg.Prometheus.URL != "" {
+		promClient := monitoring.NewPromClient(cfg.Prometheus.URL, 500*time.Millisecond)
+		collector := monitoring.NewCollector(promClient)
+		router.HandleFunc("GET /api/v1/admin/monitoring/snapshot", monitoring.SnapshotHandler(collector))
+	}
+
 	router.Handle("/", gwMux)
+
+	resolver := middleware.NewCachedResolver(
+		middleware.NewTokenCache(rdb, tokenCacheTTL),
+		middleware.NewDirectResolver(clients.Auth),
+	)
 
 	// Middleware chain: Recovery → Metrics → Logging → CORS → RateLimit → Auth → Router
 	var handler http.Handler = router
-	handler = middleware.Auth(clients.Auth)(handler)
+	handler = middleware.Auth(resolver)(handler)
 	handler = middleware.RateLimit(rdb, cfg.RateLimit.RequestsPerMinute, cfg.RateLimit.Burst)(handler)
 	handler = middleware.CORS(cfg.CORS.AllowedOrigins)(handler)
 	handler = middleware.Logging(handler)

@@ -38,9 +38,9 @@ func newLogoutAllSuite(t *testing.T) *logoutAllSuite {
 	service, err := auth_service.NewAuthService(auth_service.Deps{
 		Storage:         storage,
 		SessionStorage:  sessionStorage,
-		EventPublisher:   eventProducer,
+		EventPublisher:  eventProducer,
 		PrivateKey:      privateKey,
-		PublicKey:        &privateKey.PublicKey,
+		PublicKey:       &privateKey.PublicKey,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 168 * time.Hour,
 	})
@@ -68,4 +68,3 @@ func TestLogoutAll_Success(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, deleteCalled, "DeleteAllUserTokens should have been called")
 }
-

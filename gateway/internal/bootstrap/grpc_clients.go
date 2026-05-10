@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/vbncursed/vkr/gateway/config"
 	authpb "github.com/vbncursed/vkr/gateway/internal/pb/auth_api"
@@ -19,16 +18,20 @@ type GRPCClients struct {
 }
 
 func NewGRPCClients(cfg *config.Config) (*GRPCClients, error) {
-	opts := grpc.WithTransportCredentials(insecure.NewCredentials())
+	transportCreds, err := clientTransportCreds(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	authConn, err := grpc.NewClient(cfg.AuthService.Addr, opts)
+	authConn, err := grpc.NewClient(cfg.AuthService.Addr, transportCreds)
 	if err != nil {
 		return nil, fmt.Errorf("connect to auth service at %s: %w", cfg.AuthService.Addr, err)
 	}
 
-	twofaConn, err := grpc.NewClient(cfg.TwoFAService.Addr, opts)
+	twofaConn, err := grpc.NewClient(cfg.TwoFAService.Addr, transportCreds)
 	if err != nil {
-		authConn.Close()
+		// Best-effort cleanup; close errors during failed dial are not actionable.
+		_ = authConn.Close()
 		return nil, fmt.Errorf("connect to twofa service at %s: %w", cfg.TwoFAService.Addr, err)
 	}
 
@@ -41,10 +44,12 @@ func NewGRPCClients(cfg *config.Config) (*GRPCClients, error) {
 }
 
 func (c *GRPCClients) Close() {
+	// Close errors on shutdown are logged downstream; nothing to do for the
+	// caller here, so the returns are deliberately ignored.
 	if c.AuthConn != nil {
-		c.AuthConn.Close()
+		_ = c.AuthConn.Close()
 	}
 	if c.TwoFAConn != nil {
-		c.TwoFAConn.Close()
+		_ = c.TwoFAConn.Close()
 	}
 }

@@ -73,7 +73,7 @@ func (s *TwoFAService) Setup(ctx context.Context, userID, email string) (string,
 	}
 
 	// 6. Generate backup codes (D-05, D-06)
-	plaintextCodes, hashedCodes, err := generateBackupCodes()
+	plaintextCodes, hashedCodes, err := generateBackupCodes(s.backupCodeBcryptCost)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate backup codes: %w", err)
 	}

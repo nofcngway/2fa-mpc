@@ -30,6 +30,10 @@ var sequences = []string{
 
 // ValidatePassword checks a password against all validation rules and returns
 // all violations simultaneously via PasswordValidationError.
+//
+// splitting would scatter the policy and obscure rule coverage.
+//
+//nolint:gocyclo // multi-rule validator: each rule is independent and trivial,
 func ValidatePassword(password string) error {
 	var violations []error
 

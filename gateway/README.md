@@ -48,9 +48,21 @@ redis: { addr, password, db }
 rate_limit: { requests_per_minute: 60, burst: 10 }
 cors: { allowed_origins: ["http://localhost:3000"] }
 swagger: { auth: "path/to/auth/swagger", twofa: "path/to/twofa/swagger" }
+tls:
+  enabled: true                     # mTLS на исходящих gRPC-соединениях к Auth/TwoFA
+  cert_file: /certs/gateway.crt
+  key_file: /certs/gateway.key
+  ca_file: /certs/ca.crt
 ```
 
 Переменные окружения с префиксом `GATEWAY_` переопределяют config.yaml.
+
+## Безопасность
+
+- **mTLS на gRPC-клиентах:** Gateway аутентифицируется на Auth/TwoFA через client cert, валидирует server cert по project CA (TLS 1.3 минимум). См. [`docs/03 - Security/mTLS.md`](../docs/03%20-%20Security/mTLS.md)
+- **JWT validation через `IdentityResolver` interface:** Auth middleware зависит от интерфейса, а не от конкретной gRPC-реализации. В composition root собирается `cachedResolver(NewTokenCache(rdb), NewDirectResolver(authClient))` — Redis-кеш validate-результатов с TTL 10s (SHA-256 hash токена → user_id+email), на miss → Auth.ValidateToken RPC. Для тестов можно подменить mock-resolver'ом
+- **Rate limiting:** Redis-backed (60 req/min + burst per IP по умолчанию)
+- **CORS:** explicit allowlist, никаких wildcard origin
 
 ## Make-команды
 

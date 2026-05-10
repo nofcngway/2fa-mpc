@@ -26,6 +26,17 @@ type Config struct {
 	SharedSecret string          `yaml:"shared_secret"`
 	MPCTimeout   time.Duration   `yaml:"mpc_timeout"`
 	MPCInsecure  bool            `yaml:"mpc_insecure"`
+	TLS          TLSConfig       `yaml:"tls"`
+}
+
+// TLSConfig configures mTLS for the gRPC server and outbound clients.
+// When Enabled, the same cert/key pair is used for both incoming connections
+// (twofa as server) and outgoing connections (twofa as client to MPC).
+type TLSConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+	CAFile   string `yaml:"ca_file"`
 }
 
 // GetMPCTimeout returns the configured MPC timeout or the default (5s).
@@ -145,6 +156,10 @@ func applyEnvOverrides(cfg *Config) {
 	envString("TWOFA_SHARED_SECRET", &cfg.SharedSecret)
 	envDuration("TWOFA_MPC_TIMEOUT", &cfg.MPCTimeout)
 	envBool("TWOFA_MPC_INSECURE", &cfg.MPCInsecure)
+	envBool("TWOFA_TLS_ENABLED", &cfg.TLS.Enabled)
+	envString("TWOFA_TLS_CERT_FILE", &cfg.TLS.CertFile)
+	envString("TWOFA_TLS_KEY_FILE", &cfg.TLS.KeyFile)
+	envString("TWOFA_TLS_CA_FILE", &cfg.TLS.CAFile)
 }
 
 // Load reads and parses the configuration file at the given path.

@@ -21,13 +21,31 @@ const (
 
 // Config holds all configuration for the API Gateway.
 type Config struct {
-	Server       ServerConfig       `yaml:"server"`
-	AuthService  ServiceAddrConfig  `yaml:"auth_service"`
-	TwoFAService ServiceAddrConfig  `yaml:"twofa_service"`
-	Redis        RedisConfig        `yaml:"redis"`
-	RateLimit    RateLimitConfig    `yaml:"rate_limit"`
-	CORS         CORSConfig         `yaml:"cors"`
-	Swagger      SwaggerConfig      `yaml:"swagger"`
+	Server       ServerConfig      `yaml:"server"`
+	AuthService  ServiceAddrConfig `yaml:"auth_service"`
+	TwoFAService ServiceAddrConfig `yaml:"twofa_service"`
+	Redis        RedisConfig       `yaml:"redis"`
+	RateLimit    RateLimitConfig   `yaml:"rate_limit"`
+	CORS         CORSConfig        `yaml:"cors"`
+	Swagger      SwaggerConfig     `yaml:"swagger"`
+	TLS          TLSConfig         `yaml:"tls"`
+	Prometheus   PrometheusConfig  `yaml:"prometheus"`
+}
+
+// PrometheusConfig points the Gateway at the Prometheus query API used by the
+// monitoring snapshot endpoint. Empty URL disables the endpoint.
+type PrometheusConfig struct {
+	URL string `yaml:"url"`
+}
+
+// TLSConfig configures mTLS for the gRPC client connections to Auth and
+// TwoFA. When Enabled, the gateway presents CertFile/KeyFile and validates
+// each downstream server cert against CAFile.
+type TLSConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+	CAFile   string `yaml:"ca_file"`
 }
 
 // ServerConfig holds HTTP server settings.
@@ -124,6 +142,12 @@ func envStringSlice(key string, target *[]string) {
 	}
 }
 
+func envBool(key string, target *bool) {
+	if v := os.Getenv(key); v != "" {
+		*target = v == "true" || v == "1"
+	}
+}
+
 func applyEnvOverrides(cfg *Config) {
 	envInt("GATEWAY_SERVER_PORT", &cfg.Server.Port)
 	envInt("GATEWAY_SERVER_METRICS_PORT", &cfg.Server.MetricsPort)
@@ -140,6 +164,11 @@ func applyEnvOverrides(cfg *Config) {
 	envStringSlice("GATEWAY_CORS_ALLOWED_ORIGINS", &cfg.CORS.AllowedOrigins)
 	envString("GATEWAY_SWAGGER_AUTH", &cfg.Swagger.Auth)
 	envString("GATEWAY_SWAGGER_TWOFA", &cfg.Swagger.TwoFA)
+	envBool("GATEWAY_TLS_ENABLED", &cfg.TLS.Enabled)
+	envString("GATEWAY_TLS_CERT_FILE", &cfg.TLS.CertFile)
+	envString("GATEWAY_TLS_KEY_FILE", &cfg.TLS.KeyFile)
+	envString("GATEWAY_TLS_CA_FILE", &cfg.TLS.CAFile)
+	envString("GATEWAY_PROMETHEUS_URL", &cfg.Prometheus.URL)
 }
 
 // Load reads and parses the config file at the given path.

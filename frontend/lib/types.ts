@@ -87,6 +87,22 @@ export interface Disable2FARequest {
   otpCode: string;
 }
 
+// --- Monitoring ---
+
+export interface MonitoringServiceSnapshot {
+  name: string;
+  displayName: string;
+  up: boolean;
+  rps: number;
+  latencyP95Ms: number;
+  errorRate: number;
+}
+
+export interface MonitoringSnapshot {
+  timestamp: string;
+  services: MonitoringServiceSnapshot[];
+}
+
 // --- API Error ---
 
 export interface ApiError {

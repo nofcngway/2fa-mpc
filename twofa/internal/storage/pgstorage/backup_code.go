@@ -18,7 +18,8 @@ func (ps *PGStorage) StoreBatchBackupCodes(ctx context.Context, userID string, c
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	// Rollback returns ErrTxDone after a successful Commit; safe to ignore.
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	for _, hash := range codeHashes {
 		id := uuid.New().String()

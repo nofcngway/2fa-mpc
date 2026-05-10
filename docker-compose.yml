@@ -74,6 +74,8 @@ services:
         echo "All topics created."
     restart: "no"
 
+  # Internal-only — no host port exposure. Reach via `docker compose exec` or
+  # connect through Gateway/Prometheus from inside the docker network.
   kafka-ui:
     image: kafbat/kafka-ui:latest
     depends_on:
@@ -83,20 +85,21 @@ services:
       KAFKA_CLUSTERS_0_NAME: mpc-2fa
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: "true"
-    ports:
-      - "8090:8080"
 
   # ── Monitoring ──────────────────────────────────────────────
 
+  # Prometheus is only consumed by the Gateway's monitoring snapshot endpoint
+  # and by Grafana — both inside the docker network. No host port.
   prometheus:
     image: prom/prometheus:v3.4.0
-    ports:
-      - "9190:9090"
     volumes:
       - ./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
     depends_on:
       - kafka
 
+  # Grafana is exposed on host port 3001 for ops dashboards. The user-facing
+  # monitoring view is the /monitoring page in the frontend; Grafana is for
+  # operators inspecting raw Prometheus dashboards.
   grafana:
     image: grafana/grafana:12.0.0
     ports:
@@ -112,6 +115,24 @@ services:
     depends_on:
       - prometheus
 
+  # ── PKI bootstrap (init container) ──────────────────────────
+  # Generates the dev mTLS certificates used by every service. Idempotent —
+  # the script skips files already present in ./certs, so subsequent
+  # `docker compose up` calls return in milliseconds. Force regeneration with:
+  #   docker compose run --rm certgen bash /work/scripts/gen-certs.sh --force
+  certgen:
+    image: alpine:3.20
+    volumes:
+      - ./certs:/work/certs
+      - ./scripts:/work/scripts:ro
+    working_dir: /work
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache --quiet bash openssl >/dev/null &&
+        bash scripts/gen-certs.sh
+    restart: "no"
+
   # ── Application Services ────────────────────────────────────
 
   auth:
@@ -119,6 +140,8 @@ services:
       context: ./auth
       dockerfile: Dockerfile
     depends_on:
+      certgen:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -139,16 +162,23 @@ services:
       - AUTH_JWT_PUBLIC_KEY_PATH=/keys/public.pem
       - AUTH_JWT_ACCESS_TOKEN_TTL=15m
       - AUTH_JWT_REFRESH_TOKEN_TTL=168h
+      - AUTH_TLS_ENABLED=true
+      - AUTH_TLS_CERT_FILE=/certs/auth.crt
+      - AUTH_TLS_KEY_FILE=/certs/auth.key
+      - AUTH_TLS_CA_FILE=/certs/ca.crt
     volumes:
       - ./auth/keys:/keys:ro
-    ports:
-      - "9100:9100" # metrics only, gRPC accessed via gateway internally
+      - ./certs:/certs:ro
+    # Internal-only: gRPC reached via Gateway, metrics scraped by Prometheus
+    # inside the docker network.
 
   twofa:
     build:
       context: .
       dockerfile: twofa/Dockerfile
     depends_on:
+      certgen:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -174,16 +204,21 @@ services:
       - TWOFA_MPC_NODES=mpc-node-1:9200,mpc-node-2:9201,mpc-node-3:9202
       - TWOFA_SHARED_SECRET=dev-shared-secret-change-in-production
       - TWOFA_MPC_TIMEOUT=5s
-      - TWOFA_MPC_INSECURE=true
-    ports:
-      - "9091:9091"
-      - "9101:9101"
+      - TWOFA_TLS_ENABLED=true
+      - TWOFA_TLS_CERT_FILE=/certs/twofa.crt
+      - TWOFA_TLS_KEY_FILE=/certs/twofa.key
+      - TWOFA_TLS_CA_FILE=/certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
+    # Internal-only: gRPC reached via Gateway, metrics scraped by Prometheus.
 
   mpc-node-1:
     build:
       context: ./mpc
       dockerfile: Dockerfile
     depends_on:
+      certgen:
+        condition: service_completed_successfully
       mpc-postgres:
         condition: service_healthy
       kafka:
@@ -198,12 +233,20 @@ services:
       - MPC_NODE_ID=1
       - MPC_NODE_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
       - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+      - MPC_TLS_ENABLED=true
+      - MPC_TLS_CERT_FILE=/certs/mpc-node-1.crt
+      - MPC_TLS_KEY_FILE=/certs/mpc-node-1.key
+      - MPC_TLS_CA_FILE=/certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
 
   mpc-node-2:
     build:
       context: ./mpc
       dockerfile: Dockerfile
     depends_on:
+      certgen:
+        condition: service_completed_successfully
       mpc-postgres:
         condition: service_healthy
       kafka:
@@ -218,12 +261,20 @@ services:
       - MPC_NODE_ID=2
       - MPC_NODE_ENCRYPTION_KEY=abcdef0123456789abcdef0123456789
       - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+      - MPC_TLS_ENABLED=true
+      - MPC_TLS_CERT_FILE=/certs/mpc-node-2.crt
+      - MPC_TLS_KEY_FILE=/certs/mpc-node-2.key
+      - MPC_TLS_CA_FILE=/certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
 
   mpc-node-3:
     build:
       context: ./mpc
       dockerfile: Dockerfile
     depends_on:
+      certgen:
+        condition: service_completed_successfully
       mpc-postgres:
         condition: service_healthy
       kafka:
@@ -238,12 +289,20 @@ services:
       - MPC_NODE_ID=3
       - MPC_NODE_ENCRYPTION_KEY=56789abcdef012345678abcdef012345
       - MPC_SHARED_SECRET=dev-shared-secret-change-in-production
+      - MPC_TLS_ENABLED=true
+      - MPC_TLS_CERT_FILE=/certs/mpc-node-3.crt
+      - MPC_TLS_KEY_FILE=/certs/mpc-node-3.key
+      - MPC_TLS_CA_FILE=/certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
 
   gateway:
     build:
       context: ./gateway
       dockerfile: Dockerfile
     depends_on:
+      certgen:
+        condition: service_completed_successfully
       auth:
         condition: service_started
       twofa:
@@ -258,9 +317,17 @@ services:
       - GATEWAY_TWOFA_SERVICE_ADDR=twofa:9091
       - GATEWAY_REDIS_ADDR=redis:6379
       - GATEWAY_REDIS_DB=2
+      - GATEWAY_PROMETHEUS_URL=http://prometheus:9090
+      - GATEWAY_TLS_ENABLED=true
+      - GATEWAY_TLS_CERT_FILE=/certs/gateway.crt
+      - GATEWAY_TLS_KEY_FILE=/certs/gateway.key
+      - GATEWAY_TLS_CA_FILE=/certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
     ports:
+      # Public REST API. Metrics on :9103 stay internal — Prometheus scrapes
+      # them inside the docker network.
       - "8080:8080"
-      - "9103:9103"
 
   frontend:
     build:

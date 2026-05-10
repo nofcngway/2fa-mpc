@@ -1,0 +1,53 @@
+# Changelog
+
+## 2026-05-10
+- **[feature]** Phase A: добавлены явные fault-tolerance тесты для 2-of-3 Shamir threshold модели — TwoFA, [MPC Fault Tolerance](../03%20-%20Security/MPC%20Fault%20Tolerance.md)
+  - `fault_tolerance_verify_test.go`: 4 теста (OneNodeDown_Succeeds×3, SlowNodeIgnored, OneNodeTimeout+OneNodeDown_Fails, AllNodesTimeout_Fails)
+  - `fault_tolerance_setup_test.go`: OneNodeDown_AllOrNothing (×3 ноды)
+  - `fault_tolerance_disable_test.go`: OneNodeDown_PreservesRecord (×3 ноды)
+  - Helpers reuse `verifySuite`/`setupSuite`/`disableSuite`; добавлен `newVerifySuiteWithTimeout` для timeout-сценариев
+- **[docs]** Создан [MPC Fault Tolerance](../03%20-%20Security/MPC%20Fault%20Tolerance.md) — описание threshold-модели, поведения по флоу, известных ограничений
+- **[perf]** Параллельный bcrypt в `generateBackupCodes` через `errgroup` — Setup latency 2.5s → 250ms (×10) — TwoFA
+- **[refactor]** `t.Parallel()` на независимых setup-тестах + параллельный `bcrypt.CompareHashAndPassword` в `TestSetup_BackupCodeHashing` — пакет `twofaService` тестируется за 5.5s (без race) / 56s (с race), было ~270s
+- **[feature]** Phase B: mTLS на всех internal gRPC-каналах — [mTLS](../03%20-%20Security/mTLS.md), [ADR Log § ADR-011](../04%20-%20Decisions/ADR%20Log.md)
+  - `scripts/gen-certs.sh` — dev-PKI: 1 CA + 6 leaf certs (auth/twofa/mpc-node-{1,2,3}/gateway) с SANs под docker-compose имена
+  - `<svc>/internal/bootstrap/tls.go` — `loadServerTLSCredentials` / `loadClientTLSCredentials` (TLS 1.3 минимум, RequireAndVerifyClientCert)
+  - `twofa/internal/bootstrap/mpc_transport.go`, `gateway/internal/bootstrap/transport.go` — TLS/insecure decision (separation of concerns)
+  - `twofa/internal/adapters/mpcclient/client.go` — domain-port адаптер `MPCClient` (выделен из bootstrap по DDD)
+  - `twofa/internal/middleware/client_auth.go` — client-side auth interceptor (defense-in-depth поверх mTLS)
+  - Server bootstrap для auth/twofa/mpc — добавлен `grpc.Creds()` при `TLS.Enabled`
+  - Client bootstrap для gateway/twofa — мTLS для всех исходящих gRPC соединений
+  - `tls_test.go` — TestLoadServer/Client + TestMTLS_EndToEnd (real handshake поверх loopback TCP)
+  - docker-compose: cert volumes + `*_TLS_*` env vars для всех 5 сервисов
+  - **init-контейнер `certgen`** (alpine + openssl) — автогенерация PKI при `docker compose up`, идемпотентно (пропускает существующие файлы); все сервисы депендят через `service_completed_successfully`
+- **[refactor]** Удалён `SECURITY(WR-03): deferred to Phase 9` из `auth/internal/api/auth_service_api/logout_all.go` — закрыто mTLS
+- **[docs]** Обновлены README.md (root + auth/twofa/mpc/gateway) — добавлены mTLS, fault tolerance, parallel bcrypt, certgen init container, -статус Phase A/B/C/D
+- **[refactor]** Перенесён `workspace/` → `docs/`, снят с gitignore. Wikilinks конвертированы в относительные markdown-ссылки. `00 - Index.md` → `README.md` для GitHub-рендеринга
+- **[feature]** Phase C: k6 load testing harness + REPORT.md — [REPORT](../../loadtest/REPORT.md)
+  - `loadtest/k6/lib/{config,auth,totp}.js` — переиспользуемые модули (TOTP реализован вручную через k6/crypto HMAC-SHA1)
+  - `loadtest/k6/{login,setup-2fa,verify-2fa,mixed}.js` — 4 сценария
+  - `loadtest/docker-compose.loadtest.yaml` — k6 service overlay (override gateway rate limit для теста)
+  - `loadtest/REPORT.md` — анализ узких мест и рекомендации по масштабированию
+  - Makefile targets: `load-login`, `load-setup`, `load-verify`, `load-mixed`, `load-all`
+  - Ключевые цифры: login 22 RPS p95 576ms; setup 2.4 iter/s p95 2.87s; verify 21ms avg p95 36ms
+- **[perf]** Пакет оптимизаций после первого load-теста: setup p95 2.87s → 443ms (×6.5)
+  - bcrypt cost для backup-кодов 12→10 (security: random 26.6 бит + rate limit 5/5min — brute-force нереалистичен)
+  - ValidateToken cache в Gateway (Redis, TTL 10s, SHA-256 token hash как key) — `gateway/internal/middleware/auth_cache.go`
+  - pgxpool 25 → 4×CPU max / 0.5×CPU min во всех 3 сервисах
+  - Setup throughput 2.4 → 5.6 iter/s; mixed p95 429ms → 245ms; verify endpoint без изменений в этом workload (cache pattern не задействован)
+- **[feature]** Phase D: Frontend monitoring page — [Monitoring](../../frontend/app/(protected)/monitoring/page.tsx)
+  - Backend: `gateway/internal/monitoring/` — Prometheus query client (`prometheus.go`), Collector с whitelist PromQL для 6 сервисов (`snapshot.go`), HTTP handler `/api/v1/admin/monitoring/snapshot` (`handler.go`); GATEWAY_PROMETHEUS_URL env var
+  - Frontend атомы (Liquid Glass): `metric-card.tsx`, `service-status-dot.tsx` с pulse animation в globals.css
+  - Frontend виджеты: `throughput-overview.tsx` (3 MetricCard — total RPS/p95/error rate), `service-health-grid.tsx` (table 6 сервисов), `mpc-node-status.tsx` (2-of-3 threshold headline + 3 ноды)
+  - Page: `app/(protected)/monitoring/page.tsx` + auto-refresh hook `use-monitoring.ts` (10s polling, paused on hidden tab)
+  - Navbar: pункты Dashboard / Monitoring с активным состоянием
+  - i18n: секция `monitoring` в ru/en
+  - Все файлы ≤200 строк, TypeScript zero errors, Atomic Design соблюдён (HeroUI только в атомах)
+- **[refactor]** Полировка по Clean Architecture / Modern Go / cc-skills-golang
+  - `.golangci.yml` — добавлен v2-конфиг с 33 линтерами (correctness, quality, tests, formatting); все 4 сервиса проходят с 0 issues
+  - Makefile target `golangci-lint` для запуска по всем модулям
+  - `gateway/internal/middleware/identity_resolver.go` — interface `IdentityResolver` + 2 реализации (`directResolver`, `cachedResolver`); Auth middleware теперь зависит от интерфейса, не от конкретного TokenCache (Clean Architecture: dependency inversion)
+  - `twofa/internal/services/twofaService/twofa_service.go` — `Deps.BackupCodeBcryptCost` (DI вместо const); `DefaultBackupCodeBcryptCost = 10` для production
+  - Test suites используют `bcrypt.MinCost`: тесты пакета `twofaService` теперь **2.3s** (с race) / **1.6s** (без race) — было 56s / 5.5s ранее, изначально 270s
+  - Bootstrap fatalf-helper в auth/twofa/mpc — `cancel()` перед `os.Exit` чтобы deferred cleanups действительно отрабатывали
+  - Мелкие правки: `_ = conn.Close()` для best-effort cleanup, `int64(unixTime) → unixTime` (uneeded conversion), gofmt полный sweep

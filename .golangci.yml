@@ -1,0 +1,73 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - bodyclose       # http.Response.Body.Close() leaks
+    - errcheck        # unchecked errors
+    - errorlint       # err == ... vs errors.Is, %w wrapping
+    - errname         # error variables ErrXxx, types XxxError
+    - forcetypeassert # bare type assertions panic
+    - govet           # bug-finding pass (shadow, copylocks, ...)
+    - ineffassign     # ineffectual assignments
+    - nilerr          # return nil after err != nil
+    - sqlclosecheck   # *sql.Rows / *sql.Stmt close checks
+    - staticcheck     # large static analysis bundle
+    - unused          # unused vars/funcs/types
+
+    # Code-quality
+    - gocritic        # opinionated suggestions (perf, style, correctness)
+    - gocyclo         # cyclomatic complexity
+    - misspell        # English typos in comments / strings
+    - revive          # golint-replacement (style + bugs)
+    - unconvert       # unnecessary type conversions
+
+    # Test-quality
+    - testifylint     # testify misuse (we use gotest.tools, but harmless)
+    - thelper         # t.Helper() in *testing.T helpers
+
+  settings:
+    gocyclo:
+      min-complexity: 15
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment   # noisy: optimizing struct padding is rarely worth a churn
+        - shadow           # too noisy on `err :=` shadowing inside short scopes
+    revive:
+      rules:
+        # Project-wide convention: package names like `twofaService` and
+        # `twofa_service_api` already pervade the codebase. Renaming would
+        # cascade to imports across all 4 modules — out of scope.
+        - name: var-naming
+          disabled: true
+        - name: exported
+          disabled: true   # docstrings are aspirational here, not blocking
+        - name: package-comments
+          disabled: true
+
+  exclusions:
+    paths:
+      - ".*\\.pb\\.go$"
+      - ".*_grpc\\.pb\\.go$"
+      - ".*/mocks/.*"
+      - ".*/pb/.*"
+    rules:
+      - path: _test\.go
+        linters: [errcheck, forcetypeassert, gocyclo]
+      - path: _bench_test\.go
+        linters: [errcheck]
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
