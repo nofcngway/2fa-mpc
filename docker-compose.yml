@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql
       - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -24,7 +24,7 @@ services:
       POSTGRES_USER: mpc_user
       POSTGRES_PASSWORD: mpc_pass
     volumes:
-      - mpc-pg-data:/var/lib/postgresql/data
+      - mpc-pg-data:/var/lib/postgresql
       - ./scripts/init-mpc-dbs.sql:/docker-entrypoint-initdb.d/init-mpc-dbs.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mpc_user -d mpc_db_1"]
