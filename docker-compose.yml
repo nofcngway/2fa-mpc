@@ -91,7 +91,7 @@ services:
   # Prometheus is only consumed by the Gateway's monitoring snapshot endpoint
   # and by Grafana — both inside the docker network. No host port.
   prometheus:
-    image: prom/prometheus:v3.4.0
+    image: prom/prometheus:main
     volumes:
       - ./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
     depends_on:
@@ -101,7 +101,7 @@ services:
   # monitoring view is the /monitoring page in the frontend; Grafana is for
   # operators inspecting raw Prometheus dashboards.
   grafana:
-    image: grafana/grafana:12.0.0
+    image: grafana/grafana:main
     ports:
       - "3001:3000"
     environment:
