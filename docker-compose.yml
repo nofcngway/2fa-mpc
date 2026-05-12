@@ -4,7 +4,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────────
 
   postgres:
-    image: postgres:17
+    image: postgres:latest
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -18,7 +18,7 @@ services:
       retries: 5
 
   mpc-postgres:
-    image: postgres:17
+    image: postgres:latest
     environment:
       POSTGRES_DB: mpc_db_1
       POSTGRES_USER: mpc_user
@@ -33,7 +33,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:8
+    image: redis:latest
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -121,7 +121,7 @@ services:
   # `docker compose up` calls return in milliseconds. Force regeneration with:
   #   docker compose run --rm certgen bash /work/scripts/gen-certs.sh --force
   certgen:
-    image: alpine:3.20
+    image: alpine:latest
     volumes:
       - ./certs:/work/certs
       - ./scripts:/work/scripts:ro
