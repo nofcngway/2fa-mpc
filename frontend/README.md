@@ -6,12 +6,13 @@ Web-интерфейс для MPC-2FA — Next.js 16 приложение с App
 
 | Компонент | Версия |
 |-----------|--------|
-| Next.js | 16.2.4 |
-| React | 19.2.4 |
+| Next.js | 16.2.6 |
+| React | 19.2.6 |
 | TypeScript | 5 |
-| Tailwind CSS | 4 |
-| HeroUI | 3.0.3 |
+| Tailwind CSS | 4.3 |
+| HeroUI | 3.0.5 |
 | next-themes | 0.4.6 |
+| Node (Docker) | 22-alpine (LTS) |
 
 ## Архитектура
 
@@ -108,13 +109,13 @@ yarn start        # production server
 
 | Переменная | По умолчанию | Описание |
 |------------|-------------|----------|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | URL API Gateway |
+| `INTERNAL_API_URL` | `http://localhost:8080` | URL API Gateway, используется в `next.config.ts` для server-side проксирования |
 
 ## Docker
 
 ```bash
 docker build -t mpc-2fa-frontend .
-docker run -p 3000:3000 -e NEXT_PUBLIC_API_URL=http://gateway:8080 mpc-2fa-frontend
+docker run -p 3000:3000 -e INTERNAL_API_URL=http://gateway:8080 mpc-2fa-frontend
 ```
 
 В составе общего docker-compose:

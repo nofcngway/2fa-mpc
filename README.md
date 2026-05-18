@@ -50,10 +50,10 @@
 | Компонент | Версия |
 |-----------|--------|
 | Go | 1.26.3 |
-| PostgreSQL | 17 |
+| PostgreSQL | 18 |
 | Redis | 8 |
 | Kafka | apache/kafka 4.1.2 |
-| gRPC + gRPC-Gateway | grpc v1.80.0 |
+| gRPC + gRPC-Gateway | grpc v1.81.1 |
 | Prometheus | v3.4.0 |
 | Grafana | 12.0.0 |
 | Frontend | Next.js 16, React 19, Tailwind v4, HeroUI |
@@ -99,9 +99,9 @@ mTLS-сертификаты генерируются автоматически 
 | Frontend | http://localhost:3000 |
 | Gateway API | http://localhost:8080 |
 | API Docs (ScalarUI) | http://localhost:8080/docs |
-| Kafka UI | http://localhost:8090 |
-| Prometheus | http://localhost:9190 |
 | Grafana | http://localhost:3001 |
+
+Внутри docker-сети (без host-port): `kafka-ui`, `prometheus:9090`. Доступны через `docker compose exec` или из других контейнеров.
 
 Принудительная регенерация сертификатов:
 

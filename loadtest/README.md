@@ -42,7 +42,7 @@ make load-all     # все сценарии последовательно
 Результаты:
 - k6 печатает text summary в stdout (p50/p95/p99/max, RPS, error rate)
 - JSON summary сохраняется в `loadtest/results/summary.json`
-- Метрики каждого сервиса доступны в Prometheus (http://localhost:9190) и Grafana (http://localhost:3001) во время теста и после
+- Метрики каждого сервиса доступны в Grafana (http://localhost:3001) во время теста и после. Prometheus работает внутри docker-сети без host-port — для прямого доступа используй `docker compose exec prometheus wget -qO- localhost:9090/api/v1/query?query=...` или открой его временно публикацией `9090:9090` в compose
 
 ## Сбор Prometheus-метрик
 
