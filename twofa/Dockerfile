@@ -1,4 +1,4 @@
-FROM golang:1.26 AS builder
+FROM golang:1.26.3 AS builder
 WORKDIR /build
 
 # Copy both modules (twofa depends on mpc via replace directive)
