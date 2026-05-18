@@ -2,7 +2,7 @@
 
 Двухфакторная аутентификация с распределённым хранением секретов.
 
-**-проект:** TOTP-секрет никогда не существует целиком ни в одном персистентном хранилище — он разделяется по протоколу Shamir Secret Sharing (2-of-3) и хранится тремя независимыми долями, каждая зашифрована AES-256-GCM на отдельной MPC-ноде. Внутренние gRPC-каналы защищены mutual TLS (TLS 1.3). Криптокомпоненты (Shamir, TOTP) реализованы с нуля без сторонних библиотек.
+**Ключевая идея:** TOTP-секрет никогда не существует целиком ни в одном персистентном хранилище — он разделяется по протоколу Shamir Secret Sharing (2-of-3) и хранится тремя независимыми долями, каждая зашифрована AES-256-GCM на отдельной MPC-ноде. Внутренние gRPC-каналы защищены mutual TLS (TLS 1.3). Криптокомпоненты (Shamir, TOTP) реализованы с нуля без сторонних библиотек.
 
 ---
 
@@ -174,14 +174,14 @@ make load-all         # прогнать все 4 сценария k6 (login, se
 
 ---
 
-##  — статус закрытия пунктов ТЗ
+## Статус закрытия пунктов ТЗ
 
-| Phase | Описание | Owner | Status |
-|-------|----------|-------|--------|
-| A | MPC fault tolerance — тесты 2-of-3 threshold + документация |  | ✅ Done |
-| B | mTLS между всеми сервисами + автогенерация PKI + ADR-011 |  | ✅ Done |
-| C | k6 нагрузочные тесты + REPORT.md + рекомендации по масштабированию |  | ✅ Done |
-| D | Frontend monitoring page (Prometheus widgets) |  | ✅ Done |
+| Phase | Описание | Зона | Status |
+|-------|----------|------|--------|
+| A | MPC fault tolerance — тесты 2-of-3 threshold + документация | Backend | ✅ Done |
+| B | mTLS между всеми сервисами + автогенерация PKI + ADR-011 | Backend | ✅ Done |
+| C | k6 нагрузочные тесты + REPORT.md + рекомендации по масштабированию | Backend | ✅ Done |
+| D | Frontend monitoring page (Prometheus widgets) | Frontend | ✅ Done |
 
 Полный лог изменений: [`docs/05 - Progress/Changelog.md`](docs/05%20-%20Progress/Changelog.md).
 
@@ -203,7 +203,7 @@ make load-all         # прогнать все 4 сценария k6 (login, se
 |--------|-----------|
 | [`docs/03 - Security/`](docs/03%20-%20Security/) | mTLS, MPC Fault Tolerance — security deep-dives |
 | [`docs/04 - Decisions/ADR Log.md`](docs/04%20-%20Decisions/ADR%20Log.md) | ADR-001..011 — архитектурные решения с обоснованием |
-| [`docs/05 - Progress/Changelog.md`](docs/05%20-%20Progress/Changelog.md) | Лог всех значимых изменений по фазам  |
+| [`docs/05 - Progress/Changelog.md`](docs/05%20-%20Progress/Changelog.md) | Лог всех значимых изменений по фазам |
 
 ---
 

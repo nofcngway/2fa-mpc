@@ -137,7 +137,7 @@ Throughput на этом тесте занижен искусственно (sle
 ### Concrete bcrypt strategy
 
 bcrypt cost=12 — security-driven выбор, не оптимизировать вниз. Альтернативы для login throughput:
-1. **Argon2id вместо bcrypt** — лучшая GPU-resistance, сравнимый CPU cost. Не приоритет для .
+1. **Argon2id вместо bcrypt** — лучшая GPU-resistance, сравнимый CPU cost. Не приоритет.
 2. **Async hashing на login fail** — если password matches early-rejection возможна, return 401 fast. Но constant-time требует full hash для rejection тоже.
 3. **Vertical scaling Auth** — больше CPU = больше параллельных bcrypt'ов. На M3 8 cores → ~32 cps; на 32-core server → ~128 cps на инстанс.
 

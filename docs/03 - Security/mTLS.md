@@ -36,7 +36,7 @@ docker compose up
 # или: docker compose run --rm certgen bash /work/scripts/gen-certs.sh --force
 ```
 
-**Production:** генерация dev-CA скриптом — только для разработки и -демо. В продакшне нужен managed PKI (Vault, cert-manager, частный CA) с ротацией ключей и offline custody CA.key.
+**Production:** генерация dev-CA скриптом — только для разработки и демо. В продакшне нужен managed PKI (Vault, cert-manager, частный CA) с ротацией ключей и offline custody CA.key.
 
 ## Конфигурация
 

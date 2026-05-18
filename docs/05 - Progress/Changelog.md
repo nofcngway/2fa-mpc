@@ -21,7 +21,7 @@
   - docker-compose: cert volumes + `*_TLS_*` env vars для всех 5 сервисов
   - **init-контейнер `certgen`** (alpine + openssl) — автогенерация PKI при `docker compose up`, идемпотентно (пропускает существующие файлы); все сервисы депендят через `service_completed_successfully`
 - **[refactor]** Удалён `SECURITY(WR-03): deferred to Phase 9` из `auth/internal/api/auth_service_api/logout_all.go` — закрыто mTLS
-- **[docs]** Обновлены README.md (root + auth/twofa/mpc/gateway) — добавлены mTLS, fault tolerance, parallel bcrypt, certgen init container, -статус Phase A/B/C/D
+- **[docs]** Обновлены README.md (root + auth/twofa/mpc/gateway) — добавлены mTLS, fault tolerance, parallel bcrypt, certgen init container, статус Phase A/B/C/D
 - **[refactor]** Перенесён `workspace/` → `docs/`, снят с gitignore. Wikilinks конвертированы в относительные markdown-ссылки. `00 - Index.md` → `README.md` для GitHub-рендеринга
 - **[feature]** Phase C: k6 load testing harness + REPORT.md — [REPORT](../../loadtest/REPORT.md)
   - `loadtest/k6/lib/{config,auth,totp}.js` — переиспользуемые модули (TOTP реализован вручную через k6/crypto HMAC-SHA1)
