@@ -2,6 +2,10 @@
 
 Сервис аутентификации и управления сессиями. Регистрация пользователей, логин, выдача и ротация JWT-токенов (RS256), управление сессиями через token families.
 
+## Стек
+
+Go 1.26.3 · grpc v1.81.1 · pgx/v5 v5.9.2 · go-redis/v9 v9.19.0 · kafka-go v0.4.51 · golang-jwt/jwt/v5 v5.3.1 · prometheus/client_golang v1.23.2
+
 ## gRPC API
 
 | RPC | Описание |

@@ -2,6 +2,10 @@
 
 Единая точка входа для клиентских приложений. Принимает HTTP/REST-запросы и проксирует их в backend-сервисы по gRPC через grpc-gateway. Предоставляет ScalarUI для интерактивной документации API.
 
+## Стек
+
+Go 1.26.3 · grpc v1.81.1 · grpc-ecosystem/grpc-gateway/v2 v2.29.0 · go-redis/v9 v9.19.0 · x/sync v0.20.0 · prometheus/client_golang v1.23.2
+
 ## REST API
 
 | Метод | Путь | Сервис | Auth |
