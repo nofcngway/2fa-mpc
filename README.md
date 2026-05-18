@@ -50,13 +50,13 @@
 | Компонент | Версия |
 |-----------|--------|
 | Go | 1.26.3 |
-| PostgreSQL | 18 |
-| Redis | 8 |
+| PostgreSQL | 18.4 |
+| Redis | 8.6.3 |
 | Kafka | apache/kafka 4.1.2 |
 | gRPC + gRPC-Gateway | grpc v1.81.1 |
-| Prometheus | v3.4.0 |
-| Grafana | 12.0.0 |
-| Frontend | Next.js 16, React 19, Tailwind v4, HeroUI |
+| Prometheus | 3.11.3 |
+| Grafana | 13.1.0 |
+| Frontend | Next.js 16.2.6, React 19.2.6, Tailwind 4.3, HeroUI 3.0.5 |
 
 ---
 
